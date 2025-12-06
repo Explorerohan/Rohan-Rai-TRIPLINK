@@ -2,7 +2,7 @@
 import { Dimensions, FlatList, Image, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
-const imageHeight = Math.min(screenHeight * 0.55, 520);
+const imageHeight = Math.min(screenHeight * 0.53, 500);
 
 const slides = [
   {
@@ -53,7 +53,9 @@ const OnboardingCard = ({ item, onSkip, onNext }) => (
           <Text style={styles.title}>
             {item.titleBottom} <Text style={styles.accent}>{item.accent}</Text>
           </Text>
-          <Text style={styles.description}>{item.description}</Text>
+          <Text style={styles.description} numberOfLines={3} ellipsizeMode="tail">
+            {item.description}
+          </Text>
 
           <View style={styles.dotsRow}>
             {slides.map((slide) => (
@@ -155,8 +157,8 @@ const styles = StyleSheet.create({
   content: {
     width: screenWidth,
     paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 32,
+    paddingTop: 8,
+    paddingBottom: 16,
     alignItems: "center",
     flex: 1,
     justifyContent: "flex-end",
@@ -166,17 +168,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     paddingHorizontal: 8,
-    marginBottom: 18,
-    minHeight: 180,
-    justifyContent: "center",
+    marginBottom: 12,
+    height: 240,
+    justifyContent: "flex-start",
   },
   title: {
-    fontSize: 35,
+    fontSize: 32,
     fontWeight: "800",
     color: "#1f1f1f",
     textAlign: "center",
-    lineHeight: 40,
-    marginBottom: 16,
+    lineHeight: 38,
+    marginBottom: 10,
   },
   accent: {
     color: "#f27f1b",
@@ -186,9 +188,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6f747a",
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 21,
     marginBottom: 18,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    width: "100%",
   },
   dotsRow: {
     flexDirection: "row",
