@@ -103,7 +103,7 @@ const StandardCard = ({ item, onSkip, onNext }) => (
   </View>
 );
 
-const FinalCard = ({ item }) => (
+const FinalCard = ({ item, onLoginPress, onSignupPress }) => (
   <View style={styles.finalSlide}>
     <View style={styles.header}>
       <Image source={LOGO} style={styles.logoImage} resizeMode="contain" />
@@ -114,10 +114,10 @@ const FinalCard = ({ item }) => (
       <Image source={FINAL_HERO} style={styles.finalImage} resizeMode="contain" />
       <Text style={styles.finalBody}>{item.description}</Text>
       <View style={styles.finalActions}>
-        <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={onLoginPress}>
           <Text style={styles.primaryText}>{item.primary}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.85} onPress={onSignupPress}>
           <Text style={styles.secondaryText}>{item.secondary}</Text>
         </TouchableOpacity>
       </View>
@@ -125,7 +125,7 @@ const FinalCard = ({ item }) => (
   </View>
 );
 
-const OnboardingScreen = () => {
+const OnboardingScreen = ({ onLoginPress = () => {}, onSignupPress = () => {} }) => {
   const listRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -151,20 +151,21 @@ const OnboardingScreen = () => {
 
   const renderItem = ({ item }) => {
     if (item.type === "final") {
-      return <FinalCard item={item} />;
+      return <FinalCard item={item} onLoginPress={onLoginPress} onSignupPress={onSignupPress} />;
     }
     return <StandardCard item={item} onSkip={handleSkip} onNext={handleNext} />;
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
       <FlatList
         ref={listRef}
         data={slides}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
+        scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         renderItem={renderItem}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -195,7 +196,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
-    marginTop: -STATUS_BAR_HEIGHT,
   },
   image: {
     width: "100%",
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
     paddingHorizontal: 24,
-    paddingTop: STATUS_BAR_HEIGHT + 10,
+    paddingTop: 10,
     paddingBottom: 12,
   },
   header: {
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
   finalTitle: {
     fontSize: 35,
-    fontWeight: "800",
+    fontWeight: "900",
     color: "#1c1c1c",
     textAlign: "center",
     marginTop: -6,
@@ -323,8 +323,8 @@ const styles = StyleSheet.create({
   },
   finalImage: {
     width: "100%",
-    height: 420,
-    marginBottom: 16,
+    height: 550,
+    marginBottom: 10,
   },
   finalBody: {
     fontSize: 15,
