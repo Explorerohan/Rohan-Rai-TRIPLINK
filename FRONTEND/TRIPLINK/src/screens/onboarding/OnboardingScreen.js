@@ -13,6 +13,7 @@ import {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const imageHeight = Math.min(screenHeight * 0.53, 500);
+const STATUS_BAR_HEIGHT = StatusBar.currentHeight || 0;
 const FINAL_HERO = require("../../Assets/Login screen image.png");
 const LOGO = require("../../Assets/Logo.png");
 
@@ -157,14 +158,13 @@ const OnboardingScreen = () => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <FlatList
         ref={listRef}
         data={slides}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
-        scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         renderItem={renderItem}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -195,6 +195,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
+    marginTop: -STATUS_BAR_HEIGHT,
   },
   image: {
     width: "100%",
@@ -292,11 +293,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
     paddingHorizontal: 24,
-    paddingTop: 10,
+    paddingTop: STATUS_BAR_HEIGHT + 10,
     paddingBottom: 12,
   },
   header: {
-    paddingTop: 10,
+    paddingTop: 0,
     paddingBottom: 14,
     alignItems: "flex-start",
   },
