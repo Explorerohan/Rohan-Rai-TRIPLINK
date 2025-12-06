@@ -157,13 +157,14 @@ const OnboardingScreen = () => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
       <FlatList
         ref={listRef}
         data={slides}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
+        scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         renderItem={renderItem}
         onViewableItemsChanged={onViewableItemsChanged}
@@ -292,16 +293,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     paddingHorizontal: 24,
     paddingTop: 10,
-    paddingBottom: 28,
+    paddingBottom: 12,
   },
   header: {
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 14,
     alignItems: "flex-start",
   },
   logoImage: {
-    width: 42,
-    height: 42,
+    width: 52,
+    height: 52,
   },
   finalContent: {
     flex: 1,
@@ -313,29 +314,30 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1c1c1c",
     textAlign: "center",
+    marginTop: -6,
   },
   finalAccent: {
     color: "#3f7540",
-    marginBottom: 14,
+    marginBottom: 10,
   },
   finalImage: {
     width: "100%",
     height: 420,
-    marginBottom: 60,
+    marginBottom: 16,
   },
   finalBody: {
     fontSize: 15,
     lineHeight: 22,
     color: "#5f6369",
     textAlign: "center",
-    marginBottom: 18,
+    marginBottom: 12,
     paddingHorizontal: 10,
   },
   finalActions: {
     flexDirection: "row",
     width: "100%",
     gap: 12,
-    marginBottom: 8,
+    marginBottom: 0,
   },
   primaryButton: {
     flex: 1,
