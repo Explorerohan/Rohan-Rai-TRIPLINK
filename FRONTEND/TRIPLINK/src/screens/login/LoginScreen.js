@@ -1,6 +1,8 @@
 ﻿import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
+  Platform,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -16,8 +18,45 @@ const EMAIL_ICON = require("../../Assets/email.png");
 const LOCK_ICON = require("../../Assets/lock.png");
 const EYE_ICON = require("../../Assets/eye.png");
 
-const LoginScreen = () => {
+const API_BASE = "http://192.168.18.6:8000";
+const LOGIN_ENDPOINT = `${API_BASE}/api/auth/login/`;
+
+const LoginScreen = ({ onLoginSuccess = () => {} }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async () => {
+    setError("");
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log("Logging in to:", LOGIN_ENDPOINT);
+      const res = await fetch(LOGIN_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.message || "Invalid credentials");
+      }
+      const role = data?.user?.role;
+      if (role !== "traveler") {
+        throw new Error("Only traveler accounts can log in.");
+      }
+      onLoginSuccess({ access: data.access, refresh: data.refresh, user: data.user });
+    } catch (e) {
+      setError(e.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -28,9 +67,7 @@ const LoginScreen = () => {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.heading}>
-          Login to <Text style={styles.headingAccent}>TRIPLINK</Text>
-        </Text>
+        <Text style={styles.heading}>Login to <Text style={styles.headingAccent}>TRIPLINK</Text></Text>
 
         <View style={styles.inputGroup}>
           <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
@@ -40,6 +77,8 @@ const LoginScreen = () => {
             style={[styles.input, styles.inputWithIcon]}
             keyboardType="email-address"
             autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
           />
         </View>
 
@@ -50,6 +89,8 @@ const LoginScreen = () => {
             placeholderTextColor="#9aa0a6"
             style={[styles.input, styles.inputWithIcon]}
             secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
           />
           <TouchableOpacity
             style={styles.eye}
@@ -64,8 +105,10 @@ const LoginScreen = () => {
           <Text style={styles.forgot}>Forgot password ?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85}>
-          <Text style={styles.primaryText}>Login</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={handleLogin} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Login</Text>}
         </TouchableOpacity>
 
         <Text style={styles.or}>or</Text>
@@ -106,7 +149,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   heading: {
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: "800",
     color: "#1f6b2a",
     marginBottom: 18,
@@ -135,11 +178,11 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     position: "absolute",
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     left: 12,
     top: "50%",
-    marginTop: -10,
+    marginTop: -9,
     zIndex: 1,
     pointerEvents: "none",
   },
@@ -154,19 +197,22 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
-  eyeText: {
-    fontSize: 16,
-  },
   forgotWrap: {
     alignSelf: "flex-end",
     marginTop: 0,
   },
   forgot: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#111",
   },
+  error: {
+    color: "#c0392b",
+    fontSize: 13,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
   primaryButton: {
-    marginTop: 35,
+    marginTop: 30,
     width: "100%",
     backgroundColor: "#1f6b2a",
     borderRadius: 14,
@@ -208,7 +254,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 210,
+    marginTop: 225,
     marginBottom: 12,
   },
   footerText: {
