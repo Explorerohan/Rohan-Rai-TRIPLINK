@@ -1,1 +1,1 @@
-﻿export const SignupScreen = () => null;
+export { default as SignupScreen } from "./SignupScreen";

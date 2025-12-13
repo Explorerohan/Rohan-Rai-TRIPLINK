@@ -1,8 +1,7 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  Platform,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -18,48 +17,40 @@ const EMAIL_ICON = require("../../Assets/email.png");
 const LOCK_ICON = require("../../Assets/lock.png");
 const EYE_ICON = require("../../Assets/eye.png");
 
-const API_BASE = "http://192.168.18.6:8000";
-const LOGIN_ENDPOINT = `${API_BASE}/api/auth/login/`;
-
-const LoginScreen = ({
-  onLoginSuccess = () => {},
-  onForgotPress = () => {},
-  onSignupPress = () => {},
-}) => {
+const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} }) => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
-  const handleLogin = async () => {
+  const handleSignup = () => {
     setError("");
-    if (!email || !password) {
-      setError("Email and password are required.");
+    setInfo("");
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+      setError("Please fill in all fields.");
       return;
     }
-    setLoading(true);
-    try {
-      console.log("Logging in to:", LOGIN_ENDPOINT);
-      const res = await fetch(LOGIN_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.detail || data?.message || "Invalid credentials");
-      }
-      const role = data?.user?.role;
-      if (role !== "traveler") {
-        throw new Error("Only traveler accounts can log in.");
-      }
-      onLoginSuccess({ access: data.access, refresh: data.refresh, user: data.user });
-    } catch (e) {
-      setError(e.message || "Login failed");
-    } finally {
-      setLoading(false);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
     }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    // Frontend-only placeholder to mimic a request
+    setTimeout(() => {
+      setLoading(false);
+      setInfo("Account created! Continue to login.");
+      onSignupComplete({ name: name.trim(), email: email.trim() });
+    }, 600);
   };
 
   return (
@@ -71,7 +62,20 @@ const LoginScreen = ({
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.heading}>Login to <Text style={styles.headingAccent}>TRIPLINK</Text></Text>
+        <Text style={styles.heading}>
+          Create your <Text style={styles.headingAccent}>TRIPLINK</Text> account
+        </Text>
+
+        <View style={styles.inputGroup}>
+          <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
+          <TextInput
+            placeholder="Full name"
+            placeholderTextColor="#9aa0a6"
+            style={[styles.input, styles.inputWithIcon]}
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
 
         <View style={styles.inputGroup}>
           <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
@@ -105,14 +109,37 @@ const LoginScreen = ({
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.forgotWrap} onPress={onForgotPress}>
-          <Text style={styles.forgot}>Forgot password ?</Text>
-        </TouchableOpacity>
+        <View style={styles.inputGroup}>
+          <Image source={LOCK_ICON} style={styles.inputIcon} resizeMode="contain" />
+          <TextInput
+            placeholder="Confirm password"
+            placeholderTextColor="#9aa0a6"
+            style={[styles.input, styles.inputWithIcon]}
+            secureTextEntry={!showConfirm}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+          <TouchableOpacity
+            style={styles.eye}
+            onPress={() => setShowConfirm((prev) => !prev)}
+            activeOpacity={0.7}
+          >
+            <Image source={EYE_ICON} style={styles.eyeImage} resizeMode="contain" />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.helper}>Use 6+ characters with a number and symbol.</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {info ? <Text style={styles.success}>{info}</Text> : null}
 
-        <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={handleLogin} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Login</Text>}
+        <TouchableOpacity
+          style={styles.primaryButton}
+          activeOpacity={0.85}
+          onPress={handleSignup}
+          disabled={loading}
+        >
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Create account</Text>}
         </TouchableOpacity>
 
         <Text style={styles.or}>or</Text>
@@ -123,9 +150,9 @@ const LoginScreen = ({
         </TouchableOpacity>
 
         <View style={styles.footerRow}>
-          <Text style={styles.footerText}>Are you new on TRIPLINK ? </Text>
-          <TouchableOpacity onPress={onSignupPress}>
-            <Text style={styles.footerLink}>signup</Text>
+          <Text style={styles.footerText}>Already have an account? </Text>
+          <TouchableOpacity onPress={onBackToLogin}>
+            <Text style={styles.footerLink}>Login</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -146,7 +173,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     width: "100%",
-    height: 220,
+    height: 210,
   },
   content: {
     flex: 1,
@@ -156,14 +183,15 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: "#1f6b2a",
-    marginBottom: 18,
+    marginBottom: 14,
+    textAlign: "center",
   },
   headingAccent: {
     color: "#1f6b2a",
   },
   inputGroup: {
     width: "100%",
-    marginBottom: 14,
+    marginBottom: 12,
     position: "relative",
   },
   input: {
@@ -201,13 +229,12 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
-  forgotWrap: {
-    alignSelf: "flex-end",
-    marginTop: 0,
-  },
-  forgot: {
-    fontSize: 15,
-    color: "#111",
+  helper: {
+    width: "100%",
+    color: "#7a7f85",
+    fontSize: 13,
+    marginTop: -2,
+    marginBottom: 6,
   },
   error: {
     color: "#c0392b",
@@ -215,8 +242,14 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 8,
   },
+  success: {
+    color: "#1f6b2a",
+    fontSize: 13,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
   primaryButton: {
-    marginTop: 30,
+    marginTop: 18,
     width: "100%",
     backgroundColor: "#1f6b2a",
     borderRadius: 14,
@@ -258,7 +291,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 225,
+    marginTop: 18,
     marginBottom: 12,
   },
   footerText: {
@@ -272,4 +305,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default SignupScreen;
