@@ -54,7 +54,25 @@ export default function App() {
     setScreen("home");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Call logout endpoint if session exists
+    if (session?.access) {
+      try {
+        const API_BASE = "http://192.168.18.6:8000";
+        const LOGOUT_ENDPOINT = `${API_BASE}/api/auth/logout/`;
+        await fetch(LOGOUT_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access}`,
+          },
+        });
+      } catch (error) {
+        // Even if logout API call fails, proceed with client-side logout
+        console.log("Logout API call failed:", error);
+      }
+    }
+    // Clear session and navigate to login
     setSession(null);
     setScreen("login");
   };

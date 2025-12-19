@@ -4,6 +4,7 @@ from .views import (
     AdminOnlyView,
     AgentOnlyView,
     LoginView,
+    LogoutView,
     MeView,
     RefreshView,
     RegisterView,
@@ -13,6 +14,7 @@ from .views import (
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="token_obtain_pair"),
+    path("logout/", LogoutView.as_view(), name="logout"),
     path("refresh/", RefreshView.as_view(), name="token_refresh"),
     path("me/", MeView.as_view(), name="me"),
     path("only/traveler/", TravelerOnlyView.as_view(), name="only_traveler"),

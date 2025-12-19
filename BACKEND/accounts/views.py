@@ -49,3 +49,16 @@ class AdminOnlyView(generics.GenericAPIView):
 
     def get(self, request):
         return response.Response({"message": "Hello Admin", "email": request.user.email})
+
+
+class LogoutView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # With JWT, logout is primarily handled client-side by discarding tokens
+        # This endpoint provides a way to notify the server of logout
+        # For proper token invalidation, consider implementing token blacklisting
+        return response.Response(
+            {"message": "Successfully logged out", "detail": "Token should be discarded on client side"},
+            status=200
+        )
