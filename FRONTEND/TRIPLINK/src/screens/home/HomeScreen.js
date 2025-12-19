@@ -99,7 +99,23 @@ const navItems = [
   { key: "profile", label: "Profile", icon: "person-outline", active: false },
 ];
 
-const HomeScreen = ({ session }) => {
+const defaultFacilities = [
+  { key: "heater", label: "Heater", icon: "thermometer-outline" },
+  { key: "dinner", label: "Dinner", icon: "restaurant-outline" },
+  { key: "tub", label: "1 Tub", icon: "water-outline" },
+  { key: "pool", label: "Pool", icon: "water-outline" },
+];
+
+const cleanPrice = (price) => {
+  if (typeof price === "number") return price;
+  if (typeof price === "string") {
+    const parsed = Number(price.replace(/[^0-9.]/g, ""));
+    return Number.isNaN(parsed) ? price : parsed;
+  }
+  return price;
+};
+
+const HomeScreen = ({ session, onTripPress = () => {} }) => {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
 
   const displayName =
@@ -112,6 +128,19 @@ const HomeScreen = ({ session }) => {
     if (activeCategory === "All") return popularTrips;
     return popularTrips.filter((place) => place.region === activeCategory);
   }, [activeCategory]);
+
+  const handleTripSelect = (trip) => {
+    onTripPress({
+      ...trip,
+      facilities: trip.facilities || defaultFacilities,
+      price: cleanPrice(trip.price),
+      rating: trip.rating ?? 4.5,
+      reviews: trip.reviews ?? 320,
+      description:
+        trip.description ||
+        "Discover tailored experiences with comfortable stays, great dining, and curated activities throughout your trip.",
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -183,7 +212,12 @@ const HomeScreen = ({ session }) => {
           contentContainerStyle={styles.cardRow}
         >
           {filteredPopular.map((place) => (
-            <View key={place.id} style={styles.placeCard}>
+            <TouchableOpacity
+              key={place.id}
+              style={styles.placeCard}
+              activeOpacity={0.9}
+              onPress={() => handleTripSelect(place)}
+            >
               <View>
                 <Image source={{ uri: place.image }} style={styles.placeImage} />
                 <View style={styles.ratingBadge}>
@@ -225,7 +259,7 @@ const HomeScreen = ({ session }) => {
                   ))}
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -239,7 +273,18 @@ const HomeScreen = ({ session }) => {
           contentContainerStyle={styles.recommendedRow}
         >
           {recommendedTrips.map((place) => (
-            <View key={place.id} style={styles.recommendCard}>
+            <TouchableOpacity
+              key={place.id}
+              style={styles.recommendCard}
+              activeOpacity={0.9}
+              onPress={() =>
+                handleTripSelect({
+                  ...place,
+                  location: place.tag || "Scenic escape",
+                  hero: place.image,
+                })
+              }
+            >
               <View style={styles.recommendImageWrap}>
                 <Image
                   source={{ uri: place.image }}
@@ -256,7 +301,7 @@ const HomeScreen = ({ session }) => {
                   </View>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </ScrollView>
