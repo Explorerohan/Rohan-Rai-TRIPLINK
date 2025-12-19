@@ -18,14 +18,20 @@ const defaultTrip = {
   reviews: 355,
   price: 199,
   description:
-    "Aspen is as close as one can get to a storybook alpine town in America. The choose-your-own-adventure possibilities—skiing, hiking, dining, shopping and more—make it perfect for every traveler.",
-  hero: "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1200&q=80",
+    "Aspen is as close as one can get to a storybook alpine town in America. The choose-your-own-adventure possibilities - skiing, hiking, dining, shopping and more - make it perfect for every traveler. Wander through charming streets, soak up alpine sunshine, and unwind with world-class dining before your next adventure begins.",
+  hero: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
   facilities: [
-    { key: "heater", label: "Heater", icon: "thermometer-outline" },
+    { key: "heater", label: "1 Heater", icon: "snow-outline" },
     { key: "dinner", label: "Dinner", icon: "restaurant-outline" },
     { key: "tub", label: "1 Tub", icon: "water-outline" },
     { key: "pool", label: "Pool", icon: "water-outline" },
   ],
+};
+
+const formatPrice = (price) => {
+  if (typeof price === "number") return `$${price}`;
+  if (typeof price === "string") return price.startsWith("$") ? price : `$${price}`;
+  return "$0";
 };
 
 const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () => {} }) => {
@@ -36,99 +42,90 @@ const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () =
       ...defaultTrip,
       ...incoming,
       hero: incoming.hero || incoming.image || defaultTrip.hero,
+      facilities: incoming.facilities || defaultTrip.facilities,
       price: incoming.price ?? defaultTrip.price,
       rating: incoming.rating ?? defaultTrip.rating,
       reviews: incoming.reviews ?? defaultTrip.reviews,
-      facilities: incoming.facilities || defaultTrip.facilities,
+      description: incoming.description || defaultTrip.description,
     };
   }, [tripProp, route?.params?.trip]);
-  const fullDescription = trip.description || defaultTrip.description;
-  const description =
-    expanded || fullDescription.length <= 120 ? fullDescription : `${fullDescription.slice(0, 120)}...`;
-  const priceLabel =
-    typeof trip.price === "number" ? `$${trip.price}` : typeof trip.price === "string" ? trip.price : "$0";
+
+  const body = expanded
+    ? trip.description
+    : trip.description.length > 140
+    ? `${trip.description.slice(0, 140)}...`
+    : trip.description;
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#f2f3f5" />
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.card}>
-          <View style={styles.imageWrap}>
-            <Image source={{ uri: trip.hero }} style={styles.image} />
-            <View style={styles.imageActions}>
-              <TouchableOpacity style={styles.circleButton} onPress={onBack} activeOpacity={0.85}>
-                <Ionicons name="chevron-back" size={20} color="#1f1f1f" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.circleButton} activeOpacity={0.85}>
-                <Ionicons name="share-outline" size={18} color="#1f1f1f" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.body}>
-            <View style={styles.titleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{trip.title}</Text>
-              </View>
-              <TouchableOpacity activeOpacity={0.8}>
-                <Text style={styles.link}>Show map</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={16} color="#f7b500" />
-              <Text style={styles.ratingValue}>{trip.rating}</Text>
-              <Text style={styles.ratingMeta}>({trip.reviews} Reviews)</Text>
-            </View>
-
-            <View style={styles.descriptionWrap}>
-              <Text style={styles.description}>{description}</Text>
-              <TouchableOpacity onPress={() => setExpanded(!expanded)} activeOpacity={0.8}>
-                <Text style={styles.readMore}>{expanded ? "Read less" : "Read more"}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.sectionTitle}>Facilities</Text>
-            <View style={styles.facilityRow}>
-              {trip.facilities.map((facility) => (
-                <View key={facility.key} style={styles.facilityCard}>
-                  <View style={styles.facilityIconWrap}>
-                    <Ionicons name={facility.icon} size={20} color="#1f6b2a" />
-                  </View>
-                  <Text style={styles.facilityLabel}>{facility.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.footer}>
-          <View style={styles.priceWrap}>
-            <Text style={styles.priceLabel}>Price</Text>
-            <Text style={styles.priceValue}>{priceLabel}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.bookButton}
-            activeOpacity={0.88}
-            onPress={() => onBook(trip)}
-          >
-            <Text style={styles.bookText}>Book Now</Text>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroCard}>
+          <Image source={{ uri: trip.hero }} style={styles.heroImage} />
+          <TouchableOpacity style={styles.backButton} activeOpacity={0.85} onPress={onBack}>
+            <Ionicons name="chevron-back" size={20} color="#1f1f1f" />
           </TouchableOpacity>
         </View>
+
+        <View style={styles.body}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{trip.title}</Text>
+            <TouchableOpacity activeOpacity={0.8}>
+              <Text style={styles.mapLink}>Show map</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={16} color="#f7b500" />
+            <Text style={styles.ratingValue}>{trip.rating}</Text>
+            <Text style={styles.ratingMeta}> ({trip.reviews} Reviews)</Text>
+          </View>
+
+          <View style={styles.descriptionWrap}>
+            <Text style={styles.description}>{body}</Text>
+            {trip.description.length > 0 && (
+              <TouchableOpacity
+                style={styles.readMoreRow}
+                activeOpacity={0.8}
+                onPress={() => setExpanded(!expanded)}
+              >
+                <Text style={styles.readMoreText}>{expanded ? "Read less" : "Read more"}</Text>
+                <Ionicons
+                  name={expanded ? "chevron-up" : "chevron-down"}
+                  size={14}
+                  color="#1f6b2a"
+                  style={{ marginLeft: 2 }}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Text style={styles.sectionTitle}>Facilities</Text>
+          <View style={styles.facilityRow}>
+            {trip.facilities.map((facility) => (
+              <View key={facility.key} style={styles.facilityCard}>
+                <View style={styles.facilityIcon}>
+                  <Ionicons name={facility.icon} size={22} color="#8b9096" />
+                </View>
+                <Text style={styles.facilityLabel}>{facility.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
       </ScrollView>
+
+      <View style={styles.bottomBar}>
+        <View style={styles.priceWrap}>
+          <Text style={styles.priceLabel}>Price</Text>
+          <Text style={styles.priceValue}>{formatPrice(trip.price)}</Text>
+        </View>
+        <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={() => onBook(trip)}>
+          <Text style={styles.bookText}>Book Now</Text>
+          <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
-};
-
-const shadow = {
-  shadowColor: "#000000",
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.08,
-  shadowRadius: 10,
-  elevation: 8,
 };
 
 const styles = StyleSheet.create({
@@ -137,90 +134,99 @@ const styles = StyleSheet.create({
     backgroundColor: "#f2f3f5",
   },
   scroll: {
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 130,
   },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 24,
-    overflow: "hidden",
-    ...shadow,
-  },
-  imageWrap: {
+  heroCard: {
     position: "relative",
+    height: 350,
+    borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: "#ffffff",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  image: {
+  heroImage: {
     width: "100%",
-    height: 260,
+    height: "100%",
   },
-  imageActions: {
+  backButton: {
     position: "absolute",
-    top: 16,
-    left: 16,
-    right: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  circleButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    top: 12,
+    left: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e1e5e9",
   },
   body: {
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    gap: 12,
+    paddingHorizontal: 10,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   title: {
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: "800",
     color: "#1f1f1f",
+    flex: 1,
   },
-  link: {
-    fontSize: 14,
+  mapLink: {
+    fontSize: 15,
     fontWeight: "700",
     color: "#1f6b2a",
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    marginBottom: 14,
   },
   ratingValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
     color: "#1f1f1f",
+    marginLeft: 4,
   },
   ratingMeta: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#6f747a",
   },
   descriptionWrap: {
-    gap: 6,
+    marginBottom: 18,
   },
   description: {
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 22,
     color: "#5f6369",
   },
-  readMore: {
-    fontSize: 14,
+  readMoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  readMoreText: {
+    fontSize: 15,
     fontWeight: "700",
     color: "#1f6b2a",
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
     color: "#1f1f1f",
-    marginTop: 6,
+    marginBottom: 12,
   },
   facilityRow: {
     flexDirection: "row",
@@ -229,58 +235,68 @@ const styles = StyleSheet.create({
   },
   facilityCard: {
     flex: 1,
-    backgroundColor: "#f6f8fa",
+    backgroundColor: "#f1f4f6",
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#e4e7eb",
+    borderColor: "#e1e5ea",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  facilityIconWrap: {
+  facilityIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(31, 107, 42, 0.08)",
+    borderRadius: 12,
+    backgroundColor: "rgba(31,107,42,0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
   facilityLabel: {
     fontSize: 13,
-    color: "#1f1f1f",
-    fontWeight: "700",
+    fontWeight: "600",
+    color: "#6f747a",
   },
-  footer: {
+  bottomBar: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 18,
-    backgroundColor: "#ffffff",
-    borderRadius: 18,
-    padding: 16,
-    ...shadow,
+    gap: 18,
   },
   priceWrap: {
-    gap: 4,
+    flex: 1,
+    gap: 2,
   },
   priceLabel: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#6f747a",
   },
   priceValue: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: "900",
     color: "#1f6b2a",
   },
   bookButton: {
+    flexShrink: 0,
     backgroundColor: "#1f6b2a",
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingHorizontal: 32,
+    paddingVertical: 15,
+    borderRadius: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   bookText: {
     color: "#ffffff",
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "800",
   },
 });
