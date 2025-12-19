@@ -3,13 +3,16 @@ import {
   Dimensions,
   FlatList,
   Image,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import slideFinal from "./slides/SlideFinal";
+import slideOne from "./slides/SlideOne";
+import slideThree from "./slides/SlideThree";
+import slideTwo from "./slides/SlideTwo";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const imageHeight = Math.min(screenHeight * 0.53, 500);
@@ -17,50 +20,7 @@ const STATUS_BAR_HEIGHT = StatusBar.currentHeight || 0;
 const FINAL_HERO = require("../../Assets/Login screen image.png");
 const LOGO = require("../../Assets/Logo.png");
 
-const slides = [
-  {
-    id: "1",
-    type: "standard",
-    titleTop: "Life is short and the",
-    titleBottom: "world is",
-    accent: "wide",
-    description:
-      "At Friends tours and travel, we customize reliable and trustworthy educational tours to destinations all over the world",
-    cta: "Get Started",
-    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "2",
-    type: "standard",
-    titleTop: "It's a big world out",
-    titleBottom: "there go",
-    accent: "explore",
-    description:
-      "To get the best of your adventure you just need to leave and go where you like. we are waiting for you",
-    cta: "Next",
-    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "3",
-    type: "standard",
-    titleTop: "People don't take trips,",
-    titleBottom: "trips take",
-    accent: "people",
-    description:
-      "To get the best of your adventure you just need to leave and go where you like. we are waiting for you",
-    cta: "Next",
-    image: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "final",
-    type: "final",
-    titleTop: "Welcome to",
-    titleBottom: "TRIPLINK",
-    description: "Plan smarter. Travel smoother. Discover hidden gems, all with TripLink.",
-    primary: "Login",
-    secondary: "Signup",
-  },
-];
+const slides = [slideOne, slideTwo, slideThree, slideFinal];
 
 const Dot = ({ active }) => <View style={[styles.dot, active ? styles.dotActive : styles.dotInactive]} />;
 
@@ -157,8 +117,8 @@ const OnboardingScreen = ({ onLoginPress = () => {}, onSignupPress = () => {} })
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+    <View style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <FlatList
         ref={listRef}
         data={slides}
@@ -171,7 +131,7 @@ const OnboardingScreen = ({ onLoginPress = () => {}, onSignupPress = () => {} })
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -293,7 +253,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
     paddingHorizontal: 24,
-    paddingTop: 10,
+    paddingTop: 10 + STATUS_BAR_HEIGHT,
     paddingBottom: 12,
   },
   header: {

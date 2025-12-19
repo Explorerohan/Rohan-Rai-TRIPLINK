@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
 import LoginScreen from "./src/screens/login/LoginScreen";
@@ -6,11 +6,13 @@ import { SignupScreen } from "./src/screens/signup";
 import { ForgotPasswordScreen } from "./src/screens/forgotPassword";
 import { VerificationScreen } from "./src/screens/verification";
 import HomeScreen from "./src/screens/home/HomeScreen";
+import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 
 export default function App() {
   const [screen, setScreen] = useState("onboarding");
   const [session, setSession] = useState(null);
   const [lastEmail, setLastEmail] = useState("");
+  const [otpSession, setOtpSession] = useState(null);
 
   const goToLogin = () => setScreen("login");
   const goToSignup = () => setScreen("signup");
@@ -20,11 +22,42 @@ export default function App() {
     setScreen("home");
   };
   const handleSignupComplete = () => setScreen("login");
-  const handleForgotComplete = (email) => {
-    setLastEmail(email);
+  const handleForgotComplete = (payload) => {
+    setLastEmail(payload.email);
+    setOtpSession(payload);
     setScreen("verification");
   };
-  const handleVerifyComplete = () => setScreen("login");
+  const handleVerifyComplete = () => {
+    const email = otpSession?.email || lastEmail;
+    if (email) {
+      setSession({
+        access: null,
+        refresh: null,
+        user: { email, role: "traveler" },
+      });
+      setScreen("home");
+    } else {
+      setScreen("login");
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!otpSession) return;
+    if (otpSession.resendsUsed >= otpSession.maxResends) return;
+    const nextOtp = generateOtp();
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    try {
+      await sendOtpEmail(otpSession.email, nextOtp);
+      setOtpSession((prev) => ({
+        ...prev,
+        otp: nextOtp,
+        expiresAt,
+        resendsUsed: (prev?.resendsUsed || 0) + 1,
+      }));
+    } catch (e) {
+      // Optionally surface error to verification screen via lifted state
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -46,10 +79,14 @@ export default function App() {
       )}
       {screen === "verification" && (
         <VerificationScreen
-          email={lastEmail}
+          email={otpSession?.email || lastEmail}
+          expectedCode={otpSession?.otp}
+          expiresAt={otpSession?.expiresAt}
+          resendsUsed={otpSession?.resendsUsed ?? 0}
+          maxResends={otpSession?.maxResends ?? 3}
           onBack={goToForgot}
           onVerify={handleVerifyComplete}
-          onResend={() => setScreen("forgot")}
+          onResend={handleResendOtp}
         />
       )}
       {screen === "signup" && (

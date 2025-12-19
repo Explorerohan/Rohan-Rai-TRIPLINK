@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { generateOtp, sendOtpEmail } from "../../utils/otp";
 
 const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} }) => {
   const [email, setEmail] = useState("");
@@ -33,17 +34,35 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
       setError("Please enter your email.");
       return;
     }
+    const targetEmail = email.trim();
+    const otp = generateOtp();
+    const expiresAt = Date.now() + 5 * 60 * 1000;
     setLoading(true);
-    // Frontend-only placeholder to mimic a request/response
-    requestTimer.current = setTimeout(() => {
-      setLoading(false);
-      setInfo("Check your inbox for reset instructions.");
-      setShowOverlay(true);
-      overlayTimer.current = setTimeout(() => {
-        setShowOverlay(false);
-        onResetComplete(email.trim());
-      }, 3000);
-    }, 600);
+    sendOtpEmail(targetEmail, otp)
+      .then(() => {
+        setInfo("Check your inbox for reset instructions.");
+        setShowOverlay(true);
+        overlayTimer.current = setTimeout(() => {
+          setShowOverlay(false);
+          onResetComplete({
+            email: targetEmail,
+            otp,
+            expiresAt,
+            resendsUsed: 0,
+            maxResends: 3,
+          });
+        }, 3000);
+      })
+      .catch((err) => {
+        const msg =
+          err?.message ||
+          "Failed to send OTP email. Please check EmailJS service/template/public key or network and try again.";
+        setError(msg);
+        console.warn("OTP send failed:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
