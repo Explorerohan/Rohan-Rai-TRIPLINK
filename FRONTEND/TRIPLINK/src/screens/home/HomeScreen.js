@@ -115,7 +115,7 @@ const cleanPrice = (price) => {
   return price;
 };
 
-const HomeScreen = ({ session, onTripPress = () => {} }) => {
+const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {} }) => {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
 
   const displayName =
@@ -145,10 +145,13 @@ const HomeScreen = ({ session, onTripPress = () => {} }) => {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
+      <View style={styles.contentContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
         <View style={styles.headerRow}>
           <Image source={AVATAR} style={styles.avatar} />
           <View style={styles.headerText}>
@@ -305,6 +308,7 @@ const HomeScreen = ({ session, onTripPress = () => {} }) => {
           ))}
         </ScrollView>
       </ScrollView>
+      </View>
 
       <View style={styles.navBar}>
         <View style={styles.navSide}>
@@ -327,7 +331,12 @@ const HomeScreen = ({ session, onTripPress = () => {} }) => {
           {navItems.slice(2).map((item) => {
             const color = item.active ? "#1f6b2a" : "#7a7f85";
             return (
-              <TouchableOpacity key={item.key} style={styles.navItem} activeOpacity={0.85}>
+              <TouchableOpacity
+                key={item.key}
+                style={styles.navItem}
+                activeOpacity={0.85}
+                onPress={item.key === "profile" ? onProfilePress : undefined}
+              >
                 <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
                 <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
               </TouchableOpacity>
@@ -351,6 +360,9 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#ffffff",
+  },
+  contentContainer: {
+    flex: 1,
   },
   scroll: {
     paddingHorizontal: 18,
@@ -486,7 +498,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e3e6ea",
     overflow: "hidden",
-    ...shadow,
   },
   placeImage: {
     width: "100%",
@@ -604,7 +615,6 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderColor: "transparent",
     overflow: "hidden",
-    ...shadow,
   },
   recommendImageWrap: {
     position: "relative",
@@ -676,7 +686,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    ...shadow,
+    zIndex: 1000,
+    elevation: 10,
   },
   navSide: {
     flex: 1,
@@ -706,7 +717,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 16,
-    ...shadow,
   },
 });
 

@@ -7,6 +7,7 @@ import { ForgotPasswordScreen } from "./src/screens/forgotPassword";
 import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
+import ProfileScreen from "./src/screens/profile";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 
 export default function App() {
@@ -51,6 +52,11 @@ export default function App() {
   const handleBookTrip = (trip) => {
     // You can wire payment/booking here; for now, return to home.
     setScreen("home");
+  };
+
+  const handleLogout = () => {
+    setSession(null);
+    setScreen("login");
   };
 
   const handleResendOtp = async () => {
@@ -107,12 +113,29 @@ export default function App() {
           onBackToLogin={goToLogin}
         />
       )}
-      {screen === "home" && <HomeScreen session={session} onTripPress={handleTripPress} />}
+      {screen === "home" && (
+        <HomeScreen
+          session={session}
+          onTripPress={handleTripPress}
+          onProfilePress={() => setScreen("profile")}
+        />
+      )}
       {screen === "details" && (
         <DetailsScreen
           trip={selectedTrip}
           onBack={() => setScreen("home")}
           onBook={handleBookTrip}
+        />
+      )}
+      {screen === "profile" && (
+        <ProfileScreen
+          session={session}
+          onBack={() => setScreen("home")}
+          onEdit={() => {
+            // Handle edit profile action
+            console.log("Edit profile");
+          }}
+          onLogout={handleLogout}
         />
       )}
     </SafeAreaView>
