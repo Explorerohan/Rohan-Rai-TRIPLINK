@@ -6,6 +6,9 @@ from .views import (
     MeView,
     RefreshView,
     RegisterView,
+    ProfileView,
+    UserProfileView,
+    AgentProfileView,
 )
 
 urlpatterns = [
@@ -14,4 +17,8 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("refresh/", RefreshView.as_view(), name="token_refresh"),
     path("me/", MeView.as_view(), name="me"),
+    # Profile endpoints
+    path("profile/", ProfileView.as_view(), name="profile"),
+    path("profile/user/", UserProfileView.as_view(), name="user_profile"),
+    path("profile/agent/", AgentProfileView.as_view(), name="agent_profile"),
 ]

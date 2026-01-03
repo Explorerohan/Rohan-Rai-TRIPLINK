@@ -7,7 +7,7 @@ import { ForgotPasswordScreen } from "./src/screens/forgotPassword";
 import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
-import ProfileScreen from "./src/screens/profile";
+import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 
 export default function App() {
@@ -16,6 +16,7 @@ export default function App() {
   const [lastEmail, setLastEmail] = useState("");
   const [otpSession, setOtpSession] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
   const goToLogin = () => setScreen("login");
   const goToSignup = () => setScreen("signup");
@@ -147,13 +148,21 @@ export default function App() {
       )}
       {screen === "profile" && (
         <ProfileScreen
+          key={profileRefreshKey}
           session={session}
           onBack={() => setScreen("home")}
-          onEdit={() => {
-            // Handle edit profile action
-            console.log("Edit profile");
-          }}
+          onEdit={() => setScreen("editProfile")}
           onLogout={handleLogout}
+        />
+      )}
+      {screen === "editProfile" && (
+        <EditProfileScreen
+          session={session}
+          onBack={() => setScreen("profile")}
+          onSave={(updatedProfile) => {
+            setProfileRefreshKey((prev) => prev + 1);
+            setScreen("profile");
+          }}
         />
       )}
     </SafeAreaView>

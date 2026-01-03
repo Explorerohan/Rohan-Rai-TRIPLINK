@@ -2,13 +2,17 @@ import time
 from django.contrib.auth import authenticate, login, get_user_model
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from rest_framework import generics, permissions, response
+from rest_framework import generics, permissions, response, status
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email
-from .models import Roles
+from .models import Roles, UserProfile, AgentProfile
 from .permissions import IsAdminRole, IsAgent, IsTraveler
-from .serializers import CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer
+from .serializers import (
+    CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
+    UserProfileSerializer, AgentProfileSerializer
+)
 
 User = get_user_model()
 
@@ -359,3 +363,67 @@ def agent_reset_password_view(request):
             return redirect('agent_forgot_password')
     
     return render(request, 'agent_reset_password.html', {'email': email})
+
+
+# Profile Management Views
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    """View for retrieving and updating user (traveler) profile"""
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_object(self):
+        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        return profile
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+
+class AgentProfileView(generics.RetrieveUpdateAPIView):
+    """View for retrieving and updating agent profile"""
+    serializer_class = AgentProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAgent]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_object(self):
+        profile, created = AgentProfile.objects.get_or_create(user=self.request.user)
+        return profile
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+
+class ProfileView(generics.RetrieveUpdateAPIView):
+    """Universal profile view that returns the appropriate profile based on user role"""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_serializer_class(self):
+        if self.request.user.role == Roles.AGENT:
+            return AgentProfileSerializer
+        elif self.request.user.role == Roles.TRAVELER:
+            return UserProfileSerializer
+        else:
+            # Admin or other roles - return basic user info
+            return UserSerializer
+
+    def get_object(self):
+        user = self.request.user
+        if user.role == Roles.AGENT:
+            profile, created = AgentProfile.objects.get_or_create(user=user)
+            return profile
+        elif user.role == Roles.TRAVELER:
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            return profile
+        else:
+            return user
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context

@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.conf import settings
+from django.conf.urls.static import static
 from accounts.views import (
     admin_login_view, agent_login_view, admin_dashboard_view, agent_dashboard_view,
     admin_forgot_password_view, agent_forgot_password_view,
@@ -40,3 +42,7 @@ urlpatterns = [
     path('reset-password/admin/', admin_reset_password_view, name='admin_reset_password'),
     path('reset-password/agent/', agent_reset_password_view, name='agent_reset_password'),
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

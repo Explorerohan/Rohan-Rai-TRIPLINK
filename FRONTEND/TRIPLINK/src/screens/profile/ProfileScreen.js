@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
+  ActivityIndicator,
   Image,
   SafeAreaView,
   ScrollView,
@@ -10,10 +11,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
-const PROFILE_IMAGE = {
-  uri: "https://i.pinimg.com/564x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg",
-};
+import { getProfile } from "../../utils/api";
 
 const menuItems = [
   { id: "profile", label: "Profile", icon: "person-outline" },
@@ -24,13 +22,50 @@ const menuItems = [
 ];
 
 const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout = () => {} }) => {
-  const displayName =
-    session?.user?.first_name ||
-    session?.user?.name ||
-    (session?.user?.email ? session.user.email.split("@")[0] : null) ||
-    "Leonardo";
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const displayEmail = session?.user?.email || "leonardo@gmail.com";
+  useEffect(() => {
+    fetchProfile();
+  }, [session]);
+
+  const fetchProfile = async () => {
+    if (!session?.access) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await getProfile(session.access);
+      setProfile(response.data);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const displayName =
+    profile?.full_name ||
+    (profile?.first_name && profile?.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : profile?.first_name || profile?.last_name) ||
+    (session?.user?.email ? session.user.email.split("@")[0] : null) ||
+    "User";
+
+  const displayEmail = session?.user?.email || profile?.email || "user@example.com";
+  const profileImageUri = profile?.profile_picture_url;
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1f6b2a" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -60,10 +95,61 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
 
         {/* Profile Information */}
         <View style={styles.profileSection}>
-          <Image source={PROFILE_IMAGE} style={styles.profileImage} />
+          <Image
+            source={
+              profileImageUri
+                ? { uri: profileImageUri }
+                : require("../../Assets/Logo.png")
+            }
+            style={styles.profileImage}
+          />
           <Text style={styles.profileName}>{displayName}</Text>
           <Text style={styles.profileEmail}>{displayEmail}</Text>
+          {profile?.phone_number && (
+            <Text style={styles.profilePhone}>{profile.phone_number}</Text>
+          )}
+          {session?.user?.role === "agent" && profile?.company_name && (
+            <Text style={styles.profileCompany}>{profile.company_name}</Text>
+          )}
         </View>
+
+        {/* Profile Details Card */}
+        {profile && (
+          <View style={styles.detailsCard}>
+            {profile.bio && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Bio</Text>
+                <Text style={styles.detailValue}>{profile.bio}</Text>
+              </View>
+            )}
+            {profile.address && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Address</Text>
+                <Text style={styles.detailValue}>{profile.address}</Text>
+              </View>
+            )}
+            {(profile.city || profile.country) && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Location</Text>
+                <Text style={styles.detailValue}>
+                  {[profile.city, profile.country].filter(Boolean).join(", ")}
+                </Text>
+              </View>
+            )}
+            {session?.user?.role === "agent" && profile?.license_number && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>License Number</Text>
+                <Text style={styles.detailValue}>{profile.license_number}</Text>
+              </View>
+            )}
+            {session?.user?.role === "agent" && profile?.website && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Website</Text>
+                <Text style={styles.detailValue}>{profile.website}</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Statistics Card */}
         <View style={styles.statsCard}>
@@ -178,6 +264,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7076",
     fontWeight: "500",
+    marginTop: 4,
+  },
+  profilePhone: {
+    fontSize: 14,
+    color: "#6b7076",
+    fontWeight: "500",
+    marginTop: 4,
+  },
+  profileCompany: {
+    fontSize: 14,
+    color: "#1f6b2a",
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6b7076",
+  },
+  detailsCard: {
+    backgroundColor: "#ffffff",
+    marginHorizontal: 18,
+    marginBottom: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e3e6ea",
+    padding: 18,
+  },
+  detailItem: {
+    marginBottom: 16,
+  },
+  detailItemLast: {
+    marginBottom: 0,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: "#6b7076",
+    fontWeight: "600",
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  detailValue: {
+    fontSize: 15,
+    color: "#1f1f1f",
+    fontWeight: "500",
+    lineHeight: 22,
   },
   statsCard: {
     flexDirection: "row",
