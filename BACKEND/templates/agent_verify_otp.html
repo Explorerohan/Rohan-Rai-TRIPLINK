@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify OTP - Agent - TRIPLINK{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-left">
+        <div class="left-content">
+            <div class="logo-symbol">✧</div>
+            <h1 class="welcome-text">Verify OTP <span class="wave">✉️</span></h1>
+            <p class="description">
+                Enter the 4-digit OTP sent to your email address to verify your identity.
+            </p>
+            <div class="copyright">© 2024 TRIPLINK. All rights reserved.</div>
+        </div>
+        <div class="geometric-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+    </div>
+    
+    <div class="login-right">
+        <div class="login-form-container">
+            <h2 class="brand-name">TRIPLINK</h2>
+            <h3 class="welcome-heading">Verify OTP</h3>
+            <p class="signup-prompt">
+                OTP sent to: <strong>{{ email }}</strong>
+            </p>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="post" action="{% url 'agent_verify_otp' %}" class="login-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="otp">Enter OTP (4 digits)</label>
+                    <input type="text" id="otp" name="otp" placeholder="1234" required autofocus maxlength="4" pattern="[0-9]{4}" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+                </div>
+                
+                <button type="submit" class="btn-primary">Verify OTP</button>
+                
+                <div class="forgot-password" style="text-align: center; margin-top: 1rem;">
+                    <a href="{% url 'agent_forgot_password' %}" class="link">Resend OTP</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

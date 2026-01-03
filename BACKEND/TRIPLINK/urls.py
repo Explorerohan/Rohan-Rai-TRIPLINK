@@ -16,8 +16,27 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from accounts.views import (
+    admin_login_view, agent_login_view, admin_dashboard_view, agent_dashboard_view,
+    admin_forgot_password_view, agent_forgot_password_view,
+    admin_verify_otp_view, agent_verify_otp_view,
+    admin_reset_password_view, agent_reset_password_view
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
+    path('login/admin/', admin_login_view, name='admin_login'),
+    path('login/agent/', agent_login_view, name='agent_login'),
+    path('dashboard/admin/', admin_dashboard_view, name='admin_dashboard'),
+    path('dashboard/agent/', agent_dashboard_view, name='agent_dashboard'),
+    # Forgot password URLs
+    path('forgot-password/admin/', admin_forgot_password_view, name='admin_forgot_password'),
+    path('forgot-password/agent/', agent_forgot_password_view, name='agent_forgot_password'),
+    # OTP verification URLs
+    path('verify-otp/admin/', admin_verify_otp_view, name='admin_verify_otp'),
+    path('verify-otp/agent/', agent_verify_otp_view, name='agent_verify_otp'),
+    # Password reset URLs
+    path('reset-password/admin/', admin_reset_password_view, name='admin_reset_password'),
+    path('reset-password/agent/', agent_reset_password_view, name='agent_reset_password'),
 ]

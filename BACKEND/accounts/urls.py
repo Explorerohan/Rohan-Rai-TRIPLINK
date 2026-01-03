@@ -1,14 +1,11 @@
 from django.urls import path
 
 from .views import (
-    AdminOnlyView,
-    AgentOnlyView,
     LoginView,
     LogoutView,
     MeView,
     RefreshView,
     RegisterView,
-    TravelerOnlyView,
 )
 
 urlpatterns = [
@@ -17,7 +14,4 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("refresh/", RefreshView.as_view(), name="token_refresh"),
     path("me/", MeView.as_view(), name="me"),
-    path("only/traveler/", TravelerOnlyView.as_view(), name="only_traveler"),
-    path("only/agent/", AgentOnlyView.as_view(), name="only_agent"),
-    path("only/admin/", AdminOnlyView.as_view(), name="only_admin"),
 ]

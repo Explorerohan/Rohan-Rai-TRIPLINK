@@ -17,16 +17,13 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-@je^iql=!%9rtv2e_vj4yt%5(vl!(vde7f*)tp9^(^$(=5nn#k'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.18.6', 'localhost', '127.0.0.1', '10.0.2.2']
+ALLOWED_HOSTS = ['192.168.18.6', 'localhost', '127.0.0.1', '10.0.2.2','10.52.7.183','192.168.40.62']
 
 
 # Application definition
@@ -58,7 +55,7 @@ ROOT_URLCONF = 'TRIPLINK.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -119,6 +116,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -142,3 +141,10 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
+
+# EmailJS Configuration
+EMAILJS_SERVICE_ID = 'service_drzeno8'
+EMAILJS_TEMPLATE_ID = 'template_7jxk7ff'
+EMAILJS_PUBLIC_KEY = 'P4yjMlbQu_ckrhA3-'
+EMAILJS_PRIVATE_KEY = '4ytfBo3yCFYNV0D_unE_S'
+EMAILJS_API_URL = 'https://api.emailjs.com/api/v1.0/email/send'
