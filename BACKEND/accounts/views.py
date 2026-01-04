@@ -1,5 +1,5 @@
 import time
-from django.contrib.auth import authenticate, login, get_user_model
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from rest_framework import generics, permissions, response, status
@@ -102,7 +102,7 @@ def admin_login_view(request):
 def agent_login_view(request):
     """Render and handle agent login form"""
     if request.user.is_authenticated and request.user.role == Roles.AGENT:
-        return render(request, 'agent_login_success.html', {'user': request.user})
+        return redirect('agent_dashboard')
     
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -113,7 +113,7 @@ def agent_login_view(request):
             if user is not None:
                 if user.role == Roles.AGENT:
                     login(request, user)
-                    return render(request, 'agent_login_success.html', {'user': user})
+                    return redirect('agent_dashboard')
                 else:
                     messages.error(request, 'Access denied. This account is not an agent account.')
             else:
@@ -138,6 +138,53 @@ def agent_dashboard_view(request):
         messages.error(request, 'Access denied. Agent access required.')
         return redirect('agent_login')
     return render(request, 'agent_dashboard.html', {'user': request.user})
+
+
+def agent_logout_view(request):
+    """Agent logout view"""
+    if request.user.is_authenticated:
+        logout(request)
+        messages.success(request, 'You have been successfully logged out.')
+    return redirect('agent_login')
+
+
+def agent_profile_view(request):
+    """Agent profile management view"""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('agent_login')
+    
+    # Get or create agent profile
+    profile, created = AgentProfile.objects.get_or_create(user=request.user)
+    
+    if request.method == 'POST':
+        # Update profile fields (only essential fields)
+        profile.first_name = request.POST.get('first_name', '').strip()
+        profile.last_name = request.POST.get('last_name', '').strip()
+        profile.phone_number = request.POST.get('phone_number', '').strip()
+        
+        # Handle profile picture upload
+        if 'profile_picture' in request.FILES:
+            profile.profile_picture = request.FILES['profile_picture']
+        
+        # Handle profile picture removal
+        if 'remove_profile_picture' in request.POST:
+            if profile.profile_picture:
+                profile.profile_picture.delete(save=False)
+            profile.profile_picture = None
+        
+        try:
+            profile.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('agent_profile')
+        except Exception as e:
+            messages.error(request, f'Error updating profile: {str(e)}')
+    
+    context = {
+        'user': request.user,
+        'profile': profile,
+    }
+    return render(request, 'agent_profile.html', context)
 
 
 # Forgot Password Views

@@ -22,7 +22,8 @@ from accounts.views import (
     admin_login_view, agent_login_view, admin_dashboard_view, agent_dashboard_view,
     admin_forgot_password_view, agent_forgot_password_view,
     admin_verify_otp_view, agent_verify_otp_view,
-    admin_reset_password_view, agent_reset_password_view
+    admin_reset_password_view, agent_reset_password_view,
+    agent_profile_view, agent_logout_view
 )
 
 urlpatterns = [
@@ -30,8 +31,10 @@ urlpatterns = [
     path('api/auth/', include('accounts.urls')),
     path('login/admin/', admin_login_view, name='admin_login'),
     path('login/agent/', agent_login_view, name='agent_login'),
+    path('logout/agent/', agent_logout_view, name='agent_logout'),
     path('dashboard/admin/', admin_dashboard_view, name='admin_dashboard'),
     path('dashboard/agent/', agent_dashboard_view, name='agent_dashboard'),
+    path('profile/agent/', agent_profile_view, name='agent_profile'),
     # Forgot password URLs
     path('forgot-password/admin/', admin_forgot_password_view, name='admin_forgot_password'),
     path('forgot-password/agent/', agent_forgot_password_view, name='agent_forgot_password'),
