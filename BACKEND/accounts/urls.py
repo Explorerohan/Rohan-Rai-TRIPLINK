@@ -9,6 +9,8 @@ from .views import (
     ProfileView,
     UserProfileView,
     AgentProfileView,
+    PackageListView,
+    PackageDetailView,
 )
 
 urlpatterns = [
@@ -21,4 +23,7 @@ urlpatterns = [
     path("profile/", ProfileView.as_view(), name="profile"),
     path("profile/user/", UserProfileView.as_view(), name="user_profile"),
     path("profile/agent/", AgentProfileView.as_view(), name="agent_profile"),
+    # Package endpoints
+    path("packages/", PackageListView.as_view(), name="package_list"),
+    path("packages/<int:id>/", PackageDetailView.as_view(), name="package_detail"),
 ]

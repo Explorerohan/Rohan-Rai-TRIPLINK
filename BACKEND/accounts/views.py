@@ -11,7 +11,7 @@ from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, P
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
-    UserProfileSerializer, AgentProfileSerializer
+    UserProfileSerializer, AgentProfileSerializer, PackageSerializer
 )
 
 User = get_user_model()
@@ -616,3 +616,41 @@ def agent_delete_package_view(request, package_id):
         messages.error(request, 'Package not found.')
     
     return redirect('agent_packages')
+
+
+# API Views for Packages
+class PackageListView(generics.ListAPIView):
+    """API view to list all active packages"""
+    serializer_class = PackageSerializer
+    permission_classes = [permissions.AllowAny]
+    
+    def get_queryset(self):
+        queryset = Package.objects.filter(status=PackageStatus.ACTIVE).order_by('-created_at')
+        # Optional filters
+        location = self.request.query_params.get('location', None)
+        country = self.request.query_params.get('country', None)
+        
+        if location:
+            queryset = queryset.filter(location__icontains=location)
+        if country:
+            queryset = queryset.filter(country__icontains=country)
+        
+        return queryset
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+
+class PackageDetailView(generics.RetrieveAPIView):
+    """API view to get package details"""
+    serializer_class = PackageSerializer
+    permission_classes = [permissions.AllowAny]
+    queryset = Package.objects.filter(status=PackageStatus.ACTIVE)
+    lookup_field = 'id'
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context

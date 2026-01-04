@@ -29,9 +29,19 @@ const defaultTrip = {
 };
 
 const formatPrice = (price) => {
-  if (typeof price === "number") return `$${price}`;
-  if (typeof price === "string") return price.startsWith("$") ? price : `$${price}`;
-  return "$0";
+  // Extract numeric value from price
+  let numericValue = 0;
+  
+  if (typeof price === "number") {
+    numericValue = price;
+  } else if (typeof price === "string") {
+    // Remove any currency symbols and extract number
+    const cleaned = price.replace(/[^0-9.]/g, "");
+    numericValue = parseFloat(cleaned) || 0;
+  }
+  
+  // Format with Rs. and add commas for thousands
+  return `Rs. ${numericValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
 const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () => {} }) => {
@@ -266,38 +276,57 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 18,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "#e8ecef",
   },
   priceWrap: {
     flex: 1,
-    gap: 2,
   },
   priceLabel: {
-    fontSize: 14,
-    color: "#6f747a",
+    fontSize: 13,
+    color: "#94a3b8",
+    fontWeight: "500",
+    marginBottom: 4,
   },
   priceValue: {
-    fontSize: 28,
-    fontWeight: "900",
+    fontSize: 24,
+    fontWeight: "800",
     color: "#1f6b2a",
+    letterSpacing: -0.5,
   },
   bookButton: {
     flexShrink: 0,
     backgroundColor: "#1f6b2a",
-    paddingHorizontal: 32,
-    paddingVertical: 15,
-    borderRadius: 15,
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
+    shadowColor: "#1f6b2a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   bookText: {
     color: "#ffffff",
-    fontSize: 17,
-    fontWeight: "800",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 });
 

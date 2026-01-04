@@ -106,3 +106,28 @@ export const updateProfileWithImage = async (formData, accessToken) => {
   return apiRequestMultipart("/api/auth/profile/", formData, accessToken);
 };
 
+/**
+ * Get all packages
+ * @param {object} filters - Optional filters (location, country)
+ * @returns {Promise<object>}
+ */
+export const getPackages = async (filters = {}) => {
+  const queryParams = new URLSearchParams();
+  if (filters.location) queryParams.append('location', filters.location);
+  if (filters.country) queryParams.append('country', filters.country);
+  
+  const queryString = queryParams.toString();
+  const endpoint = `/api/auth/packages/${queryString ? `?${queryString}` : ''}`;
+  
+  return apiRequest(endpoint, { method: "GET" });
+};
+
+/**
+ * Get package by ID
+ * @param {number} packageId - Package ID
+ * @returns {Promise<object>}
+ */
+export const getPackageById = async (packageId) => {
+  return apiRequest(`/api/auth/packages/${packageId}/`, { method: "GET" });
+};
+

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Image,
   SafeAreaView,
@@ -9,8 +9,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getPackages } from "../../utils/api";
 
 const AVATAR = {
   uri: "https://hips.hearstapps.com/hmg-prod/images/cristiano-ronaldo-of-portugal-during-the-uefa-nations-news-photo-1748359673.pjpeg?crop=0.610xw:0.917xh;0.317xw,0.0829xh&resize=640:*",
@@ -117,6 +119,9 @@ const cleanPrice = (price) => {
 
 const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {} }) => {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const displayName =
     session?.user?.first_name ||
@@ -124,16 +129,69 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
     "Rohan";
 
+  // Fetch packages from API
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        setLoading(true);
+        const response = await getPackages();
+        if (response.data) {
+          // Transform API data to match the expected format
+          const transformedPackages = response.data.map((pkg) => ({
+            id: pkg.id.toString(),
+            title: pkg.title,
+            location: `${pkg.location}, ${pkg.country}`,
+            distance: "N/A", // Distance not available from backend
+            image: pkg.main_image_url || "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
+            price: pkg.price_per_person, // Pass numeric value, DetailsScreen will format it
+            nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
+            rating: parseFloat(pkg.rating) || 4.5,
+            reviews: pkg.participants_count || 0,
+            perks: pkg.features?.map(f => f.name) || [],
+            region: "All",
+            description: pkg.description,
+            hero: pkg.main_image_url,
+            facilities: pkg.features?.map((f, idx) => ({
+              key: `feature_${idx}`,
+              label: f.name,
+              icon: f.icon || "checkmark-circle-outline",
+            })) || defaultFacilities,
+            // Include full package data for detail view
+            packageData: pkg,
+          }));
+          setPackages(transformedPackages);
+        }
+      } catch (err) {
+        console.error("Error fetching packages:", err);
+        setError(err.message);
+        // Fallback to hardcoded data on error
+        setPackages(popularTrips);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPackages();
+  }, []);
+
   const filteredPopular = useMemo(() => {
-    if (activeCategory === "All") return popularTrips;
-    return popularTrips.filter((place) => place.region === activeCategory);
-  }, [activeCategory]);
+    if (activeCategory === "All") return packages;
+    return packages.filter((place) => place.region === activeCategory);
+  }, [activeCategory, packages]);
 
   const handleTripSelect = (trip) => {
+    // Extract numeric price value
+    let priceValue = trip.price;
+    if (typeof priceValue === "string") {
+      // Remove currency symbols and extract number
+      const cleaned = priceValue.replace(/[^0-9.]/g, "");
+      priceValue = parseFloat(cleaned) || 0;
+    }
+    
     onTripPress({
       ...trip,
       facilities: trip.facilities || defaultFacilities,
-      price: cleanPrice(trip.price),
+      price: priceValue, // Pass numeric value for proper formatting
       rating: trip.rating ?? 4.5,
       reviews: trip.reviews ?? 320,
       description:
@@ -209,12 +267,26 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardRow}
-        >
-          {filteredPopular.map((place) => (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1f6b2a" />
+            <Text style={styles.loadingText}>Loading packages...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Error loading packages: {error}</Text>
+          </View>
+        ) : filteredPopular.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No packages available</Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.cardRow}
+          >
+            {filteredPopular.map((place) => (
             <TouchableOpacity
               key={place.id}
               style={styles.placeCard}
@@ -265,6 +337,7 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
             </TouchableOpacity>
           ))}
         </ScrollView>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recommended Packages</Text>
@@ -717,6 +790,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 16,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#7a7f85",
+  },
+  errorContainer: {
+    padding: 20,
+    backgroundColor: "#fee2e2",
+    borderRadius: 12,
+    marginHorizontal: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#991b1b",
+    textAlign: "center",
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#7a7f85",
   },
 });
 
