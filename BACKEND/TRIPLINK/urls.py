@@ -19,11 +19,12 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from accounts.views import (
-    login_view, logout_view, admin_login_view, agent_login_view, admin_dashboard_view, agent_dashboard_view,
+    login_view, logout_view, admin_dashboard_view, agent_dashboard_view,
     admin_forgot_password_view, agent_forgot_password_view,
     admin_verify_otp_view, agent_verify_otp_view,
     admin_reset_password_view, agent_reset_password_view,
-    agent_profile_view, agent_logout_view
+    agent_profile_view, agent_packages_view, agent_add_package_view,
+    agent_edit_package_view, agent_delete_package_view
 )
 
 urlpatterns = [
@@ -32,13 +33,14 @@ urlpatterns = [
     # Unified login and logout URLs
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
-    # Keep old URLs for backward compatibility (redirect to unified login)
-    path('login/admin/', admin_login_view, name='admin_login'),
-    path('login/agent/', agent_login_view, name='agent_login'),
-    path('logout/agent/', agent_logout_view, name='agent_logout'),
     path('dashboard/admin/', admin_dashboard_view, name='admin_dashboard'),
     path('dashboard/agent/', agent_dashboard_view, name='agent_dashboard'),
     path('profile/agent/', agent_profile_view, name='agent_profile'),
+    # Package management URLs
+    path('packages/agent/', agent_packages_view, name='agent_packages'),
+    path('packages/agent/add/', agent_add_package_view, name='agent_add_package'),
+    path('packages/agent/edit/<int:package_id>/', agent_edit_package_view, name='agent_edit_package'),
+    path('packages/agent/delete/<int:package_id>/', agent_delete_package_view, name='agent_delete_package'),
     # Forgot password URLs
     path('forgot-password/admin/', admin_forgot_password_view, name='admin_forgot_password'),
     path('forgot-password/agent/', agent_forgot_password_view, name='agent_forgot_password'),

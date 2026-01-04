@@ -7,7 +7,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email
-from .models import Roles, UserProfile, AgentProfile
+from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
@@ -109,15 +109,6 @@ def login_view(request):
     return render(request, 'login.html')
 
 
-# Keep old views for backward compatibility (redirect to unified login)
-def admin_login_view(request):
-    """Redirect to unified login"""
-    return redirect('login')
-
-
-def agent_login_view(request):
-    """Redirect to unified login"""
-    return redirect('login')
 
 
 def admin_dashboard_view(request):
@@ -142,11 +133,6 @@ def logout_view(request):
         logout(request)
         messages.success(request, 'You have been successfully logged out.')
     return redirect('login')
-
-
-def agent_logout_view(request):
-    """Agent logout view (redirects to unified logout)"""
-    return logout_view(request)
 
 
 def agent_profile_view(request):
@@ -475,3 +461,158 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+
+# Package Management Views
+def agent_packages_view(request):
+    """View to list all packages for the agent"""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+    
+    packages = Package.objects.filter(agent=request.user).order_by('-created_at')
+    recent_packages = packages[:7]  # Last 7 packages
+    completed_packages = packages.filter(status=PackageStatus.COMPLETED)[:4]  # Last 4 completed
+    
+    # Get agent profile for display name
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+    
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'packages': packages,
+        'recent_packages': recent_packages,
+        'completed_packages': completed_packages,
+    }
+    return render(request, 'agent_packages.html', context)
+
+
+def agent_add_package_view(request):
+    """View to add a new package"""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+    
+    if request.method == 'POST':
+        try:
+            package = Package.objects.create(
+                agent=request.user,
+                title=request.POST.get('title', '').strip(),
+                location=request.POST.get('location', '').strip(),
+                country=request.POST.get('country', '').strip(),
+                description=request.POST.get('description', '').strip(),
+                price_per_person=request.POST.get('price_per_person', 0),
+                duration_days=int(request.POST.get('duration_days', 7)),
+                duration_nights=int(request.POST.get('duration_nights', 6)),
+                status=request.POST.get('status', PackageStatus.ACTIVE)
+            )
+            
+            # Handle image upload
+            if 'main_image' in request.FILES:
+                package.main_image = request.FILES['main_image']
+                package.save()
+            
+            # Handle features - create PackageFeature objects on-the-fly
+            feature_names = request.POST.getlist('feature_names[]')
+            feature_objects = []
+            for feature_name in feature_names:
+                feature_name = feature_name.strip()
+                if feature_name:  # Only process non-empty feature names
+                    # Get or create the feature
+                    feature, created = PackageFeature.objects.get_or_create(
+                        name=feature_name,
+                        defaults={'icon': '✓'}  # Default icon
+                    )
+                    feature_objects.append(feature)
+            
+            if feature_objects:
+                package.features.set(feature_objects)
+            
+            messages.success(request, 'Package created successfully!')
+            return redirect('agent_packages')
+        except Exception as e:
+            messages.error(request, f'Error creating package: {str(e)}')
+    
+    context = {
+        'user': request.user,
+        'status_choices': PackageStatus.choices,
+    }
+    return render(request, 'agent_add_package.html', context)
+
+
+def agent_edit_package_view(request, package_id):
+    """View to edit an existing package"""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+    
+    try:
+        package = Package.objects.get(id=package_id, agent=request.user)
+    except Package.DoesNotExist:
+        messages.error(request, 'Package not found.')
+        return redirect('agent_packages')
+    
+    if request.method == 'POST':
+        try:
+            package.title = request.POST.get('title', '').strip()
+            package.location = request.POST.get('location', '').strip()
+            package.country = request.POST.get('country', '').strip()
+            package.description = request.POST.get('description', '').strip()
+            package.price_per_person = request.POST.get('price_per_person', 0)
+            package.duration_days = int(request.POST.get('duration_days', 7))
+            package.duration_nights = int(request.POST.get('duration_nights', 6))
+            package.status = request.POST.get('status', PackageStatus.ACTIVE)
+            
+            # Handle image upload
+            if 'main_image' in request.FILES:
+                package.main_image = request.FILES['main_image']
+            
+            package.save()
+            
+            # Handle features - create PackageFeature objects on-the-fly
+            feature_names = request.POST.getlist('feature_names[]')
+            feature_objects = []
+            for feature_name in feature_names:
+                feature_name = feature_name.strip()
+                if feature_name:  # Only process non-empty feature names
+                    # Get or create the feature
+                    feature, created = PackageFeature.objects.get_or_create(
+                        name=feature_name,
+                        defaults={'icon': '✓'}  # Default icon
+                    )
+                    feature_objects.append(feature)
+            
+            package.features.set(feature_objects)
+            
+            messages.success(request, 'Package updated successfully!')
+            return redirect('agent_packages')
+        except Exception as e:
+            messages.error(request, f'Error updating package: {str(e)}')
+    
+    context = {
+        'user': request.user,
+        'package': package,
+        'status_choices': PackageStatus.choices,
+        'existing_features': package.features.all(),
+    }
+    return render(request, 'agent_edit_package.html', context)
+
+
+def agent_delete_package_view(request, package_id):
+    """View to delete a package"""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+    
+    try:
+        package = Package.objects.get(id=package_id, agent=request.user)
+        package.delete()
+        messages.success(request, 'Package deleted successfully!')
+    except Package.DoesNotExist:
+        messages.error(request, 'Package not found.')
+    
+    return redirect('agent_packages')

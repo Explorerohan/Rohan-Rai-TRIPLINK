@@ -512,7 +512,7 @@
                 <i>👤</i>
                 <span>Profile</span>
             </a>
-            <form method="post" action="{% url 'agent_logout' %}" style="display: inline; width: 100%;">
+            <form method="post" action="{% url 'logout' %}" style="display: inline; width: 100%;">
                 {% csrf_token %}
                 <button type="submit" class="nav-item logout" style="width: 100%; background: none; border: none; text-align: left; cursor: pointer;">
                     <i>🚪</i>

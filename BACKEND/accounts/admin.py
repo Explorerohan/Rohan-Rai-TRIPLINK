@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile
+from .models import User, UserProfile, AgentProfile, Package, PackageFeature
 
 
 @admin.register(User)
@@ -49,3 +49,19 @@ class AgentProfileAdmin(admin.ModelAdmin):
     list_filter = ['is_verified', 'country', 'city', 'created_at']
     search_fields = ['user__email', 'first_name', 'last_name', 'company_name', 'license_number']
     readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(PackageFeature)
+class PackageFeatureAdmin(admin.ModelAdmin):
+    list_display = ['name', 'icon', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at']
+
+
+@admin.register(Package)
+class PackageAdmin(admin.ModelAdmin):
+    list_display = ['title', 'location', 'country', 'agent', 'price_per_person', 'status', 'created_at']
+    list_filter = ['status', 'country', 'created_at']
+    search_fields = ['title', 'location', 'country', 'agent__email']
+    readonly_fields = ['created_at', 'updated_at']
+    filter_horizontal = ['features']

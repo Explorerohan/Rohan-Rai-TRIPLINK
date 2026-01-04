@@ -65,6 +65,13 @@ def agent_profile_image_path(instance, filename):
     return f'profiles/agents/{instance.user.id}/{filename}'
 
 
+def package_image_path(instance, filename):
+    """Generate file path for package images"""
+    if instance.pk:
+        return f'packages/{instance.pk}/{filename}'
+    return f'packages/temp/{filename}'
+
+
 class UserProfile(models.Model):
     """Profile model for Traveler users"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_profile')
@@ -132,3 +139,60 @@ class AgentProfile(models.Model):
         elif self.last_name:
             return self.last_name
         return self.user.email.split('@')[0]
+
+
+class PackageStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    COMPLETED = "completed", "Completed"
+    DRAFT = "draft", "Draft"
+
+
+class PackageFeature(models.Model):
+    """Features available in packages (All Inclusive, Accommodation, Gym, Pool, etc.)"""
+    name = models.CharField(max_length=100, unique=True)
+    icon = models.CharField(max_length=50, blank=True, help_text="Icon emoji or class name")
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Package Feature"
+        verbose_name_plural = "Package Features"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Package(models.Model):
+    """Trip package model for agents"""
+    agent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='packages', limit_choices_to={'role': Roles.AGENT})
+    title = models.CharField(max_length=200, help_text="Package title (e.g., PARIS)")
+    location = models.CharField(max_length=200, help_text="Location name (e.g., Paris)")
+    country = models.CharField(max_length=100, help_text="Country name (e.g., France)")
+    description = models.TextField(help_text="Detailed description of the package")
+    price_per_person = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in Rs.")
+    duration_days = models.PositiveIntegerField(default=7, help_text="Number of days")
+    duration_nights = models.PositiveIntegerField(default=6, help_text="Number of nights")
+    main_image = models.ImageField(upload_to=package_image_path, null=True, blank=True)
+    features = models.ManyToManyField(PackageFeature, related_name='packages', blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=PackageStatus.choices,
+        default=PackageStatus.ACTIVE
+    )
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=0.0, help_text="Average rating (0-5)")
+    participants_count = models.PositiveIntegerField(default=0, help_text="Number of people who joined")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Package"
+        verbose_name_plural = "Packages"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.location}, {self.country}"
+
+    @property
+    def duration_display(self):
+        return f"{self.duration_days} Days / {self.duration_nights} Nights"

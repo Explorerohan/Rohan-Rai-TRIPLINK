@@ -1,0 +1,865 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Trip Packages - TRIPLINK{% endblock %}
+
+{% block extra_css %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: #f5f7fa;
+        min-height: 100vh;
+    }
+
+    .dashboard-container {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    /* Header Styles */
+    .header {
+        position: fixed;
+        top: 0;
+        left: 260px;
+        right: 0;
+        height: 70px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        padding: 0 30px;
+        z-index: 100;
+    }
+
+    .header-left {
+        flex: 1;
+        display: flex;
+        align-items: center;
+    }
+
+    .header-logo {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-right: 30px;
+    }
+
+    .search-bar {
+        flex: 1;
+        max-width: 400px;
+        position: relative;
+    }
+
+    .search-bar input {
+        width: 100%;
+        padding: 10px 15px 10px 40px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .search-bar input:focus {
+        border-color: #1f6b2a;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .notification-icon {
+        position: relative;
+        cursor: pointer;
+        font-size: 20px;
+        color: #64748b;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #3b82f6;
+        color: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 600;
+    }
+
+    .notification-badge.red {
+        background: #ef4444;
+    }
+
+    .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .user-greeting {
+        color: #1e293b;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .user-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+        width: 260px;
+        background: #ffffff;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        height: 100vh;
+        overflow-y: auto;
+        z-index: 200;
+    }
+
+    .sidebar-content {
+        padding: 100px 20px 20px;
+    }
+
+    .sidebar-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 5px;
+    }
+
+    .sidebar-subtitle {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 14px 20px;
+        color: #64748b;
+        text-decoration: none;
+        transition: all 0.3s;
+        font-size: 15px;
+        font-weight: 500;
+        border-left: 3px solid transparent;
+        margin-left: -20px;
+        padding-left: 20px;
+    }
+
+    .nav-item:hover {
+        background: #f8f9fa;
+        color: #1f6b2a;
+        border-left-color: #1f6b2a;
+    }
+
+    .nav-item.active {
+        background: #f0f9f4;
+        color: #1f6b2a;
+        border-left-color: #1f6b2a;
+    }
+
+    .nav-item i {
+        width: 24px;
+        height: 24px;
+        margin-right: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .sidebar-footer {
+        padding: 20px;
+        border-top: 1px solid #e9ecef;
+        margin-top: auto;
+    }
+
+    .sidebar-footer .nav-item {
+        border-left: none;
+        padding: 12px 20px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+    }
+
+    .sidebar-footer .nav-item.logout {
+        background: #fee2e2;
+        color: #dc3545;
+    }
+
+    .sidebar-footer .nav-item.logout:hover {
+        background: #fecaca;
+        color: #c82333;
+    }
+
+    .sidebar-footer .nav-item.profile {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+
+    .sidebar-footer .nav-item.profile:hover {
+        background: #bae6fd;
+        color: #075985;
+    }
+
+    /* Main Content Area */
+    .main-content {
+        flex: 1;
+        margin-left: 260px;
+        background: #f5f7fa;
+        min-height: 100vh;
+        padding-top: 70px;
+    }
+
+    .content-wrapper {
+        display: flex;
+        gap: 30px;
+        padding: 30px;
+    }
+
+    .main-section {
+        flex: 1;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+    .section-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .btn-add {
+        background: #1f6b2a;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+
+    .btn-add:hover {
+        background: #2d8f3f;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(31, 107, 42, 0.3);
+    }
+
+    /* Package Cards */
+    .packages-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .package-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        display: flex;
+        transition: all 0.3s;
+    }
+
+    .package-card:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .package-image {
+        width: 300px;
+        height: 250px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .package-content {
+        flex: 1;
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .package-header {
+        margin-bottom: 15px;
+    }
+
+    .package-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 5px;
+    }
+
+    .package-location {
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .package-description {
+        color: #475569;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        flex: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .package-details {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .package-detail {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .detail-label {
+        color: #94a3b8;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+
+    .detail-value {
+        color: #1e293b;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .package-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .package-features {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        color: #475569;
+    }
+
+    .feature-icon {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-edit {
+        background: #1f6b2a;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+    }
+
+    .btn-edit:hover {
+        background: #2d8f3f;
+    }
+
+    /* Right Sidebar */
+    .right-sidebar {
+        width: 320px;
+        flex-shrink: 0;
+    }
+
+    .sidebar-widget {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .widget-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 20px;
+    }
+
+    .package-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .package-list-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px;
+        border-radius: 8px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .package-list-item:hover {
+        background: #f8f9fa;
+    }
+
+    .package-thumbnail {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .package-list-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .package-list-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 4px;
+    }
+
+    .package-list-subtitle {
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .package-list-date {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 2px;
+    }
+
+    .package-list-arrow {
+        color: #94a3b8;
+        font-size: 18px;
+    }
+
+    .completed-package-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .completed-package-item:hover {
+        background: #f8f9fa;
+    }
+
+    .completed-package-thumbnail {
+        width: 70px;
+        height: 70px;
+        border-radius: 8px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .completed-package-content {
+        flex: 1;
+    }
+
+    .completed-package-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 6px;
+    }
+
+    .completed-package-price {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1f6b2a;
+        margin-bottom: 4px;
+    }
+
+    .completed-package-date {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+
+    .completed-package-rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 4px;
+    }
+
+    .star {
+        color: #fbbf24;
+        font-size: 12px;
+    }
+
+    .star.half {
+        opacity: 0.5;
+    }
+
+    .completed-package-participants {
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+
+    .empty-state-text {
+        font-size: 16px;
+    }
+
+    /* Messages */
+    .messages {
+        margin: 20px 30px;
+    }
+
+    .alert {
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="header-logo">TRIPLINK</div>
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Search here">
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="notification-icon">
+                🔔
+                <span class="notification-badge">1</span>
+            </div>
+            <div class="notification-icon">
+                💬
+                <span class="notification-badge">3</span>
+            </div>
+            <div class="notification-icon">
+                ⚙️
+                <span class="notification-badge red">1</span>
+            </div>
+            <div class="user-profile">
+                <span class="user-greeting">Hello, {{ display_name|default:user.email }}</span>
+                <div class="user-avatar">
+                    {% if user.agent_profile.profile_picture %}
+                        <img src="{{ user.agent_profile.profile_picture.url }}" alt="{{ display_name }}">
+                    {% else %}
+                        <span>👤</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-content">
+            <h1 class="sidebar-title">Trip Packages</h1>
+            <p class="sidebar-subtitle">Hi, {{ display_name|default:user.email }}. Welcome back!</p>
+            
+            <nav>
+                <a href="{% url 'agent_dashboard' %}" class="nav-item">
+                    <i>🏠</i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{% url 'agent_packages' %}" class="nav-item active">
+                    <i>📦</i>
+                    <span>Packages</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i>📋</i>
+                    <span>Bookings</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i>👥</i>
+                    <span>Travelers</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i>📈</i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i>⭐</i>
+                    <span>Reviews</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i>🎯</i>
+                    <span>Deals</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i>📅</i>
+                    <span>Calendar</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i>💬</i>
+                    <span>Chat</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="{% url 'agent_profile' %}" class="nav-item profile">
+                <i>👤</i>
+                <span>Profile</span>
+            </a>
+            <form method="post" action="{% url 'logout' %}" style="display: inline; width: 100%;">
+                {% csrf_token %}
+                <button type="submit" class="nav-item logout" style="width: 100%; background: none; border: none; text-align: left; cursor: pointer;">
+                    <i>🚪</i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="content-wrapper">
+            <!-- Main Section -->
+            <div class="main-section">
+                <div class="section-header">
+                    <h2 class="section-title">Trip Packages</h2>
+                    <a href="{% url 'agent_add_package' %}" class="btn-add">
+                        <span>+</span>
+                        <span>Add Packages</span>
+                    </a>
+                </div>
+
+                <div class="packages-grid">
+                    {% if packages %}
+                        {% for package in packages %}
+                            <div class="package-card">
+                                {% if package.main_image %}
+                                    <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="package-image">
+                                {% else %}
+                                    <div class="package-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px;">
+                                        📦
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="package-content">
+                                    <div class="package-header">
+                                        <h3 class="package-title">{{ package.title }}</h3>
+                                        <p class="package-location">{{ package.location }}, {{ package.country }}</p>
+                                    </div>
+                                    
+                                    <p class="package-description">{{ package.description }}</p>
+                                    
+                                    <div class="package-details">
+                                        <div class="package-detail">
+                                            <span class="detail-label">Price</span>
+                                            <span class="detail-value">Rs. {{ package.price_per_person|floatformat:0 }} Per Person</span>
+                                        </div>
+                                        <div class="package-detail">
+                                            <span class="detail-label">Duration</span>
+                                            <span class="detail-value">{{ package.duration_display }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="package-actions">
+                                        <div class="package-features">
+                                            {% for feature in package.features.all|slice:":4" %}
+                                                <div class="feature-item">
+                                                    <span class="feature-icon">{{ feature.icon|default:"✓" }}</span>
+                                                    <span>{{ feature.name }}</span>
+                                                </div>
+                                            {% empty %}
+                                                <div class="feature-item">
+                                                    <span class="feature-icon">✓</span>
+                                                    <span>All Inclusive</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit">Edit Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📦</div>
+                            <div class="empty-state-text">No packages yet. Create your first package to get started!</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <aside class="right-sidebar">
+                <!-- Recent Packages -->
+                <div class="sidebar-widget">
+                    <h3 class="widget-title">Recent Packages</h3>
+                    <div class="package-list">
+                        {% if recent_packages %}
+                            {% for package in recent_packages %}
+                                <div class="package-list-item">
+                                    {% if package.main_image %}
+                                        <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="package-thumbnail">
+                                    {% else %}
+                                        <div class="package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">📦</div>
+                                    {% endif %}
+                                    <div class="package-list-content">
+                                        <div class="package-list-title">{{ package.location }}</div>
+                                        <div class="package-list-subtitle">{{ package.country }}</div>
+                                        <div class="package-list-date">{{ package.created_at|date:"d F Y" }}</div>
+                                    </div>
+                                    <span class="package-list-arrow">→</span>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state" style="padding: 20px;">
+                                <div class="empty-state-text" style="font-size: 14px;">No recent packages</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Completed Packages -->
+                <div class="sidebar-widget">
+                    <h3 class="widget-title">Completed Packages</h3>
+                    <div class="package-list">
+                        {% if completed_packages %}
+                            {% for package in completed_packages %}
+                                <div class="completed-package-item">
+                                    {% if package.main_image %}
+                                        <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="completed-package-thumbnail">
+                                    {% else %}
+                                        <div class="completed-package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">📦</div>
+                                    {% endif %}
+                                    <div class="completed-package-content">
+                                        <div class="completed-package-title">{{ package.location }}</div>
+                                        <div class="completed-package-price">Rs. {{ package.price_per_person|floatformat:0 }}</div>
+                                        <div class="completed-package-date">{{ package.created_at|date:"d M" }} - {{ package.updated_at|date:"d M" }}</div>
+                                        <div class="completed-package-rating">
+                                            {% for i in "12345"|make_list %}
+                                                {% if forloop.counter <= package.rating|floatformat:0|add:"0" %}
+                                                    <span class="star">★</span>
+                                                {% elif forloop.counter|add:"-1" < package.rating|floatformat:0|add:"0" %}
+                                                    <span class="star half">★</span>
+                                                {% else %}
+                                                    <span class="star" style="color: #e2e8f0;">★</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <span style="margin-left: 4px; font-size: 12px; color: #64748b;">{{ package.rating|floatformat:1 }}</span>
+                                        </div>
+                                        <div class="completed-package-participants">{{ package.participants_count }} Person Joined</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state" style="padding: 20px;">
+                                <div class="empty-state-text" style="font-size: 14px;">No completed packages</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
