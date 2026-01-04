@@ -136,12 +136,17 @@ def agent_dashboard_view(request):
     return render(request, 'agent_dashboard.html', {'user': request.user})
 
 
-def agent_logout_view(request):
-    """Agent logout view"""
+def logout_view(request):
+    """Unified logout view for admin and agent"""
     if request.user.is_authenticated:
         logout(request)
         messages.success(request, 'You have been successfully logged out.')
     return redirect('login')
+
+
+def agent_logout_view(request):
+    """Agent logout view (redirects to unified logout)"""
+    return logout_view(request)
 
 
 def agent_profile_view(request):
