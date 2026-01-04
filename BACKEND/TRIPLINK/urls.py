@@ -19,7 +19,7 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from accounts.views import (
-    admin_login_view, agent_login_view, admin_dashboard_view, agent_dashboard_view,
+    login_view, admin_login_view, agent_login_view, admin_dashboard_view, agent_dashboard_view,
     admin_forgot_password_view, agent_forgot_password_view,
     admin_verify_otp_view, agent_verify_otp_view,
     admin_reset_password_view, agent_reset_password_view,
@@ -29,6 +29,9 @@ from accounts.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
+    # Unified login URL
+    path('login/', login_view, name='login'),
+    # Keep old URLs for backward compatibility (redirect to unified login)
     path('login/admin/', admin_login_view, name='admin_login'),
     path('login/agent/', agent_login_view, name='agent_login'),
     path('logout/agent/', agent_logout_view, name='agent_logout'),

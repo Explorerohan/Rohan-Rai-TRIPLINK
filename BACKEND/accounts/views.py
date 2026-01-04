@@ -73,11 +73,17 @@ class LogoutView(generics.GenericAPIView):
         )
 
 
-# Template-based views for admin and agent login
-def admin_login_view(request):
-    """Render and handle admin login form"""
-    if request.user.is_authenticated and request.user.role == Roles.ADMIN:
-        return render(request, 'admin_login_success.html', {'user': request.user})
+# Template-based views for unified login
+def login_view(request):
+    """Unified login view that handles both admin and agent login"""
+    # If user is already authenticated, redirect to appropriate dashboard
+    if request.user.is_authenticated:
+        if request.user.role == Roles.ADMIN:
+            return redirect('admin_dashboard')
+        elif request.user.role == Roles.AGENT:
+            return redirect('agent_dashboard')
+        # For other roles (like traveler), redirect to login page
+        logout(request)
     
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -86,49 +92,39 @@ def admin_login_view(request):
         if email and password:
             user = authenticate(request, username=email, password=password)
             if user is not None:
+                # Check if user is admin or agent (only these roles can use this login)
                 if user.role == Roles.ADMIN:
                     login(request, user)
-                    return render(request, 'admin_login_success.html', {'user': user})
-                else:
-                    messages.error(request, 'Access denied. This account is not an admin account.')
-            else:
-                messages.error(request, 'Invalid email or password.')
-        else:
-            messages.error(request, 'Please fill in all fields.')
-    
-    return render(request, 'admin_login.html')
-
-
-def agent_login_view(request):
-    """Render and handle agent login form"""
-    if request.user.is_authenticated and request.user.role == Roles.AGENT:
-        return redirect('agent_dashboard')
-    
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        
-        if email and password:
-            user = authenticate(request, username=email, password=password)
-            if user is not None:
-                if user.role == Roles.AGENT:
+                    return redirect('admin_dashboard')
+                elif user.role == Roles.AGENT:
                     login(request, user)
                     return redirect('agent_dashboard')
                 else:
-                    messages.error(request, 'Access denied. This account is not an agent account.')
+                    messages.error(request, 'Access denied. This login page is only for admin and agent accounts.')
             else:
                 messages.error(request, 'Invalid email or password.')
         else:
             messages.error(request, 'Please fill in all fields.')
     
-    return render(request, 'agent_login.html')
+    return render(request, 'login.html')
+
+
+# Keep old views for backward compatibility (redirect to unified login)
+def admin_login_view(request):
+    """Redirect to unified login"""
+    return redirect('login')
+
+
+def agent_login_view(request):
+    """Redirect to unified login"""
+    return redirect('login')
 
 
 def admin_dashboard_view(request):
     """Placeholder admin dashboard view"""
     if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
         messages.error(request, 'Access denied. Admin access required.')
-        return redirect('admin_login')
+        return redirect('login')
     return render(request, 'admin_dashboard.html', {'user': request.user})
 
 
@@ -136,7 +132,7 @@ def agent_dashboard_view(request):
     """Placeholder agent dashboard view"""
     if not request.user.is_authenticated or request.user.role != Roles.AGENT:
         messages.error(request, 'Access denied. Agent access required.')
-        return redirect('agent_login')
+        return redirect('login')
     return render(request, 'agent_dashboard.html', {'user': request.user})
 
 
@@ -145,14 +141,14 @@ def agent_logout_view(request):
     if request.user.is_authenticated:
         logout(request)
         messages.success(request, 'You have been successfully logged out.')
-    return redirect('agent_login')
+    return redirect('login')
 
 
 def agent_profile_view(request):
     """Agent profile management view"""
     if not request.user.is_authenticated or request.user.role != Roles.AGENT:
         messages.error(request, 'Access denied. Agent access required.')
-        return redirect('agent_login')
+        return redirect('login')
     
     # Get or create agent profile
     profile, created = AgentProfile.objects.get_or_create(user=request.user)
@@ -361,7 +357,7 @@ def admin_reset_password_view(request):
             request.session.pop('admin_reset_expires', None)
             
             messages.success(request, 'Password reset successfully. Please login with your new password.')
-            return redirect('admin_login')
+            return redirect('login')
         except User.DoesNotExist:
             messages.error(request, 'User not found.')
             return redirect('admin_forgot_password')
@@ -404,7 +400,7 @@ def agent_reset_password_view(request):
             request.session.pop('agent_reset_expires', None)
             
             messages.success(request, 'Password reset successfully. Please login with your new password.')
-            return redirect('agent_login')
+            return redirect('login')
         except User.DoesNotExist:
             messages.error(request, 'User not found.')
             return redirect('agent_forgot_password')

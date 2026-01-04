@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - TRIPLINK{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-left">
+        <div class="left-content">
+            <div class="logo-symbol">✧</div>
+            <h1 class="welcome-text">Hello TRIPLINK! <span class="wave">👋</span></h1>
+            <p class="description">
+                Streamline your travel management operations. Access powerful tools to manage bookings, agents, and travelers with ease!
+            </p>
+            <div class="copyright">© 2024 TRIPLINK. All rights reserved.</div>
+        </div>
+        <div class="geometric-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+    </div>
+    
+    <div class="login-right">
+        <div class="login-form-container">
+            <h2 class="brand-name">TRIPLINK</h2>
+            <h3 class="welcome-heading">Welcome Back!</h3>
+            <p class="signup-prompt">
+                Use your credentials to access your dashboard.
+            </p>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="post" action="{% url 'login' %}" class="login-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required autofocus>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                </div>
+                
+                <button type="submit" class="btn-primary">Login Now</button>
+                
+                <div class="forgot-password">
+                    <a href="#" class="link" onclick="showForgotPasswordOptions()">Forgot password? <span class="link-highlight">Click here</span></a>
+                    <div id="forgot-password-options" style="display: none; margin-top: 10px;">
+                        <a href="{% url 'admin_forgot_password' %}" class="link" style="display: block; margin: 5px 0;">Admin Password Reset</a>
+                        <a href="{% url 'agent_forgot_password' %}" class="link" style="display: block; margin: 5px 0;">Agent Password Reset</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function showForgotPasswordOptions() {
+    event.preventDefault();
+    const options = document.getElementById('forgot-password-options');
+    options.style.display = options.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}
+
