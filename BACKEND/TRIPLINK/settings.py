@@ -12,18 +12,26 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from datetime import timedelta
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@je^iql=!%9rtv2e_vj4yt%5(vl!(vde7f*)tp9^(^$(=5nn#k'
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-@je^iql=!%9rtv2e_vj4yt%5(vl!(vde7f*)tp9^(^$(=5nn#k',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['192.168.18.6', 'localhost', '127.0.0.1', '10.0.2.2','10.52.7.183','192.168.40.62']
+ALLOWED_HOSTS = ['192.168.18.6', 'localhost', '127.0.0.1', '10.0.2.2','10.52.7.183','192.168.40.62','192.168.47.30']
 
 
 # Application definition
@@ -75,10 +83,15 @@ WSGI_APPLICATION = 'TRIPLINK.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'triplink_db'),
+        'USER': os.environ.get('DB_USER', 'Rohan'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+
 
 
 # Password validation
@@ -147,8 +160,8 @@ SIMPLE_JWT = {
 }
 
 # EmailJS Configuration
-EMAILJS_SERVICE_ID = 'service_drzeno8'
-EMAILJS_TEMPLATE_ID = 'template_7jxk7ff'
-EMAILJS_PUBLIC_KEY = 'P4yjMlbQu_ckrhA3-'
-EMAILJS_PRIVATE_KEY = '4ytfBo3yCFYNV0D_unE_S'
-EMAILJS_API_URL = 'https://api.emailjs.com/api/v1.0/email/send'
+EMAILJS_SERVICE_ID = os.environ.get('EMAILJS_SERVICE_ID')
+EMAILJS_TEMPLATE_ID = os.environ.get('EMAILJS_TEMPLATE_ID')
+EMAILJS_PUBLIC_KEY = os.environ.get('EMAILJS_PUBLIC_KEY')
+EMAILJS_PRIVATE_KEY = os.environ.get('EMAILJS_PRIVATE_KEY')
+EMAILJS_API_URL = os.environ.get('EMAILJS_API_URL')
