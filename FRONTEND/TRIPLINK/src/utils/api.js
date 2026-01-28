@@ -58,8 +58,43 @@ export const apiRequestMultipart = async (endpoint, formData, accessToken) => {
       body: formData,
     });
 
-    const data = await response.json();
-    
+    let data;
+    let rawText = null;
+    try {
+      rawText = await response.text();
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (e) {
+      data = { raw: rawText };
+    }
+
+    if (!response.ok) {
+      // Log full error payload for debugging (field-level validation errors, etc.)
+      console.log("Profile update error response:", response.status, data);
+
+      // Try to surface a more helpful message if possible
+      const messageFromDetail = data?.detail || data?.message;
+      let messageFromFields = null;
+
+      if (!messageFromDetail && data && typeof data === "object" && !Array.isArray(data)) {
+        const firstKey = Object.keys(data)[0];
+        if (firstKey) {
+          const fieldError = data[firstKey];
+          if (Array.isArray(fieldError) && fieldError.length > 0) {
+            messageFromFields = `${firstKey}: ${fieldError[0]}`;
+          } else if (typeof fieldError === "string") {
+            messageFromFields = `${firstKey}: ${fieldError}`;
+          }
+        }
+      }
+
+      const finalMessage =
+        messageFromDetail ||
+        messageFromFields ||
+        `HTTP error! status: ${response.status}`;
+
+      throw new Error(finalMessage);
+    }
+
     if (!response.ok) {
       throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
     }

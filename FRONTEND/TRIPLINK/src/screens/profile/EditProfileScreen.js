@@ -36,6 +36,7 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
   });
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUri, setProfileImageUri] = useState(null);
+  const [isFirstTimeProfile, setIsFirstTimeProfile] = useState(false);
   const isAgent = session?.user?.role === "agent";
 
   useEffect(() => {
@@ -65,6 +66,24 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
         license_number: data.license_number || "",
         website: data.website || "",
       });
+
+      // Determine if this is effectively the "first time" profile is being completed
+      const requiredBaseFields = [
+        "first_name",
+        "last_name",
+        "phone_number",
+        "date_of_birth",
+        "address",
+        "city",
+        "country",
+      ];
+      const agentExtraFields = ["company_name", "license_number", "website"];
+      const requiredFields = isAgent
+        ? [...requiredBaseFields, ...agentExtraFields]
+        : requiredBaseFields;
+
+      const isComplete = requiredFields.every((field) => !!data[field]);
+      setIsFirstTimeProfile(!isComplete);
 
       if (data.profile_picture_url) {
         setProfileImageUri(data.profile_picture_url);
@@ -119,6 +138,33 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
       return;
     }
 
+    // If this is the first time profile is being completed, require all fields
+    const requiredBaseFields = [
+      "first_name",
+      "last_name",
+      "phone_number",
+      "date_of_birth",
+      "address",
+      "city",
+      "country",
+    ];
+    const agentExtraFields = ["company_name", "license_number", "website"];
+    const requiredFields = isAgent
+      ? [...requiredBaseFields, ...agentExtraFields]
+      : requiredBaseFields;
+
+    const missingRequired = requiredFields.filter(
+      (field) => !profileData[field] || String(profileData[field]).trim() === ""
+    );
+
+    if (isFirstTimeProfile && missingRequired.length > 0) {
+      Alert.alert(
+        "Complete your profile",
+        "Because this is your first time updating your profile, please fill in all fields before saving."
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       // Check if profile picture was removed (had image before, now null)
@@ -163,6 +209,7 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
 
         const response = await updateProfileWithImage(formData, session.access);
         Alert.alert("Success", "Profile updated successfully!");
+        setIsFirstTimeProfile(false);
         if (onSave) onSave(response.data);
       } else if (imageRemoved) {
         // Profile picture was removed - send null to clear it
@@ -172,11 +219,13 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
         };
         const response = await updateProfile(updateData, session.access);
         Alert.alert("Success", "Profile updated successfully!");
+        setIsFirstTimeProfile(false);
         if (onSave) onSave(response.data);
       } else {
         // Update without image (no change to image)
         const response = await updateProfile(profileData, session.access);
         Alert.alert("Success", "Profile updated successfully!");
+        setIsFirstTimeProfile(false);
         if (onSave) onSave(response.data);
       }
       
