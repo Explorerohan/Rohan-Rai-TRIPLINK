@@ -13,6 +13,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { getProfile } from "../../utils/api";
 
+const NAV_ICON_SIZE = 22;
+
+const navItems = [
+  { key: "home", label: "Home", icon: "home-outline", active: false },
+  { key: "calendar", label: "Calendar", icon: "calendar-outline", active: false },
+  { key: "messages", label: "Messages", icon: "chatbubble-ellipses-outline", active: false },
+  { key: "profile", label: "Profile", icon: "person-outline", active: true },
+];
+
 const menuItems = [
   { id: "profile", label: "Profile", icon: "person-outline" },
   { id: "bookmarked", label: "Bookmarked", icon: "bookmark-outline" },
@@ -70,10 +79,11 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.contentContainer}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -199,6 +209,54 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+
+        <View style={styles.navBar}>
+          <View style={styles.navSide}>
+            {navItems.slice(0, 2).map((item) => {
+              const color = item.active ? "#1f6b2a" : "#7a7f85";
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.navItem}
+                  activeOpacity={0.85}
+                  onPress={item.key === "home" ? onBack : undefined}
+                >
+                  <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
+                  <Text
+                    style={[styles.navLabel, item.active && styles.navLabelActive]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity style={styles.fab} activeOpacity={0.9}>
+            <Ionicons name="add" size={26} color="#ffffff" />
+          </TouchableOpacity>
+
+          <View style={styles.navSide}>
+            {navItems.slice(2).map((item) => {
+              const color = item.active ? "#1f6b2a" : "#7a7f85";
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.navItem}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
+                  <Text
+                    style={[styles.navLabel, item.active && styles.navLabelActive]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -208,9 +266,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
+  contentContainer: {
+    flex: 1,
+  },
   scroll: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 110,
   },
   header: {
     flexDirection: "row",
@@ -396,6 +457,53 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#ef4444",
+  },
+  navBar: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    bottom: 14,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
+    backgroundColor: "#ffffff",
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: "#e3e6ea",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    elevation: 10,
+  },
+  navSide: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-evenly",
+  },
+  navItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    minWidth: 68,
+  },
+  navLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#7a7f85",
+  },
+  navLabelActive: {
+    color: "#1f6b2a",
+  },
+  fab: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#1f6b2a",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 16,
   },
 });
 
