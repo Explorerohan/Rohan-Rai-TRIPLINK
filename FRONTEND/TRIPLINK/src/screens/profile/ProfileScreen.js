@@ -63,8 +63,6 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
     "User";
 
-  const displayEmail = session?.user?.email || profile?.email || "user@example.com";
-  const displayLocation = profile?.location || null;
   const profileImageUri = profile?.profile_picture_url;
 
   if (loading) {
@@ -105,7 +103,7 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
           </TouchableOpacity>
         </View>
 
-        {/* Profile Information */}
+        {/* Profile Information - First name & Last name only */}
         <View style={styles.profileSection}>
           <Image
             source={
@@ -116,13 +114,6 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
             style={styles.profileImage}
           />
           <Text style={styles.profileName}>{displayName}</Text>
-          <Text style={styles.profileEmail}>{displayEmail}</Text>
-          {profile?.phone_number && (
-            <Text style={styles.profilePhone}>{profile.phone_number}</Text>
-          )}
-          {displayLocation && (
-            <Text style={styles.profileLocation}>{displayLocation}</Text>
-          )}
         </View>
 
         {/* Statistics Card */}
@@ -158,7 +149,7 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
               <View style={styles.menuItemLeft}>
                 <Ionicons
                   name={item.icon}
-                  size={22}
+                  size={23}
                   color={item.id === "logout" ? "#ef4444" : "#1f1f1f"}
                 />
                 <Text
@@ -171,7 +162,7 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
                 </Text>
               </View>
               {item.id !== "logout" && (
-                <Ionicons name="chevron-forward" size={20} color="#9aa0a6" />
+                <Ionicons name="chevron-forward" size={21} color="#9aa0a6" />
               )}
             </TouchableOpacity>
           ))}
@@ -272,13 +263,14 @@ const styles = StyleSheet.create({
   },
   profileSection: {
     alignItems: "center",
-    paddingVertical: 24,
+    paddingTop: 8,
+    paddingBottom: 24,
     paddingHorizontal: 18,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     marginBottom: 16,
     borderWidth: 3,
     borderColor: "#f3f5f7",
@@ -287,31 +279,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#1f1f1f",
-    marginBottom: 6,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: "#6b7076",
-    fontWeight: "500",
-    marginTop: 4,
-  },
-  profilePhone: {
-    fontSize: 14,
-    color: "#6b7076",
-    fontWeight: "500",
-    marginTop: 4,
-  },
-  profileCompany: {
-    fontSize: 14,
-    color: "#1f6b2a",
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  profileLocation: {
-    fontSize: 13,
-    color: "#6b7076",
-    fontWeight: "500",
-    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -360,8 +327,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#e3e6ea",
-    paddingVertical: 20,
-    paddingHorizontal: 12,
+    paddingVertical: 23,
+    paddingHorizontal: 13,
   },
   statItem: {
     flex: 1,
@@ -380,7 +347,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: "800",
     color: "#1f6b2a",
   },
@@ -396,8 +363,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    paddingVertical: 17,
+    paddingHorizontal: 19,
     borderBottomWidth: 1,
     borderBottomColor: "#f3f5f7",
   },
@@ -407,7 +374,7 @@ const styles = StyleSheet.create({
   menuItemLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 15,
   },
   menuItemText: {
     fontSize: 15,
