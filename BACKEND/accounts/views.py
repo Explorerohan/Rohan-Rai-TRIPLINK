@@ -124,7 +124,7 @@ def agent_dashboard_view(request):
     if not request.user.is_authenticated or request.user.role != Roles.AGENT:
         messages.error(request, 'Access denied. Agent access required.')
         return redirect('login')
-    return render(request, 'agent_dashboard.html', {'user': request.user})
+    return render(request, 'agent_dashboard.html', {'user': request.user, 'active_nav': 'dashboard'})
 
 
 def logout_view(request):
@@ -161,6 +161,7 @@ def agent_profile_view(request):
     context = {
         'user': request.user,
         'profile': profile,
+        'active_nav': 'profile',
     }
     return render(request, 'agent_profile.html', context)
 
@@ -478,6 +479,7 @@ def agent_packages_view(request):
         'packages': packages,
         'recent_packages': recent_packages,
         'completed_packages': completed_packages,
+        'active_nav': 'packages',
     }
     return render(request, 'agent_packages.html', context)
 

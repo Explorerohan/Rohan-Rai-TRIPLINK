@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: #f5f7fa;
+        min-height: 100vh;
+    }
+
+    .dashboard-container {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    /* Sidebar – same on all agent pages */
+    .sidebar {
+        width: 260px;
+        background: #ffffff;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .sidebar-header {
+        padding: 24px 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .sidebar-header .logo {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+        text-decoration: none;
+        display: block;
+    }
+
+    .sidebar-nav {
+        flex: 1;
+        padding: 8px 0 20px 0;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        padding: 14px 20px;
+        color: #64748b;
+        text-decoration: none;
+        transition: all 0.3s;
+        font-size: 15px;
+        font-weight: 500;
+        border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+        background: #f8f9fa;
+        color: #1f6b2a;
+        border-left-color: #1f6b2a;
+    }
+
+    .nav-item.active {
+        background: #f0f9f4;
+        color: #1f6b2a;
+        border-left-color: #1f6b2a;
+    }
+
+    .nav-item i {
+        width: 24px;
+        height: 24px;
+        margin-right: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .nav-item.logout {
+        color: #dc3545;
+    }
+
+    .nav-item.logout:hover {
+        background: #fee2e2;
+        color: #c82333;
+        border-left-color: #dc3545;
+    }
+
+    .main-content {
+        flex: 1;
+        margin-left: 260px;
+        background: #f5f7fa;
+        min-height: 100vh;
+    }
+
+    .content-wrapper {
+        padding: 40px;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 80px;
+        }
+        .sidebar-header .logo {
+            font-size: 18px;
+        }
+        .nav-item span {
+            display: none;
+        }
+        .nav-item i {
+            margin-right: 0;
+        }
+        .main-content {
+            margin-left: 80px;
+        }
+    }
+</style>
+{% block agent_extra_css %}{% endblock agent_extra_css %}
+{% endblock extra_css %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Single shared sidebar – active item from context active_nav -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="{% url 'agent_dashboard' %}" class="logo">TRIPLINK</a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{% url 'agent_dashboard' %}" class="nav-item{% if active_nav == 'dashboard' %} active{% endif %}">
+                <i>📊</i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{% url 'agent_packages' %}" class="nav-item{% if active_nav == 'packages' %} active{% endif %}">
+                <i>📦</i>
+                <span>Packages</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>📋</i>
+                <span>Bookings</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>👥</i>
+                <span>Travelers</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>📈</i>
+                <span>Analytics</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>⭐</i>
+                <span>Reviews</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>🎯</i>
+                <span>Deals</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>📅</i>
+                <span>Calendar</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>💬</i>
+                <span>Chat</span>
+            </a>
+            <a href="{% url 'agent_profile' %}" class="nav-item{% if active_nav == 'profile' %} active{% endif %}">
+                <i>👤</i>
+                <span>Profile</span>
+            </a>
+            <form method="post" action="{% url 'logout' %}" style="display: contents;">
+                {% csrf_token %}
+                <button type="submit" class="nav-item logout" style="width: 100%; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; font-size: inherit;">
+                    <i>🚪</i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="content-wrapper">
+            {% block main_content %}{% endblock %}
+        </div>
+    </main>
+</div>
+{% endblock %}
