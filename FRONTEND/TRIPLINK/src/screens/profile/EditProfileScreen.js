@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { getProfile, updateProfile } from "../../utils/api";
+import { getProfile, updateProfile, updateProfileWithImage } from "../../utils/api";
 
 const EditProfileScreen = ({ session, onBack, onSave }) => {
   const [loading, setLoading] = useState(false);
@@ -64,7 +64,9 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
       const isComplete = requiredFields.every((field) => !!data[field]);
       setIsFirstTimeProfile(!isComplete);
 
-      // Keep avatar purely client-side for now (no backend field)
+      if (data.profile_picture_url) {
+        setProfileImageUri(data.profile_picture_url);
+      }
     } catch (error) {
       console.error("Error fetching profile:", error);
       Alert.alert("Error", "Failed to load profile data");
@@ -138,12 +140,72 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
 
     setLoading(true);
     try {
-      // Simplified update: only send core text fields (no profile picture)
-      const response = await updateProfile(profileData, session.access);
-      Alert.alert("Success", "Profile updated successfully!");
-      setIsFirstTimeProfile(false);
-      if (onSave) onSave(response.data);
-      
+      // Check if profile picture was removed (had image before, now null)
+      const hadImageBefore = profileImageUri && !profileImageUri.includes("Assets");
+      const imageRemoved = hadImageBefore && !profileImage;
+
+      if (profileImage) {
+        // Upload with new image using multipart/form-data
+        const formData = new FormData();
+
+        // Add text fields
+        Object.keys(profileData).forEach((key) => {
+          if (
+            profileData[key] !== null &&
+            profileData[key] !== undefined &&
+            profileData[key] !== ""
+          ) {
+            formData.append(key, String(profileData[key]));
+          }
+        });
+
+        // Add image - React Native FormData format
+        const imageUri = profileImage.uri;
+        let filename = imageUri.split("/").pop() || "profile.jpg";
+
+        // Ensure filename has extension
+        if (!filename.includes(".")) {
+          filename = `${filename}.jpg`;
+        }
+
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : "image/jpeg";
+
+        // Handle different platforms for image URI
+        let finalUri = imageUri;
+        if (Platform.OS === "ios") {
+          // iOS needs file:// prefix removed
+          finalUri = imageUri.replace("file://", "");
+        }
+
+        formData.append("profile_picture", {
+          uri: finalUri,
+          name: filename,
+          type: type,
+        });
+
+        const response = await updateProfileWithImage(formData, session.access);
+        Alert.alert("Success", "Profile updated successfully!");
+        setIsFirstTimeProfile(false);
+        if (onSave) onSave(response.data);
+      } else if (imageRemoved) {
+        // Profile picture was removed - send null to clear it
+        const updateData = {
+          ...profileData,
+          profile_picture: null,
+        };
+        const response = await updateProfile(updateData, session.access);
+        Alert.alert("Success", "Profile updated successfully!");
+        setIsFirstTimeProfile(false);
+        if (onSave) onSave(response.data);
+      } else {
+        // Update without image (no change to image)
+        const response = await updateProfile(profileData, session.access);
+        Alert.alert("Success", "Profile updated successfully!");
+        setIsFirstTimeProfile(false);
+        if (onSave) onSave(response.data);
+      }
+
       if (onBack) onBack();
     } catch (error) {
       console.error("Error updating profile:", error);

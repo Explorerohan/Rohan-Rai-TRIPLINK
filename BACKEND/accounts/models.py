@@ -78,6 +78,7 @@ class UserProfile(models.Model):
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
+    profile_picture = models.ImageField(upload_to=user_profile_image_path, null=True, blank=True)
     # Simplified profile: single location field instead of multiple address fields
     location = models.CharField(max_length=200, blank=True, help_text="User location")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -107,6 +108,7 @@ class AgentProfile(models.Model):
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
+    profile_picture = models.ImageField(upload_to=agent_profile_image_path, null=True, blank=True)
     # Simplified profile: single location field instead of multiple address / company fields
     location = models.CharField(max_length=200, blank=True, help_text="Agent location")
     is_verified = models.BooleanField(default=False)

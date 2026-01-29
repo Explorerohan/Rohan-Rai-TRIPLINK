@@ -64,6 +64,7 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
     "User";
 
   const displayEmail = session?.user?.email || profile?.email || "user@example.com";
+  const displayLocation = profile?.location || null;
   const profileImageUri = profile?.profile_picture_url;
 
   if (loading) {
@@ -119,8 +120,8 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
           {profile?.phone_number && (
             <Text style={styles.profilePhone}>{profile.phone_number}</Text>
           )}
-          {session?.user?.role === "agent" && profile?.company_name && (
-            <Text style={styles.profileCompany}>{profile.company_name}</Text>
+          {displayLocation && (
+            <Text style={styles.profileLocation}>{displayLocation}</Text>
           )}
         </View>
 
@@ -304,6 +305,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1f6b2a",
     fontWeight: "600",
+    marginTop: 4,
+  },
+  profileLocation: {
+    fontSize: 13,
+    color: "#6b7076",
+    fontWeight: "500",
     marginTop: 4,
   },
   loadingContainer: {
