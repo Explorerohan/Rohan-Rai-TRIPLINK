@@ -218,6 +218,14 @@
 
     .package-header {
         margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .package-header-text {
+        min-width: 0;
     }
 
     .package-title {
@@ -232,16 +240,45 @@
         font-size: 14px;
     }
 
+    .package-description-wrap {
+        flex: 1;
+        margin-bottom: 12px;
+        min-height: 0;
+    }
+
     .package-description {
         color: #475569;
         font-size: 14px;
         line-height: 1.6;
-        margin-bottom: 20px;
-        flex: 1;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        transition: -webkit-line-clamp 0.2s ease;
+    }
+
+    .package-description.expanded {
+        display: block;
+        -webkit-line-clamp: unset;
+        overflow: visible;
+    }
+
+    .read-more-toggle {
+        background: none;
+        border: none;
+        color: #1f6b2a;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 4px 0;
+        margin-top: 4px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .read-more-toggle:hover {
+        color: #15803d;
+        text-decoration: underline;
     }
 
     .package-details {
@@ -273,11 +310,6 @@
         flex-direction: column;
         gap: 12px;
         margin-bottom: 20px;
-    }
-
-    .package-card-edit-wrap {
-        margin-top: auto;
-        padding-top: 8px;
     }
 
     .feature-item {
@@ -578,11 +610,17 @@
 
                         <div class="package-content">
                             <div class="package-header">
-                                <h3 class="package-title">{{ package.title }}</h3>
-                                <p class="package-location">{{ package.location }}, {{ package.country }}</p>
+                                <div class="package-header-text">
+                                    <h3 class="package-title">{{ package.title }}</h3>
+                                    <p class="package-location">{{ package.location }}, {{ package.country }}</p>
+                                </div>
+                                <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit">Edit Details</a>
                             </div>
 
-                            <p class="package-description">{{ package.description }}</p>
+                            <div class="package-description-wrap">
+                                <p class="package-description" id="desc-{{ package.id }}">{{ package.description }}</p>
+                                <button type="button" class="read-more-toggle" data-desc-id="desc-{{ package.id }}" aria-label="Toggle full description">Read more</button>
+                            </div>
 
                             <div class="package-details">
                                 <div class="package-detail">
@@ -615,9 +653,6 @@
                                         </div>
                                     {% endfor %}
                                 </div>
-                            </div>
-                            <div class="package-card-edit-wrap">
-                                <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit">Edit Details</a>
                             </div>
                         </div>
                     </div>
@@ -704,4 +739,41 @@
 {% block extra_js %}
 <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+<script>
+(function() {
+    document.querySelectorAll('.read-more-toggle').forEach(function(btn) {
+        var descId = btn.getAttribute('data-desc-id');
+        var descEl = descId ? document.getElementById(descId) : null;
+        if (!descEl) return;
+
+        function updateButtonLabel() {
+            btn.textContent = descEl.classList.contains('expanded') ? 'Read less' : 'Read more';
+        }
+
+        function maybeHideToggle() {
+            if (descEl.classList.contains('expanded')) {
+                btn.style.display = '';
+                return;
+            }
+            if (descEl.scrollHeight <= descEl.offsetHeight + 2) {
+                btn.style.display = 'none';
+            } else {
+                btn.style.display = '';
+            }
+        }
+
+        btn.addEventListener('click', function() {
+            descEl.classList.toggle('expanded');
+            updateButtonLabel();
+        });
+
+        updateButtonLabel();
+        maybeHideToggle();
+        if (typeof window.ResizeObserver !== 'undefined') {
+            var ro = new ResizeObserver(maybeHideToggle);
+            ro.observe(descEl);
+        }
+    });
+})();
+</script>
 {% endblock extra_js %}

@@ -463,9 +463,14 @@ def agent_packages_view(request):
         messages.error(request, 'Access denied. Agent access required.')
         return redirect('login')
     
-    packages = Package.objects.filter(agent=request.user).order_by('-created_at')
-    recent_packages = packages[:7]  # Last 7 packages
-    completed_packages = packages.filter(status=PackageStatus.COMPLETED)[:4]  # Last 4 completed
+    # Trip Packages: only active and draft (exclude completed)
+    packages = Package.objects.filter(agent=request.user).exclude(
+        status=PackageStatus.COMPLETED
+    ).order_by('-created_at')
+    recent_packages = packages[:7]  # Last 7 non-completed packages
+    completed_packages = Package.objects.filter(
+        agent=request.user, status=PackageStatus.COMPLETED
+    ).order_by('-updated_at')[:4]  # Last 4 completed
     
     # Get agent profile for display name
     try:
