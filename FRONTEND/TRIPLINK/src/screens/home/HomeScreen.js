@@ -179,6 +179,8 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
               icon: f.icon || "checkmark-circle-outline",
             })) || defaultFacilities,
             user_has_booked: pkg.user_has_booked ?? false,
+            trip_start_date: pkg.trip_start_date ?? null,
+            trip_end_date: pkg.trip_end_date ?? null,
             // Include full package data for detail view
             packageData: pkg,
           }));

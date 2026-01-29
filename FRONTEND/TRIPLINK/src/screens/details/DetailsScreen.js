@@ -46,6 +46,13 @@ const formatPrice = (price) => {
   return `Rs. ${numericValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
+const formatTripDate = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
 const COLS = 4;
 const CARD_GAP = 10;
 const ROW_GAP = 12;
@@ -56,6 +63,7 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
   const [userHasBooked, setUserHasBooked] = useState(false);
   const trip = useMemo(() => {
     const incoming = tripProp || route?.params?.trip || {};
+    const pkg = incoming.packageData || {};
     return {
       ...defaultTrip,
       ...incoming,
@@ -66,6 +74,8 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
       reviews: incoming.reviews ?? defaultTrip.reviews,
       description: incoming.description || defaultTrip.description,
       user_has_booked: incoming.user_has_booked ?? false,
+      trip_start_date: incoming.trip_start_date ?? pkg.trip_start_date ?? null,
+      trip_end_date: incoming.trip_end_date ?? pkg.trip_end_date ?? null,
     };
   }, [tripProp, route?.params?.trip]);
 
@@ -111,6 +121,19 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
             <Text style={styles.ratingValue}>{trip.rating}</Text>
             <Text style={styles.ratingMeta}> ({trip.reviews} Reviews)</Text>
           </View>
+
+          {(trip.trip_start_date || trip.trip_end_date) && (
+            <View style={styles.tripDatesRow}>
+              <Ionicons name="calendar-outline" size={18} color="#1f6b2a" />
+              <Text style={styles.tripDatesText}>
+                {trip.trip_start_date && trip.trip_end_date
+                  ? `${formatTripDate(trip.trip_start_date)} – ${formatTripDate(trip.trip_end_date)}`
+                  : trip.trip_start_date
+                    ? `From ${formatTripDate(trip.trip_start_date)}`
+                    : `To ${formatTripDate(trip.trip_end_date)}`}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.descriptionWrap}>
             <Text style={styles.description}>{body}</Text>
@@ -260,6 +283,17 @@ const styles = StyleSheet.create({
   ratingMeta: {
     fontSize: 14,
     color: "#6f747a",
+  },
+  tripDatesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  tripDatesText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1f6b2a",
   },
   descriptionWrap: {
     marginBottom: 18,
