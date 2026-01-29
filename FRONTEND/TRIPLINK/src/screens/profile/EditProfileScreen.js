@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { getProfile, updateProfile, updateProfileWithImage } from "../../utils/api";
+import { getProfile, updateProfile } from "../../utils/api";
 
 const EditProfileScreen = ({ session, onBack, onSave }) => {
   const [loading, setLoading] = useState(false);
@@ -24,15 +24,7 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
     first_name: "",
     last_name: "",
     phone_number: "",
-    date_of_birth: "",
-    address: "",
-    city: "",
-    country: "",
-    bio: "",
-    // Agent-specific fields
-    company_name: "",
-    license_number: "",
-    website: "",
+    location: "",
   });
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUri, setProfileImageUri] = useState(null);
@@ -57,14 +49,7 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
         first_name: data.first_name || "",
         last_name: data.last_name || "",
         phone_number: data.phone_number || "",
-        date_of_birth: data.date_of_birth || "",
-        address: data.address || "",
-        city: data.city || "",
-        country: data.country || "",
-        bio: data.bio || "",
-        company_name: data.company_name || "",
-        license_number: data.license_number || "",
-        website: data.website || "",
+        location: data.location || "",
       });
 
       // Determine if this is effectively the "first time" profile is being completed
@@ -72,22 +57,14 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
         "first_name",
         "last_name",
         "phone_number",
-        "date_of_birth",
-        "address",
-        "city",
-        "country",
+        "location",
       ];
-      const agentExtraFields = ["company_name", "license_number", "website"];
-      const requiredFields = isAgent
-        ? [...requiredBaseFields, ...agentExtraFields]
-        : requiredBaseFields;
+      const requiredFields = requiredBaseFields;
 
       const isComplete = requiredFields.every((field) => !!data[field]);
       setIsFirstTimeProfile(!isComplete);
 
-      if (data.profile_picture_url) {
-        setProfileImageUri(data.profile_picture_url);
-      }
+      // Keep avatar purely client-side for now (no backend field)
     } catch (error) {
       console.error("Error fetching profile:", error);
       Alert.alert("Error", "Failed to load profile data");
@@ -143,15 +120,9 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
       "first_name",
       "last_name",
       "phone_number",
-      "date_of_birth",
-      "address",
-      "city",
-      "country",
+      "location",
     ];
-    const agentExtraFields = ["company_name", "license_number", "website"];
-    const requiredFields = isAgent
-      ? [...requiredBaseFields, ...agentExtraFields]
-      : requiredBaseFields;
+    const requiredFields = requiredBaseFields;
 
     const missingRequired = requiredFields.filter(
       (field) => !profileData[field] || String(profileData[field]).trim() === ""
@@ -167,67 +138,11 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
 
     setLoading(true);
     try {
-      // Check if profile picture was removed (had image before, now null)
-      const hadImageBefore = profileImageUri && !profileImageUri.includes("Assets");
-      const imageRemoved = hadImageBefore && !profileImage;
-
-      if (profileImage) {
-        // Upload with new image
-        const formData = new FormData();
-        
-        // Add text fields
-        Object.keys(profileData).forEach((key) => {
-          if (profileData[key] !== null && profileData[key] !== undefined && profileData[key] !== "") {
-            formData.append(key, String(profileData[key]));
-          }
-        });
-
-        // Add image - React Native FormData format
-        const imageUri = profileImage.uri;
-        let filename = imageUri.split("/").pop() || "profile.jpg";
-        
-        // Ensure filename has extension
-        if (!filename.includes(".")) {
-          filename = `${filename}.jpg`;
-        }
-        
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : "image/jpeg";
-
-        // Handle different platforms for image URI
-        let finalUri = imageUri;
-        if (Platform.OS === "ios") {
-          // iOS needs file:// prefix removed
-          finalUri = imageUri.replace("file://", "");
-        }
-
-        formData.append("profile_picture", {
-          uri: finalUri,
-          name: filename,
-          type: type,
-        });
-
-        const response = await updateProfileWithImage(formData, session.access);
-        Alert.alert("Success", "Profile updated successfully!");
-        setIsFirstTimeProfile(false);
-        if (onSave) onSave(response.data);
-      } else if (imageRemoved) {
-        // Profile picture was removed - send null to clear it
-        const updateData = {
-          ...profileData,
-          profile_picture: null,
-        };
-        const response = await updateProfile(updateData, session.access);
-        Alert.alert("Success", "Profile updated successfully!");
-        setIsFirstTimeProfile(false);
-        if (onSave) onSave(response.data);
-      } else {
-        // Update without image (no change to image)
-        const response = await updateProfile(profileData, session.access);
-        Alert.alert("Success", "Profile updated successfully!");
-        setIsFirstTimeProfile(false);
-        if (onSave) onSave(response.data);
-      }
+      // Simplified update: only send core text fields (no profile picture)
+      const response = await updateProfile(profileData, session.access);
+      Alert.alert("Success", "Profile updated successfully!");
+      setIsFirstTimeProfile(false);
+      if (onSave) onSave(response.data);
       
       if (onBack) onBack();
     } catch (error) {
@@ -326,145 +241,87 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>First Name</Text>
-            <TextInput
-              style={styles.input}
-              value={profileData.first_name}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, first_name: text })
-              }
-              placeholder="Enter first name"
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                value={profileData.first_name}
+                onChangeText={(text) =>
+                  setProfileData({ ...profileData, first_name: text })
+                }
+                placeholder="First name"
+                placeholderTextColor="#9aa0a6"
+              />
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color="#1f6b2a"
+                style={styles.inputIcon}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Last Name</Text>
-            <TextInput
-              style={styles.input}
-              value={profileData.last_name}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, last_name: text })
-              }
-              placeholder="Enter last name"
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                value={profileData.last_name}
+                onChangeText={(text) =>
+                  setProfileData({ ...profileData, last_name: text })
+                }
+                placeholder="Last name"
+                placeholderTextColor="#9aa0a6"
+              />
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color="#1f6b2a"
+                style={styles.inputIcon}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={styles.input}
-              value={profileData.phone_number}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, phone_number: text })
-              }
-              placeholder="Enter phone number"
-              keyboardType="phone-pad"
-            />
+            <Text style={styles.label}>Location</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                value={profileData.location}
+                onChangeText={(text) =>
+                  setProfileData({ ...profileData, location: text })
+                }
+                placeholder="City, Area"
+                placeholderTextColor="#9aa0a6"
+              />
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color="#1f6b2a"
+                style={styles.inputIcon}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date of Birth</Text>
-            <TextInput
-              style={styles.input}
-              value={profileData.date_of_birth}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, date_of_birth: text })
-              }
-              placeholder="YYYY-MM-DD"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Address</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={profileData.address}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, address: text })
-              }
-              placeholder="Enter address"
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>City</Text>
-            <TextInput
-              style={styles.input}
-              value={profileData.city}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, city: text })
-              }
-              placeholder="Enter city"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Country</Text>
-            <TextInput
-              style={styles.input}
-              value={profileData.country}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, country: text })
-              }
-              placeholder="Enter country"
-            />
-          </View>
-
-          {isAgent && (
-            <>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Company Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profileData.company_name}
-                  onChangeText={(text) =>
-                    setProfileData({ ...profileData, company_name: text })
-                  }
-                  placeholder="Enter company name"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>License Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profileData.license_number}
-                  onChangeText={(text) =>
-                    setProfileData({ ...profileData, license_number: text })
-                  }
-                  placeholder="Enter license number"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Website</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profileData.website}
-                  onChangeText={(text) =>
-                    setProfileData({ ...profileData, website: text })
-                  }
-                  placeholder="https://example.com"
-                  keyboardType="url"
-                  autoCapitalize="none"
-                />
-              </View>
-            </>
-          )}
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Bio</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={profileData.bio}
-              onChangeText={(text) =>
-                setProfileData({ ...profileData, bio: text })
-              }
-              placeholder="Tell us about yourself"
-              multiline
-              numberOfLines={4}
-            />
+            <Text style={styles.label}>Mobile Number</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                value={profileData.phone_number}
+                onChangeText={(text) =>
+                  setProfileData({ ...profileData, phone_number: text })
+                }
+                placeholder="+977 98XXXXXXXX"
+                placeholderTextColor="#9aa0a6"
+                keyboardType="phone-pad"
+              />
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color="#1f6b2a"
+                style={styles.inputIcon}
+              />
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -637,6 +494,11 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 20,
   },
+  inputWrapper: {
+    position: "relative",
+    borderRadius: 14,
+    overflow: "hidden",
+  },
   label: {
     fontSize: 14,
     fontWeight: "600",
@@ -644,18 +506,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: "#f3f5f7",
-    borderRadius: 12,
+    backgroundColor: "#f5f6fa",
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
     color: "#1f1f1f",
-    borderWidth: 1,
-    borderColor: "#e3e6ea",
+    borderWidth: 0,
   },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: "top",
+  inputIcon: {
+    position: "absolute",
+    right: 16,
+    top: "50%",
+    marginTop: -9,
   },
 });
 

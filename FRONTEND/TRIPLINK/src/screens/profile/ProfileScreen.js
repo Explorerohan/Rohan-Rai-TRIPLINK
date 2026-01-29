@@ -28,6 +28,7 @@ const menuItems = [
   { id: "previousTrips", label: "Previous Trips", icon: "airplane-outline" },
   { id: "settings", label: "Settings", icon: "settings-outline" },
   { id: "leaderboard", label: "LeaderBoard", icon: "trophy-outline" },
+  { id: "logout", label: "Logout", icon: "log-out-outline" },
 ];
 
 const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout = () => {} }) => {
@@ -123,44 +124,6 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
           )}
         </View>
 
-        {/* Profile Details Card */}
-        {profile && (
-          <View style={styles.detailsCard}>
-            {profile.bio && (
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Bio</Text>
-                <Text style={styles.detailValue}>{profile.bio}</Text>
-              </View>
-            )}
-            {profile.address && (
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Address</Text>
-                <Text style={styles.detailValue}>{profile.address}</Text>
-              </View>
-            )}
-            {(profile.city || profile.country) && (
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Location</Text>
-                <Text style={styles.detailValue}>
-                  {[profile.city, profile.country].filter(Boolean).join(", ")}
-                </Text>
-              </View>
-            )}
-            {session?.user?.role === "agent" && profile?.license_number && (
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>License Number</Text>
-                <Text style={styles.detailValue}>{profile.license_number}</Text>
-              </View>
-            )}
-            {session?.user?.role === "agent" && profile?.website && (
-              <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>Website</Text>
-                <Text style={styles.detailValue}>{profile.website}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
         {/* Statistics Card */}
         <View style={styles.statsCard}>
           <View style={styles.statItem}>
@@ -189,25 +152,29 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
                 index === menuItems.length - 1 && styles.menuItemLast,
               ]}
               activeOpacity={0.7}
+              onPress={item.id === "logout" ? onLogout : undefined}
             >
               <View style={styles.menuItemLeft}>
-                <Ionicons name={item.icon} size={22} color="#1f1f1f" />
-                <Text style={styles.menuItemText}>{item.label}</Text>
+                <Ionicons
+                  name={item.icon}
+                  size={22}
+                  color={item.id === "logout" ? "#ef4444" : "#1f1f1f"}
+                />
+                <Text
+                  style={[
+                    styles.menuItemText,
+                    item.id === "logout" && styles.menuItemTextLogout,
+                  ]}
+                >
+                  {item.label}
+                </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#9aa0a6" />
+              {item.id !== "logout" && (
+                <Ionicons name="chevron-forward" size={20} color="#9aa0a6" />
+              )}
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          activeOpacity={0.8}
-          onPress={onLogout}
-        >
-          <Ionicons name="log-out-outline" size={22} color="#ef4444" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
       </ScrollView>
 
         <View style={styles.navBar}>
@@ -440,22 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#1f1f1f",
   },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 18,
-    marginTop: 20,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#fee2e2",
-    backgroundColor: "#fef2f2",
-    gap: 10,
-  },
-  logoutText: {
-    fontSize: 15,
-    fontWeight: "700",
+  menuItemTextLogout: {
     color: "#ef4444",
   },
   navBar: {
