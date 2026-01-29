@@ -9,6 +9,7 @@ import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
+import { createBooking } from "./src/utils/api";
 
 export default function App() {
   const [screen, setScreen] = useState("onboarding");
@@ -17,6 +18,7 @@ export default function App() {
   const [otpSession, setOtpSession] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
+  const [packagesRefreshKey, setPackagesRefreshKey] = useState(0);
 
   const goToLogin = () => setScreen("login");
   const goToSignup = () => setScreen("signup");
@@ -50,9 +52,27 @@ export default function App() {
     setScreen("details");
   };
 
-  const handleBookTrip = (trip) => {
-    // You can wire payment/booking here; for now, return to home.
-    setScreen("home");
+  const handleBookTrip = async (trip) => {
+    if (!session?.access) {
+      alert("Please log in to book this package.");
+      setScreen("login");
+      return;
+    }
+    const packageId = trip?.packageData?.id ?? trip?.id;
+    if (!packageId) {
+      alert("Invalid package.");
+      return;
+    }
+    try {
+      await createBooking(packageId, session.access);
+      alert("Your package has been booked.");
+      setPackagesRefreshKey((k) => k + 1);
+      setSelectedTrip((prev) => (prev ? { ...prev, user_has_booked: true } : prev));
+      // Stay on details screen; button will show "Already booked"
+    } catch (err) {
+      const message = err?.message || "Booking failed. Please try again.";
+      alert(message);
+    }
   };
 
   const handleLogout = async () => {
@@ -135,6 +155,7 @@ export default function App() {
       {screen === "home" && (
         <HomeScreen
           session={session}
+          packagesRefreshKey={packagesRefreshKey}
           onTripPress={handleTripPress}
           onProfilePress={() => setScreen("profile")}
         />
@@ -142,6 +163,7 @@ export default function App() {
       {screen === "details" && (
         <DetailsScreen
           trip={selectedTrip}
+          session={session}
           onBack={() => setScreen("home")}
           onBook={handleBookTrip}
         />

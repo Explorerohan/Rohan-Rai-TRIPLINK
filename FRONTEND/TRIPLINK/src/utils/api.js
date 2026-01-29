@@ -25,12 +25,26 @@ export const apiRequest = async (endpoint, options = {}, accessToken = null) => 
 
   try {
     const response = await fetch(url, config);
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    let data;
+    try {
+      data = await response.json();
+    } catch (_) {
+      data = {};
     }
-    
+
+    if (!response.ok) {
+      // DRF validation errors: { "field": ["msg"] } or { "detail": "..." }
+      let message = data.detail || data.message;
+      if (!message && typeof data === "object") {
+        const firstKey = Object.keys(data)[0];
+        if (firstKey) {
+          const val = data[firstKey];
+          message = Array.isArray(val) ? val[0] : val;
+        }
+      }
+      throw new Error(message || `HTTP error ${response.status}`);
+    }
+
     return { data, status: response.status };
   } catch (error) {
     throw error;
@@ -144,9 +158,10 @@ export const updateProfileWithImage = async (formData, accessToken) => {
 /**
  * Get all packages
  * @param {object} filters - Optional filters (location, country)
+ * @param {string} accessToken - Optional JWT; when provided, response includes user_has_booked per package
  * @returns {Promise<object>}
  */
-export const getPackages = async (filters = {}) => {
+export const getPackages = async (filters = {}, accessToken = null) => {
   const queryParams = new URLSearchParams();
   if (filters.location) queryParams.append('location', filters.location);
   if (filters.country) queryParams.append('country', filters.country);
@@ -154,15 +169,44 @@ export const getPackages = async (filters = {}) => {
   const queryString = queryParams.toString();
   const endpoint = `/api/auth/packages/${queryString ? `?${queryString}` : ''}`;
   
-  return apiRequest(endpoint, { method: "GET" });
+  return apiRequest(endpoint, { method: "GET" }, accessToken);
 };
 
 /**
- * Get package by ID
- * @param {number} packageId - Package ID
+ * Get package by ID (optional token for user_has_booked when logged in)
+ * @param {number|string} packageId - Package ID
+ * @param {string} accessToken - Optional JWT
  * @returns {Promise<object>}
  */
-export const getPackageById = async (packageId) => {
-  return apiRequest(`/api/auth/packages/${packageId}/`, { method: "GET" });
+export const getPackageById = async (packageId, accessToken = null) => {
+  const id = typeof packageId === "string" ? packageId : String(packageId);
+  return apiRequest(`/api/auth/packages/${id}/`, { method: "GET" }, accessToken);
+};
+
+/**
+ * Create a booking for the current user (traveler)
+ * @param {number|string} packageId - Package ID to book
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const createBooking = async (packageId, accessToken) => {
+  const id = typeof packageId === "string" ? parseInt(packageId, 10) : packageId;
+  return apiRequest(
+    "/api/auth/bookings/",
+    {
+      method: "POST",
+      body: JSON.stringify({ package_id: id }),
+    },
+    accessToken
+  );
+};
+
+/**
+ * Get current user's bookings
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const getMyBookings = async (accessToken) => {
+  return apiRequest("/api/auth/bookings/", { method: "GET" }, accessToken);
 };
 

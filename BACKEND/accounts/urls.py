@@ -11,6 +11,7 @@ from .views import (
     AgentProfileView,
     PackageListView,
     PackageDetailView,
+    BookingListCreateView,
 )
 
 urlpatterns = [
@@ -26,4 +27,5 @@ urlpatterns = [
     # Package endpoints
     path("packages/", PackageListView.as_view(), name="package_list"),
     path("packages/<int:id>/", PackageDetailView.as_view(), name="package_detail"),
+    path("bookings/", BookingListCreateView.as_view(), name="booking_list_create"),
 ]

@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus
 
 User = get_user_model()
 
@@ -137,6 +137,7 @@ class PackageSerializer(serializers.ModelSerializer):
     main_image_url = serializers.SerializerMethodField()
     agent_name = serializers.SerializerMethodField()
     duration_display = serializers.ReadOnlyField()
+    user_has_booked = serializers.SerializerMethodField()
     
     class Meta:
         model = Package
@@ -144,7 +145,7 @@ class PackageSerializer(serializers.ModelSerializer):
             'id', 'title', 'location', 'country', 'description',
             'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
             'main_image', 'main_image_url', 'features', 'status',
-            'rating', 'participants_count', 'agent_name',
+            'rating', 'participants_count', 'agent_name', 'user_has_booked',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -163,3 +164,37 @@ class PackageSerializer(serializers.ModelSerializer):
             return agent_profile.full_name
         except:
             return obj.agent.email.split('@')[0]
+    
+    def get_user_has_booked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'traveler':
+            return False
+        return Booking.objects.filter(
+            user=request.user, package=obj, status=BookingStatus.CONFIRMED
+        ).exists()
+
+
+class BookingSerializer(serializers.ModelSerializer):
+    """Serializer for Bookings - create and list. Use package_id for create (no duplicate package field)."""
+    package_title = serializers.CharField(source='package.title', read_only=True)
+    package_id = serializers.PrimaryKeyRelatedField(
+        queryset=Package.objects.filter(status=PackageStatus.ACTIVE),
+        source='package',
+    )
+
+    class Meta:
+        model = Booking
+        fields = ['id', 'user', 'package_id', 'package_title', 'status', 'created_at']
+        read_only_fields = ['id', 'user', 'status', 'created_at']
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        package = validated_data.pop('package')
+        if Booking.objects.filter(user=user, package=package, status=BookingStatus.CONFIRMED).exists():
+            raise serializers.ValidationError({'package_id': 'You have already booked this package.'})
+        validated_data['user'] = user
+        validated_data['package'] = package
+        booking = super().create(validated_data)
+        package.participants_count = (package.participants_count or 0) + 1
+        package.save(update_fields=['participants_count'])
+        return booking

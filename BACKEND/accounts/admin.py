@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile, Package, PackageFeature
+from .models import User, UserProfile, AgentProfile, Package, PackageFeature, Booking
 
 
 @admin.register(User)
@@ -65,3 +65,11 @@ class PackageAdmin(admin.ModelAdmin):
     search_fields = ['title', 'location', 'country', 'agent__email']
     readonly_fields = ['created_at', 'updated_at']
     filter_horizontal = ['features']
+
+
+@admin.register(Booking)
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ['user', 'package', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['user__email', 'package__title']
+    readonly_fields = ['created_at']

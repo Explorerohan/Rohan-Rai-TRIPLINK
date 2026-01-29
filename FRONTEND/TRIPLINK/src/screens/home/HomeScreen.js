@@ -120,7 +120,7 @@ const cleanPrice = (price) => {
   return price;
 };
 
-const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {} }) => {
+const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, onProfilePress = () => {} }) => {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -151,12 +151,12 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
     fetchProfileData();
   }, [session]);
 
-  // Fetch packages from API
+  // Fetch packages from API (pass token when logged in so backend can set user_has_booked)
   useEffect(() => {
     const fetchPackages = async () => {
       try {
         setLoading(true);
-        const response = await getPackages();
+        const response = await getPackages({}, session?.access ?? null);
         if (response.data) {
           // Transform API data to match the expected format
           const transformedPackages = response.data.map((pkg) => ({
@@ -178,6 +178,7 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
               label: f.name,
               icon: f.icon || "checkmark-circle-outline",
             })) || defaultFacilities,
+            user_has_booked: pkg.user_has_booked ?? false,
             // Include full package data for detail view
             packageData: pkg,
           }));
@@ -194,7 +195,7 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
     };
 
     fetchPackages();
-  }, []);
+  }, [session?.access, packagesRefreshKey]);
 
   const filteredPopular = useMemo(() => {
     if (activeCategory === "All") return packages;

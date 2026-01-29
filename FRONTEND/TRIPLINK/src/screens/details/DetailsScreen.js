@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Image,
   SafeAreaView,
@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getPackageById } from "../../utils/api";
 
 const defaultTrip = {
   title: "Coeurdes Alpes",
@@ -49,9 +50,10 @@ const COLS = 4;
 const CARD_GAP = 10;
 const ROW_GAP = 12;
 
-const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () => {} }) => {
+const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBook = () => {} }) => {
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
+  const [userHasBooked, setUserHasBooked] = useState(false);
   const trip = useMemo(() => {
     const incoming = tripProp || route?.params?.trip || {};
     return {
@@ -63,8 +65,21 @@ const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () =
       rating: incoming.rating ?? defaultTrip.rating,
       reviews: incoming.reviews ?? defaultTrip.reviews,
       description: incoming.description || defaultTrip.description,
+      user_has_booked: incoming.user_has_booked ?? false,
     };
   }, [tripProp, route?.params?.trip]);
+
+  const packageId = trip?.id || trip?.packageData?.id;
+  useEffect(() => {
+    setUserHasBooked(trip.user_has_booked ?? false);
+    if (session?.access && packageId) {
+      getPackageById(packageId, session.access)
+        .then((res) => {
+          if (res?.data?.user_has_booked === true) setUserHasBooked(true);
+        })
+        .catch(() => {});
+    }
+  }, [session?.access, packageId, trip.user_has_booked]);
 
   const body = expanded
     ? trip.description
@@ -154,10 +169,17 @@ const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () =
           <Text style={styles.priceLabel}>Price</Text>
           <Text style={styles.priceValue}>{formatPrice(trip.price)}</Text>
         </View>
-        <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={() => onBook(trip)}>
-          <Text style={styles.bookText}>Book Now</Text>
-          <Ionicons name="arrow-forward" size={18} color="#ffffff" />
-        </TouchableOpacity>
+        {(userHasBooked || trip.user_has_booked) ? (
+          <View style={styles.alreadyBookedBadge}>
+            <Ionicons name="checkmark-circle" size={20} color="#1f6b2a" />
+            <Text style={styles.alreadyBookedText}>Already booked</Text>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={() => onBook(trip)}>
+            <Text style={styles.bookText}>Book Now</Text>
+            <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -363,6 +385,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.3,
+  },
+  alreadyBookedBadge: {
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+  },
+  alreadyBookedText: {
+    color: "#166534",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
 

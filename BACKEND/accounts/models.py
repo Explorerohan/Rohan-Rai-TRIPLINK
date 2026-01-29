@@ -188,3 +188,37 @@ class Package(models.Model):
     @property
     def duration_display(self):
         return f"{self.duration_days} Days / {self.duration_nights} Nights"
+
+
+class BookingStatus(models.TextChoices):
+    CONFIRMED = "confirmed", "Confirmed"
+    CANCELLED = "cancelled", "Cancelled"
+
+
+class Booking(models.Model):
+    """Booking: a traveler books a package"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="bookings",
+        limit_choices_to={"role": Roles.TRAVELER},
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name="bookings",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=BookingStatus.choices,
+        default=BookingStatus.CONFIRMED,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Booking"
+        verbose_name_plural = "Bookings"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.email} – {self.package.title}"
