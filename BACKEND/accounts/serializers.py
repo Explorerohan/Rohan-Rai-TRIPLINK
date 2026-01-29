@@ -144,6 +144,7 @@ class PackageSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'location', 'country', 'description',
             'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
+            'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'status',
             'rating', 'participants_count', 'agent_name', 'user_has_booked',
             'created_at', 'updated_at'

@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.shortcuts import render, redirect
@@ -538,6 +539,18 @@ def agent_add_package_view(request):
     
     if request.method == 'POST':
         try:
+            trip_start = request.POST.get('trip_start_date', '').strip() or None
+            trip_end = request.POST.get('trip_end_date', '').strip() or None
+            if trip_start:
+                try:
+                    trip_start = datetime.strptime(trip_start, '%Y-%m-%d').date()
+                except ValueError:
+                    trip_start = None
+            if trip_end:
+                try:
+                    trip_end = datetime.strptime(trip_end, '%Y-%m-%d').date()
+                except ValueError:
+                    trip_end = None
             package = Package.objects.create(
                 agent=request.user,
                 title=request.POST.get('title', '').strip(),
@@ -547,6 +560,8 @@ def agent_add_package_view(request):
                 price_per_person=request.POST.get('price_per_person', 0),
                 duration_days=int(request.POST.get('duration_days', 7)),
                 duration_nights=int(request.POST.get('duration_nights', 6)),
+                trip_start_date=trip_start,
+                trip_end_date=trip_end,
                 status=request.POST.get('status', PackageStatus.ACTIVE)
             )
             
@@ -610,7 +625,22 @@ def agent_edit_package_view(request, package_id):
             package.duration_days = int(request.POST.get('duration_days', 7))
             package.duration_nights = int(request.POST.get('duration_nights', 6))
             package.status = request.POST.get('status', PackageStatus.ACTIVE)
-            
+            trip_start = request.POST.get('trip_start_date', '').strip() or None
+            trip_end = request.POST.get('trip_end_date', '').strip() or None
+            if trip_start:
+                try:
+                    package.trip_start_date = datetime.strptime(trip_start, '%Y-%m-%d').date()
+                except ValueError:
+                    package.trip_start_date = None
+            else:
+                package.trip_start_date = None
+            if trip_end:
+                try:
+                    package.trip_end_date = datetime.strptime(trip_end, '%Y-%m-%d').date()
+                except ValueError:
+                    package.trip_end_date = None
+            else:
+                package.trip_end_date = None
             # Handle image upload
             if 'main_image' in request.FILES:
                 package.main_image = request.FILES['main_image']

@@ -165,6 +165,16 @@ class Package(models.Model):
     price_per_person = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in Rs.")
     duration_days = models.PositiveIntegerField(default=7, help_text="Number of days")
     duration_nights = models.PositiveIntegerField(default=6, help_text="Number of nights")
+    trip_start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Trip start date (from when)",
+    )
+    trip_end_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Trip end date (to when)",
+    )
     main_image = models.ImageField(upload_to=package_image_path, null=True, blank=True)
     features = models.ManyToManyField(PackageFeature, related_name='packages', blank=True)
     status = models.CharField(
