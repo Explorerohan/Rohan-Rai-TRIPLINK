@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -44,7 +45,12 @@ const formatPrice = (price) => {
   return `Rs. ${numericValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
+const COLS = 4;
+const CARD_GAP = 10;
+const ROW_GAP = 12;
+
 const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () => {} }) => {
+  const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
   const trip = useMemo(() => {
     const incoming = tripProp || route?.params?.trip || {};
@@ -111,15 +117,34 @@ const DetailsScreen = ({ route, trip: tripProp, onBack = () => {}, onBook = () =
           </View>
 
           <Text style={styles.sectionTitle}>Facilities</Text>
-          <View style={styles.facilityRow}>
-            {trip.facilities.map((facility) => (
-              <View key={facility.key} style={styles.facilityCard}>
-                <View style={styles.facilityIcon}>
-                  <Ionicons name={facility.icon} size={22} color="#8b9096" />
+          <View style={styles.facilityGrid}>
+            {(() => {
+              const list = Array.isArray(trip.facilities) ? trip.facilities : [];
+              const contentWidth = windowWidth - 16 * 2 - 10 * 2;
+              const cardWidth = (contentWidth - (COLS - 1) * CARD_GAP) / COLS;
+              const rows = [];
+              for (let i = 0; i < list.length; i += COLS) {
+                rows.push(list.slice(i, i + COLS));
+              }
+              return rows.map((row, rowIndex) => (
+                <View key={`row-${rowIndex}`} style={[styles.facilityRow, rowIndex === rows.length - 1 && styles.facilityRowLast]}>
+                  {row.map((facility, colIndex) => (
+                    <View
+                      key={facility.key || `${rowIndex}-${colIndex}`}
+                      style={[
+                        styles.facilityCard,
+                        { width: cardWidth, marginRight: colIndex < row.length - 1 ? CARD_GAP : 0 },
+                      ]}
+                    >
+                      <View style={styles.facilityIcon}>
+                        <Ionicons name={facility.icon || "checkmark-circle-outline"} size={22} color="#8b9096" />
+                      </View>
+                      <Text style={styles.facilityLabel} numberOfLines={2}>{facility.label || facility.name || ""}</Text>
+                    </View>
+                  ))}
                 </View>
-                <Text style={styles.facilityLabel}>{facility.label}</Text>
-              </View>
-            ))}
+              ));
+            })()}
           </View>
         </View>
       </ScrollView>
@@ -238,18 +263,25 @@ const styles = StyleSheet.create({
     color: "#1f1f1f",
     marginBottom: 12,
   },
+  facilityGrid: {
+    flexDirection: "column",
+    width: "100%",
+  },
   facilityRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
+    marginBottom: ROW_GAP,
+    width: "100%",
+  },
+  facilityRowLast: {
+    marginBottom: 0,
   },
   facilityCard: {
-    flex: 1,
     backgroundColor: "#f1f4f6",
     borderRadius: 14,
     paddingVertical: 16,
+    paddingHorizontal: 6,
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: "#e1e5ea",
     shadowColor: "#000000",
@@ -267,9 +299,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   facilityLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "600",
     color: "#6f747a",
+    marginTop: 8,
+    textAlign: "center",
+    alignSelf: "stretch",
+    paddingHorizontal: 2,
   },
   bottomBar: {
     position: "absolute",
