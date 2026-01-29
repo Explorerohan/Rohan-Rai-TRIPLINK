@@ -67,9 +67,9 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
       const isComplete = requiredFields.every((field) => !!data[field]);
       setIsFirstTimeProfile(!isComplete);
 
-      if (data.profile_picture_url) {
-        setProfileImageUri(data.profile_picture_url);
-      }
+      // Only set avatar from API when user has actually set a profile image
+      const url = data.profile_picture_url && String(data.profile_picture_url).trim();
+      if (url) setProfileImageUri(url);
     } catch (error) {
       console.error("Error fetching profile:", error);
       Alert.alert("Error", "Failed to load profile data");
@@ -269,8 +269,8 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
           >
             <Image
               source={
-                profileImageUri
-                  ? { uri: profileImageUri }
+                profileImageUri?.trim?.()
+                  ? { uri: profileImageUri.trim() }
                   : { uri: DEFAULT_AVATAR_URL }
               }
               style={styles.profileImage}

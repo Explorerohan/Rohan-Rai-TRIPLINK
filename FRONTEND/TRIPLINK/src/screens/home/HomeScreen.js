@@ -135,7 +135,7 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
     "Traveler";
 
-  // Fetch profile (for avatar and first name)
+  // Fetch profile (for avatar and first name) – show placeholder until loaded so we don't flash default then user image
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!session?.access) return;
@@ -144,6 +144,7 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
         setProfile(response.data);
       } catch (err) {
         console.error("Error fetching profile in HomeScreen:", err);
+        setProfile({}); // so we show default avatar on error, not placeholder forever
       }
     };
 
@@ -232,14 +233,18 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
           keyboardDismissMode="on-drag"
         >
         <View style={styles.headerRow}>
-          <Image
-            source={
-              profile?.profile_picture_url
-                ? { uri: profile.profile_picture_url }
-                : AVATAR
-            }
-            style={styles.avatar}
-          />
+          {profile === null ? (
+            <View style={[styles.avatar, styles.avatarPlaceholder]} />
+          ) : (
+            <Image
+              source={
+                profile?.profile_picture_url?.trim?.()
+                  ? { uri: profile.profile_picture_url.trim() }
+                  : AVATAR
+              }
+              style={styles.avatar}
+            />
+          )}
           <View style={styles.headerText}>
             <Text style={styles.hello}>Hello ! {displayName}</Text>
             <Text style={styles.prompt}>Where do you want to go ?</Text>
@@ -480,6 +485,9 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 18,
     marginRight: 12,
+  },
+  avatarPlaceholder: {
+    backgroundColor: "#e8eaed",
   },
   headerText: {
     flex: 1,

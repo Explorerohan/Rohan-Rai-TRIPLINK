@@ -66,7 +66,11 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
     "User";
 
-  const profileImageUri = profile?.profile_picture_url;
+  // Only use user's image when they have set one; otherwise show default
+  const profileImageUri =
+    profile?.profile_picture_url && String(profile.profile_picture_url).trim()
+      ? profile.profile_picture_url
+      : null;
 
   if (loading) {
     return (
@@ -110,9 +114,7 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
         <View style={styles.profileSection}>
           <Image
             source={
-              profileImageUri
-                ? { uri: profileImageUri }
-                : { uri: DEFAULT_AVATAR_URL }
+              profileImageUri ? { uri: profileImageUri } : { uri: DEFAULT_AVATAR_URL }
             }
             style={styles.profileImage}
           />
