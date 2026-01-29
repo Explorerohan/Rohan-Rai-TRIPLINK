@@ -8,6 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email
 from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus
+from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
@@ -509,17 +510,20 @@ def agent_add_package_view(request):
                 package.main_image = request.FILES['main_image']
                 package.save()
             
-            # Handle features - create PackageFeature objects on-the-fly
+            # Handle features - create PackageFeature objects on-the-fly (with Ionicons icon for frontend)
             feature_names = request.POST.getlist('feature_names[]')
             feature_objects = []
             for feature_name in feature_names:
                 feature_name = feature_name.strip()
-                if feature_name:  # Only process non-empty feature names
-                    # Get or create the feature
+                if feature_name:
+                    icon = get_feature_icon(feature_name)
                     feature, created = PackageFeature.objects.get_or_create(
                         name=feature_name,
-                        defaults={'icon': '✓'}  # Default icon
+                        defaults={'icon': icon}
                     )
+                    if not created and (not feature.icon or feature.icon == '✓'):
+                        feature.icon = icon
+                        feature.save(update_fields=['icon'])
                     feature_objects.append(feature)
             
             if feature_objects:
@@ -533,6 +537,8 @@ def agent_add_package_view(request):
     context = {
         'user': request.user,
         'status_choices': PackageStatus.choices,
+        'active_nav': 'packages',
+        'feature_options': get_all_feature_options(),
     }
     return render(request, 'agent_add_package.html', context)
 
@@ -566,17 +572,20 @@ def agent_edit_package_view(request, package_id):
             
             package.save()
             
-            # Handle features - create PackageFeature objects on-the-fly
+            # Handle features - create PackageFeature objects on-the-fly (with Ionicons icon for frontend)
             feature_names = request.POST.getlist('feature_names[]')
             feature_objects = []
             for feature_name in feature_names:
                 feature_name = feature_name.strip()
-                if feature_name:  # Only process non-empty feature names
-                    # Get or create the feature
+                if feature_name:
+                    icon = get_feature_icon(feature_name)
                     feature, created = PackageFeature.objects.get_or_create(
                         name=feature_name,
-                        defaults={'icon': '✓'}  # Default icon
+                        defaults={'icon': icon}
                     )
+                    if not created and (not feature.icon or feature.icon == '✓'):
+                        feature.icon = icon
+                        feature.save(update_fields=['icon'])
                     feature_objects.append(feature)
             
             package.features.set(feature_objects)
@@ -591,6 +600,8 @@ def agent_edit_package_view(request, package_id):
         'package': package,
         'status_choices': PackageStatus.choices,
         'existing_features': package.features.all(),
+        'feature_options': get_all_feature_options(),
+        'active_nav': 'packages',
     }
     return render(request, 'agent_edit_package.html', context)
 

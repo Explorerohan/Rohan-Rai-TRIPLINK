@@ -191,11 +191,22 @@
         transform: translateY(-2px);
     }
 
-    .package-image {
+    .package-image-wrap {
         width: 300px;
-        height: 250px;
-        object-fit: cover;
+        min-height: 200px;
         flex-shrink: 0;
+        overflow: hidden;
+        background: #f1f5f9;
+        align-self: stretch;
+    }
+
+    .package-image-wrap .package-image {
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
     }
 
     .package-content {
@@ -257,16 +268,16 @@
         font-weight: 600;
     }
 
-    .package-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
     .package-features {
         display: flex;
         flex-direction: column;
         gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .package-card-edit-wrap {
+        margin-top: auto;
+        padding-top: 8px;
     }
 
     .feature-item {
@@ -283,6 +294,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .feature-icon ion-icon {
+        font-size: 20px;
+        color: #64748b;
     }
 
     .btn-edit {
@@ -550,9 +567,11 @@
                 {% for package in packages %}
                     <div class="package-card">
                         {% if package.main_image %}
-                            <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="package-image">
+                            <div class="package-image-wrap">
+                                <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="package-image">
+                            </div>
                         {% else %}
-                            <div class="package-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px;">
+                            <div class="package-image-wrap" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px;">
                                 📦
                             </div>
                         {% endif %}
@@ -580,16 +599,24 @@
                                 <div class="package-features">
                                     {% for feature in package.features.all|slice:":4" %}
                                         <div class="feature-item">
-                                            <span class="feature-icon">{{ feature.icon|default:"✓" }}</span>
+                                            <span class="feature-icon">
+                                                {% if feature.icon and "-" in feature.icon %}
+                                                    <ion-icon name="{{ feature.icon }}"></ion-icon>
+                                                {% else %}
+                                                    <ion-icon name="checkmark-circle-outline"></ion-icon>
+                                                {% endif %}
+                                            </span>
                                             <span>{{ feature.name }}</span>
                                         </div>
                                     {% empty %}
                                         <div class="feature-item">
-                                            <span class="feature-icon">✓</span>
+                                            <span class="feature-icon"><ion-icon name="checkmark-circle-outline"></ion-icon></span>
                                             <span>All Inclusive</span>
                                         </div>
                                     {% endfor %}
                                 </div>
+                            </div>
+                            <div class="package-card-edit-wrap">
                                 <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit">Edit Details</a>
                             </div>
                         </div>
@@ -673,3 +700,8 @@
     </aside>
 </div>
 {% endblock main_content %}
+
+{% block extra_js %}
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+{% endblock extra_js %}
