@@ -1,0 +1,238 @@
+{% extends 'base_agent.html' %}
+{% load static %}
+
+{% block title %}Travelers - TRIPLINK{% endblock %}
+
+{% block agent_extra_css %}
+<style>
+    .travelers-page {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .page-head {
+        margin-bottom: 28px;
+    }
+
+    .page-head h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+    }
+
+    .page-head p {
+        font-size: 15px;
+        color: #64748b;
+    }
+
+    .travelers-card {
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .travelers-table-wrap {
+        overflow-x: auto;
+    }
+
+    .travelers-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .travelers-table th {
+        text-align: left;
+        padding: 16px 20px;
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .travelers-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        vertical-align: middle;
+    }
+
+    .travelers-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .travelers-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .traveler-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        display: block;
+        background: #e2e8f0;
+    }
+
+    .traveler-avatar-placeholder {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1f6b2a 0%, #15803d 100%);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .traveler-name {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .traveler-email {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.7;
+    }
+
+    .empty-state-text {
+        font-size: 16px;
+    }
+
+    .alert {
+        padding: 14px 20px;
+        border-radius: 10px;
+        margin-bottom: 24px;
+        font-size: 14px;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 768px) {
+        .travelers-table th,
+        .travelers-table td {
+            padding: 12px 14px;
+            font-size: 13px;
+        }
+
+        .travelers-table th:nth-child(4),
+        .travelers-table td:nth-child(4),
+        .travelers-table th:nth-child(5),
+        .travelers-table td:nth-child(5) {
+            display: none;
+        }
+    }
+</style>
+{% endblock agent_extra_css %}
+
+{% block main_content %}
+<div class="travelers-page">
+    <div class="page-head">
+        <h1>Travelers</h1>
+        <p>View all registered travelers and their details.</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="travelers-card">
+        {% if travelers %}
+            <div class="travelers-table-wrap">
+                <table class="travelers-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 56px;">Photo</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Location</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in travelers %}
+                            <tr>
+                                <td>
+                                    {% if item.profile and item.profile.profile_picture %}
+                                        <img src="{{ item.profile.profile_picture.url }}" alt="" class="traveler-avatar">
+                                    {% else %}
+                                        <div class="traveler-avatar-placeholder">
+                                            {% if item.profile and item.profile.full_name %}
+                                                {{ item.profile.full_name|slice:":1"|upper }}
+                                            {% else %}
+                                                {{ item.user.email|slice:":1"|upper }}
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="traveler-name">
+                                        {% if item.profile and item.profile.full_name %}
+                                            {{ item.profile.full_name }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="traveler-email">{{ item.user.email }}</span>
+                                </td>
+                                <td>
+                                    {% if item.profile and item.profile.phone_number %}
+                                        {{ item.profile.phone_number }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.profile and item.profile.location %}
+                                        {{ item.profile.location }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.user.date_joined|date:"M d, Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div class="empty-state-text">No travelers registered yet.</div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock main_content %}

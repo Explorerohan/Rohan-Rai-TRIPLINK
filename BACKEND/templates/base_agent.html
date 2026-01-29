@@ -146,7 +146,7 @@
                 <i>📋</i>
                 <span>Bookings</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{% url 'agent_travelers' %}" class="nav-item{% if active_nav == 'travelers' %} active{% endif %}">
                 <i>👥</i>
                 <span>Travelers</span>
             </a>

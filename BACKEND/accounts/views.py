@@ -177,6 +177,36 @@ def agent_profile_view(request):
     return render(request, 'agent_profile.html', context)
 
 
+def agent_travelers_view(request):
+    """View to list all travelers for the agent"""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    users = User.objects.filter(role=Roles.TRAVELER).order_by('-date_joined')
+    travelers = []
+    for user in users:
+        try:
+            profile = user.user_profile
+        except UserProfile.DoesNotExist:
+            profile = None
+        travelers.append({'user': user, 'profile': profile})
+
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'travelers': travelers,
+        'active_nav': 'travelers',
+    }
+    return render(request, 'agent_travelers.html', context)
+
+
 # Forgot Password Views
 def admin_forgot_password_view(request):
     """Handle admin forgot password request"""

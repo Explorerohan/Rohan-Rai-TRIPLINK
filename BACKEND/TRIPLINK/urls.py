@@ -24,7 +24,8 @@ from accounts.views import (
     admin_verify_otp_view, agent_verify_otp_view,
     admin_reset_password_view, agent_reset_password_view,
     agent_profile_view, agent_packages_view, agent_add_package_view,
-    agent_edit_package_view, agent_delete_package_view
+    agent_edit_package_view, agent_delete_package_view,
+    agent_travelers_view,
 )
 
 urlpatterns = [
@@ -41,6 +42,7 @@ urlpatterns = [
     path('packages/agent/add/', agent_add_package_view, name='agent_add_package'),
     path('packages/agent/edit/<int:package_id>/', agent_edit_package_view, name='agent_edit_package'),
     path('packages/agent/delete/<int:package_id>/', agent_delete_package_view, name='agent_delete_package'),
+    path('travelers/agent/', agent_travelers_view, name='agent_travelers'),
     # Forgot password URLs
     path('forgot-password/admin/', admin_forgot_password_view, name='admin_forgot_password'),
     path('forgot-password/agent/', agent_forgot_password_view, name='agent_forgot_password'),
