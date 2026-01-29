@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getPackages } from "../../utils/api";
+import { getPackages, getProfile } from "../../utils/api";
 
 const AVATAR = {
   uri: "https://hips.hearstapps.com/hmg-prod/images/cristiano-ronaldo-of-portugal-during-the-uefa-nations-news-photo-1748359673.pjpeg?crop=0.610xw:0.917xh;0.317xw,0.0829xh&resize=640:*",
@@ -122,12 +122,30 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profile, setProfile] = useState(null);
 
+  // Prefer first name from profile; fall back to session / email username
   const displayName =
+    profile?.first_name ||
     session?.user?.first_name ||
     session?.user?.name ||
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
-    "Rohan";
+    "Traveler";
+
+  // Fetch profile (for avatar and first name)
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      if (!session?.access) return;
+      try {
+        const response = await getProfile(session.access);
+        setProfile(response.data);
+      } catch (err) {
+        console.error("Error fetching profile in HomeScreen:", err);
+      }
+    };
+
+    fetchProfileData();
+  }, [session]);
 
   // Fetch packages from API
   useEffect(() => {
@@ -211,7 +229,14 @@ const HomeScreen = ({ session, onTripPress = () => {}, onProfilePress = () => {}
           keyboardDismissMode="on-drag"
         >
         <View style={styles.headerRow}>
-          <Image source={AVATAR} style={styles.avatar} />
+          <Image
+            source={
+              profile?.profile_picture_url
+                ? { uri: profile.profile_picture_url }
+                : AVATAR
+            }
+            style={styles.avatar}
+          />
           <View style={styles.headerText}>
             <Text style={styles.hello}>Hello ! {displayName}</Text>
             <Text style={styles.prompt}>Where do you want to go ?</Text>
