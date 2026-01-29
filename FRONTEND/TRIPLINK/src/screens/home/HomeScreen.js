@@ -14,8 +14,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { getPackages, getProfile } from "../../utils/api";
 
+const DEFAULT_AVATAR_URL =
+  "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
+
 const AVATAR = {
-  uri: "https://hips.hearstapps.com/hmg-prod/images/cristiano-ronaldo-of-portugal-during-the-uefa-nations-news-photo-1748359673.pjpeg?crop=0.610xw:0.917xh;0.317xw,0.0829xh&resize=640:*",
+  uri: DEFAULT_AVATAR_URL,
 };
 
 const categories = ["All", "Kathmandu", "Pokhara", "Dharan", "Mustang"];

@@ -17,6 +17,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { getProfile, updateProfile, updateProfileWithImage } from "../../utils/api";
 
+const DEFAULT_AVATAR_URL =
+  "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
+
 const EditProfileScreen = ({ session, onBack, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -268,7 +271,7 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
               source={
                 profileImageUri
                   ? { uri: profileImageUri }
-                  : require("../../Assets/Logo.png")
+                  : { uri: DEFAULT_AVATAR_URL }
               }
               style={styles.profileImage}
             />

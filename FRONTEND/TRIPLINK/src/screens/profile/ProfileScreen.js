@@ -15,6 +15,9 @@ import { getProfile } from "../../utils/api";
 
 const NAV_ICON_SIZE = 22;
 
+const DEFAULT_AVATAR_URL =
+  "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
+
 const navItems = [
   { key: "home", label: "Home", icon: "home-outline", active: false },
   { key: "calendar", label: "Calendar", icon: "calendar-outline", active: false },
@@ -109,7 +112,7 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
             source={
               profileImageUri
                 ? { uri: profileImageUri }
-                : require("../../Assets/Logo.png")
+                : { uri: DEFAULT_AVATAR_URL }
             }
             style={styles.profileImage}
           />
