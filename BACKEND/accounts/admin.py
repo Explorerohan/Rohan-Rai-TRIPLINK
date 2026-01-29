@@ -37,17 +37,17 @@ class UserAdmin(DjangoUserAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'full_name', 'phone_number', 'city', 'country', 'created_at']
-    list_filter = ['country', 'city', 'created_at']
+    list_display = ['user', 'full_name', 'phone_number', 'location', 'created_at']
+    list_filter = ['created_at']
     search_fields = ['user__email', 'first_name', 'last_name', 'phone_number']
     readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(AgentProfile)
 class AgentProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'full_name', 'company_name', 'is_verified', 'city', 'country', 'created_at']
-    list_filter = ['is_verified', 'country', 'city', 'created_at']
-    search_fields = ['user__email', 'first_name', 'last_name', 'company_name', 'license_number']
+    list_display = ['user', 'full_name', 'phone_number', 'location', 'is_verified', 'created_at']
+    list_filter = ['is_verified', 'created_at']
+    search_fields = ['user__email', 'first_name', 'last_name', 'phone_number']
     readonly_fields = ['created_at', 'updated_at']
 
 

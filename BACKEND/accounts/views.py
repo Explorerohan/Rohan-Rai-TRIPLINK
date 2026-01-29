@@ -145,20 +145,11 @@ def agent_profile_view(request):
     profile, created = AgentProfile.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
-        # Update profile fields (only essential fields)
+        # Update profile fields (simplified set)
         profile.first_name = request.POST.get('first_name', '').strip()
         profile.last_name = request.POST.get('last_name', '').strip()
         profile.phone_number = request.POST.get('phone_number', '').strip()
-        
-        # Handle profile picture upload
-        if 'profile_picture' in request.FILES:
-            profile.profile_picture = request.FILES['profile_picture']
-        
-        # Handle profile picture removal
-        if 'remove_profile_picture' in request.POST:
-            if profile.profile_picture:
-                profile.profile_picture.delete(save=False)
-            profile.profile_picture = None
+        profile.location = request.POST.get('location', '').strip()
         
         try:
             profile.save()
