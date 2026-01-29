@@ -354,6 +354,10 @@
                     <input type="email" value="{{ user.email }}" disabled style="background: #e9ecef; cursor: not-allowed;">
                 </div>
                 <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" value="{{ profile.location }}" placeholder="e.g. Kathmandu, Nepal">
+                </div>
+                <div class="form-group">
                     <label>Member Since</label>
                     <input type="text" value="{{ profile.created_at|date:"F d, Y" }}" disabled style="background: #e9ecef; cursor: not-allowed;">
                 </div>

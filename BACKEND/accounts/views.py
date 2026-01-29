@@ -142,7 +142,7 @@ def agent_profile_view(request):
         messages.error(request, 'Access denied. Agent access required.')
         return redirect('login')
     
-    # Get or create agent profile
+    # Get or create agent profile (creates in DB if not exists)
     profile, created = AgentProfile.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
@@ -151,6 +151,16 @@ def agent_profile_view(request):
         profile.last_name = request.POST.get('last_name', '').strip()
         profile.phone_number = request.POST.get('phone_number', '').strip()
         profile.location = request.POST.get('location', '').strip()
+        
+        # Handle profile picture: new upload
+        if 'profile_picture' in request.FILES:
+            profile.profile_picture = request.FILES['profile_picture']
+        
+        # Handle profile picture: remove
+        if request.POST.get('remove_profile_picture') == '1':
+            if profile.profile_picture:
+                profile.profile_picture.delete(save=False)
+            profile.profile_picture = None
         
         try:
             profile.save()
