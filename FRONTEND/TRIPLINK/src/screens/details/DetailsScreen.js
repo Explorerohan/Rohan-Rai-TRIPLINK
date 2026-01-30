@@ -415,7 +415,21 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
                   {!userHasReviewed && (
                     <TouchableOpacity
                       style={styles.agentReviewButton}
-                      onPress={() => setReviewModalVisible(true)}
+                      onPress={() => {
+                        const tripEndDate = packageDetail?.trip_end_date || trip.trip_end_date;
+                        const hasBooked = userHasBooked || trip.user_has_booked;
+                        if (hasBooked && tripEndDate) {
+                          const todayStr = new Date().toISOString().slice(0, 10);
+                          if (tripEndDate > todayStr) {
+                            Alert.alert(
+                              "Cannot Review Yet",
+                              "Trip hasn't completed yet. You can only provide a review once the trip date has passed."
+                            );
+                            return;
+                          }
+                        }
+                        setReviewModalVisible(true);
+                      }}
                       activeOpacity={0.8}
                     >
                       <Ionicons name="create-outline" size={18} color="#1f6b2a" />

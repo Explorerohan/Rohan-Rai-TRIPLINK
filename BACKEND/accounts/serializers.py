@@ -242,21 +242,31 @@ class AgentReviewSerializer(serializers.ModelSerializer):
         return None
 
     def create(self, validated_data):
-        from .models import PackageStatus
+        from datetime import date
         user = self.context['request'].user
         agent = validated_data.get('agent')
 
-        # Traveler can only review agent after completing a trip (confirmed booking for completed package)
-        has_completed_trip = Booking.objects.filter(
+        # Traveler can only review agent after trip date has passed (confirmed booking, trip_end_date <= today)
+        has_booking = Booking.objects.filter(
             user=user,
             package__agent=agent,
-            package__status=PackageStatus.COMPLETED,
             status=BookingStatus.CONFIRMED
         ).exists()
-
-        if not has_completed_trip:
+        if not has_booking:
             raise serializers.ValidationError(
                 {'agent': 'You can only review agents after completing a trip with them.'}
+            )
+
+        has_trip_ended = Booking.objects.filter(
+            user=user,
+            package__agent=agent,
+            package__trip_end_date__isnull=False,
+            package__trip_end_date__lte=date.today(),
+            status=BookingStatus.CONFIRMED
+        ).exists()
+        if not has_trip_ended:
+            raise serializers.ValidationError(
+                {'agent': 'Trip hasn\'t completed yet. You can only provide a review once the trip date has passed.'}
             )
 
         if AgentReview.objects.filter(user=user, agent=agent).exists():
@@ -343,19 +353,21 @@ class AgentInfoSerializer(serializers.ModelSerializer):
         return AgentReview.objects.filter(agent=obj.user).count()
 
     def get_user_can_review_agent(self, obj):
-        """True if traveler has completed a trip with this agent and hasn't reviewed yet"""
+        """True if traveler has booked a trip, trip date has passed, and hasn't reviewed yet"""
+        from datetime import date
         request = self.context.get('request')
         if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'traveler':
             return False
         user = request.user
-        has_completed = Booking.objects.filter(
+        has_trip_ended = Booking.objects.filter(
             user=user,
             package__agent=obj.user,
-            package__status=PackageStatus.COMPLETED,
+            package__trip_end_date__isnull=False,
+            package__trip_end_date__lte=date.today(),
             status=BookingStatus.CONFIRMED
         ).exists()
         has_reviewed = AgentReview.objects.filter(user=user, agent=obj.user).exists()
-        return has_completed and not has_reviewed
+        return has_trip_ended and not has_reviewed
 
     def get_user_has_reviewed_agent(self, obj):
         request = self.context.get('request')
