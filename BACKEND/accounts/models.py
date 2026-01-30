@@ -232,3 +232,61 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.user.email} – {self.package.title}"
+
+
+class Review(models.Model):
+    """Review left by a traveler for a package they booked"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+        limit_choices_to={"role": Roles.TRAVELER},
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+    )
+    rating = models.PositiveIntegerField(
+        help_text="Rating from 1 to 5"
+    )
+    comment = models.TextField(blank=True, help_text="Review comment")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Review"
+        verbose_name_plural = "Reviews"
+        ordering = ["-created_at"]
+        unique_together = ["user", "package"]  # One review per user per package
+
+    def __str__(self):
+        return f"{self.user.email} - {self.package.title} ({self.rating}/5)"
+
+    def save(self, *args, **kwargs):
+        # Ensure rating is between 1 and 5
+        if self.rating < 1:
+            self.rating = 1
+        elif self.rating > 5:
+            self.rating = 5
+        super().save(*args, **kwargs)
+        # Update package average rating
+        self._update_package_rating()
+
+    def delete(self, *args, **kwargs):
+        package = self.package
+        super().delete(*args, **kwargs)
+        # Update package rating after deletion
+        self._update_package_rating_for(package)
+
+    def _update_package_rating(self):
+        """Update the package's average rating"""
+        self._update_package_rating_for(self.package)
+
+    @staticmethod
+    def _update_package_rating_for(package):
+        """Update average rating for a specific package"""
+        from django.db.models import Avg
+        avg_rating = package.reviews.aggregate(Avg('rating'))['rating__avg']
+        package.rating = round(avg_rating, 1) if avg_rating else 0.0
+        package.save(update_fields=['rating'])

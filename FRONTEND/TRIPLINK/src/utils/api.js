@@ -210,3 +210,33 @@ export const getMyBookings = async (accessToken) => {
   return apiRequest("/api/auth/bookings/", { method: "GET" }, accessToken);
 };
 
+/**
+ * Get reviews for a package
+ * @param {number|string} packageId - Package ID
+ * @returns {Promise<object>}
+ */
+export const getPackageReviews = async (packageId) => {
+  const id = typeof packageId === "string" ? packageId : String(packageId);
+  return apiRequest(`/api/auth/packages/${id}/reviews/`, { method: "GET" });
+};
+
+/**
+ * Create a review for a package
+ * @param {number|string} packageId - Package ID
+ * @param {number} rating - Rating (1-5)
+ * @param {string} comment - Review comment
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const createReview = async (packageId, rating, comment, accessToken) => {
+  const id = typeof packageId === "string" ? packageId : String(packageId);
+  return apiRequest(
+    `/api/auth/packages/${id}/reviews/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ rating, comment }),
+    },
+    accessToken
+  );
+};
+

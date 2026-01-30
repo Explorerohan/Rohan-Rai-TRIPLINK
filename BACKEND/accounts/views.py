@@ -8,12 +8,13 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email
-from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus
+from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus, Review
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
-    UserProfileSerializer, AgentProfileSerializer, PackageSerializer, BookingSerializer
+    UserProfileSerializer, AgentProfileSerializer, PackageSerializer, BookingSerializer,
+    PackageDetailSerializer, ReviewSerializer
 )
 
 User = get_user_model()
@@ -723,16 +724,40 @@ class PackageListView(generics.ListAPIView):
 
 
 class PackageDetailView(generics.RetrieveAPIView):
-    """API view to get package details"""
-    serializer_class = PackageSerializer
+    """API view to get package details with reviews and participants"""
+    serializer_class = PackageDetailSerializer
     permission_classes = [permissions.AllowAny]
-    queryset = Package.objects.filter(status=PackageStatus.ACTIVE)
+    queryset = Package.objects.all()  # Allow viewing completed packages too for detail
     lookup_field = 'id'
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+
+class ReviewListCreateView(generics.ListCreateAPIView):
+    """API view to list package reviews and create a new review"""
+    serializer_class = ReviewSerializer
+    
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated(), IsTraveler()]
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        package_id = self.kwargs.get('package_id')
+        return Review.objects.filter(package_id=package_id).order_by('-created_at')
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def perform_create(self, serializer):
+        package_id = self.kwargs.get('package_id')
+        package = Package.objects.get(id=package_id)
+        serializer.save(package=package)
 
 
 class BookingListCreateView(generics.ListCreateAPIView):

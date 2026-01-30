@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus, Review
 
 User = get_user_model()
 
@@ -199,3 +199,183 @@ class BookingSerializer(serializers.ModelSerializer):
         package.participants_count = (package.participants_count or 0) + 1
         package.save(update_fields=['participants_count'])
         return booking
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    """Serializer for Reviews"""
+    reviewer_name = serializers.SerializerMethodField()
+    reviewer_profile_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Review
+        fields = [
+            'id', 'user', 'package', 'rating', 'comment',
+            'reviewer_name', 'reviewer_profile_picture',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+    def get_reviewer_name(self, obj):
+        try:
+            profile = obj.user.user_profile
+            return profile.full_name
+        except UserProfile.DoesNotExist:
+            return obj.user.email.split('@')[0]
+
+    def get_reviewer_profile_picture(self, obj):
+        try:
+            profile = obj.user.user_profile
+            if profile.profile_picture:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(profile.profile_picture.url)
+                return profile.profile_picture.url
+        except UserProfile.DoesNotExist:
+            pass
+        return None
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        package = validated_data.get('package')
+        
+        # Check if user has booked this package
+        if not Booking.objects.filter(user=user, package=package, status=BookingStatus.CONFIRMED).exists():
+            raise serializers.ValidationError({'package': 'You can only review packages you have booked.'})
+        
+        # Check if user already reviewed this package
+        if Review.objects.filter(user=user, package=package).exists():
+            raise serializers.ValidationError({'package': 'You have already reviewed this package.'})
+        
+        validated_data['user'] = user
+        return super().create(validated_data)
+
+
+class ParticipantSerializer(serializers.ModelSerializer):
+    """Serializer for showing participants (travelers who booked)"""
+    traveler_name = serializers.SerializerMethodField()
+    traveler_profile_picture = serializers.SerializerMethodField()
+    traveler_location = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Booking
+        fields = ['id', 'traveler_name', 'traveler_profile_picture', 'traveler_location', 'created_at']
+
+    def get_traveler_name(self, obj):
+        try:
+            profile = obj.user.user_profile
+            return profile.full_name
+        except UserProfile.DoesNotExist:
+            return obj.user.email.split('@')[0]
+
+    def get_traveler_profile_picture(self, obj):
+        try:
+            profile = obj.user.user_profile
+            if profile.profile_picture:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(profile.profile_picture.url)
+                return profile.profile_picture.url
+        except UserProfile.DoesNotExist:
+            pass
+        return None
+
+    def get_traveler_location(self, obj):
+        try:
+            profile = obj.user.user_profile
+            return profile.location
+        except UserProfile.DoesNotExist:
+            return None
+
+
+class AgentInfoSerializer(serializers.ModelSerializer):
+    """Serializer for agent info in package detail"""
+    full_name = serializers.ReadOnlyField()
+    profile_picture_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AgentProfile
+        fields = ['id', 'full_name', 'phone_number', 'location', 'profile_picture_url', 'is_verified']
+
+    def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        return None
+
+
+class PackageDetailSerializer(serializers.ModelSerializer):
+    """Detailed serializer for Package with reviews and participants"""
+    features = PackageFeatureSerializer(many=True, read_only=True)
+    main_image_url = serializers.SerializerMethodField()
+    duration_display = serializers.ReadOnlyField()
+    user_has_booked = serializers.SerializerMethodField()
+    user_has_reviewed = serializers.SerializerMethodField()
+    
+    # Nested data
+    agent = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+    participants = serializers.SerializerMethodField()
+    reviews_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Package
+        fields = [
+            'id', 'title', 'location', 'country', 'description',
+            'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
+            'trip_start_date', 'trip_end_date',
+            'main_image', 'main_image_url', 'features', 'status',
+            'rating', 'participants_count', 'reviews_count',
+            'user_has_booked', 'user_has_reviewed',
+            'agent', 'reviews', 'participants',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_main_image_url(self, obj):
+        if obj.main_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.main_image.url)
+            return obj.main_image.url
+        return None
+
+    def get_user_has_booked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'traveler':
+            return False
+        return Booking.objects.filter(
+            user=request.user, package=obj, status=BookingStatus.CONFIRMED
+        ).exists()
+
+    def get_user_has_reviewed(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'traveler':
+            return False
+        return Review.objects.filter(user=request.user, package=obj).exists()
+
+    def get_agent(self, obj):
+        try:
+            agent_profile = obj.agent.agent_profile
+            return AgentInfoSerializer(agent_profile, context=self.context).data
+        except AgentProfile.DoesNotExist:
+            return {
+                'id': None,
+                'full_name': obj.agent.email.split('@')[0],
+                'phone_number': None,
+                'location': None,
+                'profile_picture_url': None,
+                'is_verified': False
+            }
+
+    def get_reviews(self, obj):
+        reviews = obj.reviews.all()[:10]  # Limit to 10 most recent reviews
+        return ReviewSerializer(reviews, many=True, context=self.context).data
+
+    def get_participants(self, obj):
+        bookings = obj.bookings.filter(status=BookingStatus.CONFIRMED)[:20]  # Limit to 20 participants
+        return ParticipantSerializer(bookings, many=True, context=self.context).data
+
+    def get_reviews_count(self, obj):
+        return obj.reviews.count()
