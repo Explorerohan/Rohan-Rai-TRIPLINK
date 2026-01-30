@@ -186,9 +186,39 @@
         transition: all 0.3s;
     }
 
+    .package-card {
+        cursor: pointer;
+    }
+
     .package-card:hover {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
         transform: translateY(-2px);
+    }
+    
+    .package-card-link {
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        width: 100%;
+    }
+
+    .btn-view {
+        background: #f1f5f9;
+        color: #1f6b2a;
+        padding: 10px 20px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        margin-right: 10px;
+    }
+
+    .btn-view:hover {
+        background: #e2e8f0;
     }
 
     .package-image-wrap {
@@ -598,6 +628,7 @@
             {% if packages %}
                 {% for package in packages %}
                     <div class="package-card">
+                        <a href="{% url 'agent_package_detail' package.id %}" class="package-card-link">
                         {% if package.main_image %}
                             <div class="package-image-wrap">
                                 <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="package-image">
@@ -614,7 +645,10 @@
                                     <h3 class="package-title">{{ package.title }}</h3>
                                     <p class="package-location">{{ package.location }}, {{ package.country }}</p>
                                 </div>
-                                <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit">Edit Details</a>
+                                <div style="display: flex; gap: 10px;" onclick="event.stopPropagation();">
+                                    <a href="{% url 'agent_package_detail' package.id %}" class="btn-view" onclick="event.stopPropagation();">View Details</a>
+                                    <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit" onclick="event.stopPropagation();">Edit</a>
+                                </div>
                             </div>
 
                             <div class="package-description-wrap">
@@ -655,6 +689,7 @@
                                 </div>
                             </div>
                         </div>
+                        </a>
                     </div>
                 {% endfor %}
             {% else %}
@@ -672,7 +707,7 @@
             <div class="package-list">
                 {% if recent_packages %}
                     {% for package in recent_packages %}
-                        <div class="package-list-item">
+                        <a href="{% url 'agent_package_detail' package.id %}" class="package-list-item" style="text-decoration: none; color: inherit;">
                             {% if package.main_image %}
                                 <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="package-thumbnail">
                             {% else %}
@@ -684,7 +719,7 @@
                                 <div class="package-list-date">{{ package.created_at|date:"d F Y" }}</div>
                             </div>
                             <span class="package-list-arrow">→</span>
-                        </div>
+                        </a>
                     {% endfor %}
                 {% else %}
                     <div class="empty-state" style="padding: 20px;">
@@ -699,7 +734,7 @@
             <div class="package-list">
                 {% if completed_packages %}
                     {% for package in completed_packages %}
-                        <div class="completed-package-item">
+                        <a href="{% url 'agent_package_detail' package.id %}" class="completed-package-item" style="text-decoration: none; color: inherit;">
                             {% if package.main_image %}
                                 <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="completed-package-thumbnail">
                             {% else %}
@@ -711,19 +746,19 @@
                                 <div class="completed-package-date">{{ package.created_at|date:"d M" }} - {{ package.updated_at|date:"d M" }}</div>
                                 <div class="completed-package-rating">
                                     {% for i in "12345"|make_list %}
-                                        {% if forloop.counter <= package.rating|floatformat:0|add:"0" %}
+                                        {% if forloop.counter <= package.agent_rating %}
                                             <span class="star">★</span>
-                                        {% elif forloop.counter|add:"-1" < package.rating|floatformat:0|add:"0" %}
+                                        {% elif forloop.counter|add:"-1" < package.agent_rating %}
                                             <span class="star half">★</span>
                                         {% else %}
                                             <span class="star" style="color: #e2e8f0;">★</span>
                                         {% endif %}
                                     {% endfor %}
-                                    <span style="margin-left: 4px; font-size: 12px; color: #64748b;">{{ package.rating|floatformat:1 }}</span>
+                                    <span style="margin-left: 4px; font-size: 12px; color: #64748b;">{{ package.agent_rating|floatformat:1 }}</span>
                                 </div>
                                 <div class="completed-package-participants">{{ package.participants_count }} Person Joined</div>
                             </div>
-                        </div>
+                        </a>
                     {% endfor %}
                 {% else %}
                     <div class="empty-state" style="padding: 20px;">

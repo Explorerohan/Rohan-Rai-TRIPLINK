@@ -1,0 +1,727 @@
+{% extends 'base_agent.html' %}
+{% load static %}
+
+{% block title %}{{ package.title }} - TRIPLINK{% endblock %}
+
+{% block agent_extra_css %}
+<style>
+    .header {
+        position: fixed;
+        top: 0;
+        left: 260px;
+        right: 0;
+        height: 70px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        padding: 0 30px;
+        z-index: 100;
+    }
+
+    .header-left {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .back-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+
+    .back-btn:hover {
+        background: #f1f5f9;
+        color: #1f6b2a;
+    }
+
+    .header-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .btn-edit {
+        background: #1f6b2a;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+
+    .btn-edit:hover {
+        background: #2d8f3f;
+    }
+
+    .btn-delete {
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+
+    .btn-delete:hover {
+        background: #fecaca;
+    }
+
+    .main-content {
+        padding-top: 70px;
+    }
+
+    .detail-container {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 30px;
+        padding: 30px 0 0;
+    }
+
+    /* Package Info Section */
+    .package-info {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .package-hero {
+        position: relative;
+        border-radius: 16px;
+        overflow: hidden;
+        height: 350px;
+        background: #f1f5f9;
+    }
+
+    .package-hero img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .package-status-badge {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .package-status-badge.active {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .package-status-badge.completed {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .package-status-badge.draft {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .package-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: #1e293b;
+        margin-bottom: 8px;
+    }
+
+    .package-location {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #64748b;
+        font-size: 16px;
+        margin-bottom: 16px;
+    }
+
+    .package-stats {
+        display: flex;
+        gap: 24px;
+        padding: 16px 0;
+        border-top: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 16px;
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .stat-value.price {
+        color: #1f6b2a;
+    }
+
+    .rating-stars {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .star {
+        color: #fbbf24;
+        font-size: 16px;
+    }
+
+    .star.empty {
+        color: #e2e8f0;
+    }
+
+    .package-dates {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #1f6b2a;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 12px;
+    }
+
+    .package-description {
+        color: #475569;
+        font-size: 15px;
+        line-height: 1.7;
+    }
+
+    .features-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 8px;
+    }
+
+    .feature-tag {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #475569;
+    }
+
+    .feature-tag ion-icon {
+        font-size: 18px;
+        color: #64748b;
+    }
+
+    /* Right Sidebar */
+    .detail-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .sidebar-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .sidebar-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .sidebar-card-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .count-badge {
+        background: #f1f5f9;
+        color: #64748b;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    /* Reviews */
+    .reviews-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .review-item {
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .review-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .review-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: #e2e8f0;
+    }
+
+    .review-info {
+        flex: 1;
+    }
+
+    .review-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 2px;
+    }
+
+    .review-date {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .review-rating {
+        display: flex;
+        gap: 2px;
+    }
+
+    .review-rating .star {
+        font-size: 14px;
+    }
+
+    .review-comment {
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.6;
+    }
+
+    /* Participants */
+    .participants-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 350px;
+        overflow-y: auto;
+    }
+
+    .participant-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .participant-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: #e2e8f0;
+    }
+
+    .participant-info {
+        flex: 1;
+    }
+
+    .participant-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 2px;
+    }
+
+    .participant-email {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 2px;
+    }
+
+    .participant-location {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .participant-date {
+        font-size: 11px;
+        color: #94a3b8;
+        text-align: right;
+    }
+
+    /* Empty States */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #94a3b8;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+    }
+
+    .empty-state-text {
+        font-size: 14px;
+        color: #64748b;
+    }
+
+    .empty-state-subtext {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-top: 4px;
+    }
+
+    /* Messages */
+    .messages {
+        margin: 20px 0;
+    }
+
+    .alert {
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 1200px) {
+        .detail-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .detail-sidebar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .header {
+            left: 80px;
+        }
+        
+        .detail-sidebar {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock agent_extra_css %}
+
+{% block main_content %}
+<header class="header">
+    <div class="header-left">
+        <a href="{% url 'agent_packages' %}" class="back-btn">
+            ← Back to Packages
+        </a>
+        <span class="header-title">Package Details</span>
+    </div>
+    <div class="header-right">
+        <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit">
+            ✏️ Edit Package
+        </a>
+        <a href="{% url 'agent_delete_package' package.id %}" class="btn-delete" onclick="return confirm('Are you sure you want to delete this package?');">
+            🗑️ Delete
+        </a>
+    </div>
+</header>
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="detail-container">
+    <!-- Left Column: Package Info -->
+    <div class="package-info">
+        <!-- Hero Image -->
+        <div class="package-hero">
+            {% if package.main_image %}
+                <img src="{{ package.main_image.url }}" alt="{{ package.title }}">
+            {% else %}
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 72px;">
+                    📦
+                </div>
+            {% endif %}
+            <span class="package-status-badge {{ package.status }}">{{ package.get_status_display }}</span>
+        </div>
+
+        <!-- Package Info Card -->
+        <div class="info-card">
+            <h1 class="package-title">{{ package.title }}</h1>
+            <div class="package-location">
+                📍 {{ package.location }}, {{ package.country }}
+            </div>
+
+            <div class="package-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Price</span>
+                    <span class="stat-value price">Rs. {{ package.price_per_person|floatformat:0 }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Duration</span>
+                    <span class="stat-value">{{ package.duration_display }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Agent Rating</span>
+                    <div class="rating-stars">
+                        {% for i in "12345"|make_list %}
+                            {% if forloop.counter <= agent_rating %}
+                                <span class="star">★</span>
+                            {% else %}
+                                <span class="star empty">★</span>
+                            {% endif %}
+                        {% endfor %}
+                        <span style="margin-left: 4px; font-size: 14px; color: #64748b;">({{ agent_rating|floatformat:1 }})</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Participants</span>
+                    <span class="stat-value">{{ participants_count }}</span>
+                </div>
+            </div>
+
+            {% if package.trip_start_date or package.trip_end_date %}
+            <div class="package-dates">
+                📅 
+                {% if package.trip_start_date and package.trip_end_date %}
+                    {{ package.trip_start_date|date:"M d, Y" }} – {{ package.trip_end_date|date:"M d, Y" }}
+                {% elif package.trip_start_date %}
+                    From {{ package.trip_start_date|date:"M d, Y" }}
+                {% else %}
+                    To {{ package.trip_end_date|date:"M d, Y" }}
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <h3 class="section-title">Description</h3>
+            <p class="package-description">{{ package.description }}</p>
+        </div>
+
+        <!-- Features Card -->
+        <div class="info-card">
+            <h3 class="section-title">Features & Facilities</h3>
+            <div class="features-grid">
+                {% for feature in package.features.all %}
+                    <div class="feature-tag">
+                        {% if feature.icon and "-" in feature.icon %}
+                            <ion-icon name="{{ feature.icon }}"></ion-icon>
+                        {% else %}
+                            <ion-icon name="checkmark-circle-outline"></ion-icon>
+                        {% endif %}
+                        {{ feature.name }}
+                    </div>
+                {% empty %}
+                    <div class="feature-tag">
+                        <ion-icon name="checkmark-circle-outline"></ion-icon>
+                        All Inclusive
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Reviews & Participants -->
+    <div class="detail-sidebar">
+        <!-- Reviews Card -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header">
+                <h3 class="sidebar-card-title">Agent Reviews</h3>
+                <span class="count-badge">{{ reviews_count }}</span>
+            </div>
+            
+            {% if reviews %}
+                <div class="reviews-list">
+                    {% for item in reviews %}
+                        <div class="review-item">
+                            <div class="review-header">
+                                {% if item.profile and item.profile.profile_picture %}
+                                    <img src="{{ item.profile.profile_picture.url }}" alt="{{ item.profile.full_name }}" class="review-avatar">
+                                {% else %}
+                                    <div class="review-avatar" style="display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                                        👤
+                                    </div>
+                                {% endif %}
+                                <div class="review-info">
+                                    <div class="review-name">
+                                        {% if item.profile %}
+                                            {{ item.profile.full_name }}
+                                        {% else %}
+                                            {{ item.review.user.email|slice:":20" }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="review-date">{{ item.review.created_at|date:"M d, Y" }}</div>
+                                </div>
+                                <div class="review-rating">
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= item.review.rating %}
+                                            <span class="star">★</span>
+                                        {% else %}
+                                            <span class="star empty">★</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% if item.review.comment %}
+                                <p class="review-comment">{{ item.review.comment }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <div class="empty-state-text">No reviews yet</div>
+                    <div class="empty-state-subtext">Reviews will appear here once travelers complete a trip and rate this agent</div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Participants Card -->
+        <div class="sidebar-card">
+            <div class="sidebar-card-header">
+                <h3 class="sidebar-card-title">Travelers Joined</h3>
+                <span class="count-badge">{{ participants_count }}</span>
+            </div>
+            
+            {% if participants %}
+                <div class="participants-list">
+                    {% for item in participants %}
+                        <div class="participant-item">
+                            {% if item.profile and item.profile.profile_picture %}
+                                <img src="{{ item.profile.profile_picture.url }}" alt="{{ item.profile.full_name }}" class="participant-avatar">
+                            {% else %}
+                                <div class="participant-avatar" style="display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                    👤
+                                </div>
+                            {% endif %}
+                            <div class="participant-info">
+                                <div class="participant-name">
+                                    {% if item.profile %}
+                                        {{ item.profile.full_name }}
+                                    {% else %}
+                                        {{ item.booking.user.email|slice:":20" }}
+                                    {% endif %}
+                                </div>
+                                <div class="participant-email">{{ item.booking.user.email }}</div>
+                                {% if item.profile and item.profile.location %}
+                                    <div class="participant-location">
+                                        📍 {{ item.profile.location }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="participant-date">
+                                Booked<br>{{ item.booking.created_at|date:"M d" }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <div class="empty-state-text">No travelers yet</div>
+                    <div class="empty-state-subtext">Travelers who book this package will appear here</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock main_content %}
+
+{% block extra_js %}
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+{% endblock extra_js %}

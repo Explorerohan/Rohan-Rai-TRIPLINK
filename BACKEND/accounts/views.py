@@ -8,13 +8,13 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email
-from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus, Review
+from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus, AgentReview
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
     UserProfileSerializer, AgentProfileSerializer, PackageSerializer, BookingSerializer,
-    PackageDetailSerializer, ReviewSerializer
+    PackageDetailSerializer, AgentReviewSerializer
 )
 
 User = get_user_model()
@@ -698,6 +698,81 @@ def agent_delete_package_view(request, package_id):
     return redirect('agent_packages')
 
 
+def agent_package_detail_view(request, package_id):
+    """View to show package details including reviews and participants"""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+    
+    try:
+        package = Package.objects.get(id=package_id, agent=request.user)
+    except Package.DoesNotExist:
+        messages.error(request, 'Package not found.')
+        return redirect('agent_packages')
+    
+    # Get agent reviews (reviews for the package's agent)
+    agent_reviews = AgentReview.objects.filter(agent=package.agent).order_by('-created_at')
+    reviews_with_profiles = []
+    for review in agent_reviews:
+        try:
+            profile = review.user.user_profile
+            reviews_with_profiles.append({
+                'review': review,
+                'profile': profile,
+            })
+        except UserProfile.DoesNotExist:
+            reviews_with_profiles.append({
+                'review': review,
+                'profile': None,
+            })
+    
+    # Get confirmed bookings (participants)
+    bookings = Booking.objects.filter(
+        package=package,
+        status=BookingStatus.CONFIRMED
+    ).order_by('-created_at')
+    participants = []
+    for booking in bookings:
+        try:
+            profile = booking.user.user_profile
+            participants.append({
+                'booking': booking,
+                'profile': profile,
+            })
+        except UserProfile.DoesNotExist:
+            participants.append({
+                'booking': booking,
+                'profile': None,
+            })
+    
+    # Get agent profile for display name and rating
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+
+    # Agent rating for package's agent (for template fallback)
+    try:
+        package_agent_profile = AgentProfile.objects.get(user=package.agent)
+        agent_rating = float(package_agent_profile.rating)
+    except AgentProfile.DoesNotExist:
+        agent_rating = 0.0
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'package': package,
+        'reviews': reviews_with_profiles,
+        'reviews_count': agent_reviews.count(),
+        'participants': participants,
+        'participants_count': bookings.count(),
+        'agent_rating': agent_rating,
+        'active_nav': 'packages',
+    }
+    return render(request, 'agent_package_detail.html', context)
+
+
 # API Views for Packages
 class PackageListView(generics.ListAPIView):
     """API view to list all active packages"""
@@ -736,18 +811,18 @@ class PackageDetailView(generics.RetrieveAPIView):
         return context
 
 
-class ReviewListCreateView(generics.ListCreateAPIView):
-    """API view to list package reviews and create a new review"""
-    serializer_class = ReviewSerializer
-    
+class AgentReviewListCreateView(generics.ListCreateAPIView):
+    """API view to list agent reviews and create a new review (travelers only, after completing a trip)"""
+    serializer_class = AgentReviewSerializer
+
     def get_permissions(self):
         if self.request.method == 'POST':
             return [permissions.IsAuthenticated(), IsTraveler()]
         return [permissions.AllowAny()]
 
     def get_queryset(self):
-        package_id = self.kwargs.get('package_id')
-        return Review.objects.filter(package_id=package_id).order_by('-created_at')
+        agent_id = self.kwargs.get('agent_id')
+        return AgentReview.objects.filter(agent_id=agent_id).order_by('-created_at')
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -755,9 +830,10 @@ class ReviewListCreateView(generics.ListCreateAPIView):
         return context
 
     def perform_create(self, serializer):
-        package_id = self.kwargs.get('package_id')
-        package = Package.objects.get(id=package_id)
-        serializer.save(package=package)
+        agent_id = self.kwargs.get('agent_id')
+        from django.contrib.auth import get_user_model
+        agent = get_user_model().objects.get(id=agent_id, role=Roles.AGENT)
+        serializer.save(agent=agent)
 
 
 class BookingListCreateView(generics.ListCreateAPIView):

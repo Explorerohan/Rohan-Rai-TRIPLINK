@@ -12,7 +12,7 @@ from .views import (
     PackageListView,
     PackageDetailView,
     BookingListCreateView,
-    ReviewListCreateView,
+    AgentReviewListCreateView,
 )
 
 urlpatterns = [
@@ -28,8 +28,8 @@ urlpatterns = [
     # Package endpoints
     path("packages/", PackageListView.as_view(), name="package_list"),
     path("packages/<int:id>/", PackageDetailView.as_view(), name="package_detail"),
-    # Review endpoints
-    path("packages/<int:package_id>/reviews/", ReviewListCreateView.as_view(), name="review_list_create"),
+    # Agent review endpoints (travelers review agents after completing a trip)
+    path("agents/<int:agent_id>/reviews/", AgentReviewListCreateView.as_view(), name="agent_review_list_create"),
     # Booking endpoints
     path("bookings/", BookingListCreateView.as_view(), name="booking_list_create"),
 ]

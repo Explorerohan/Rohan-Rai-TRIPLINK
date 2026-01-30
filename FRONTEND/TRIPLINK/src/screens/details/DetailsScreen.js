@@ -15,7 +15,7 @@ import {
   Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getPackageById, createReview } from "../../utils/api";
+import { getPackageById, createAgentReview } from "../../utils/api";
 
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -137,7 +137,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Write a Review</Text>
+            <Text style={styles.modalTitle}>Review Agent</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <Ionicons name="close" size={24} color="#6b7076" />
             </TouchableOpacity>
@@ -177,7 +177,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitButtonText}>Submit Review</Text>
+              <Text style={styles.submitButtonText}>Submit Agent Review</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -247,19 +247,24 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
       Alert.alert("Error", "Please log in to submit a review");
       return;
     }
+    const agentId = packageDetail?.agent?.agent_id;
+    if (!agentId) {
+      Alert.alert("Error", "Agent information not found");
+      return;
+    }
 
     try {
       setSubmittingReview(true);
-      await createReview(packageId, rating, comment, session.access);
+      await createAgentReview(agentId, rating, comment, session.access);
       setReviewModalVisible(false);
       setUserHasReviewed(true);
-      
+
       // Refresh package details to show new review
       const response = await getPackageById(packageId, session.access);
       if (response?.data) {
         setPackageDetail(response.data);
       }
-      
+
       Alert.alert("Success", "Your review has been submitted!");
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to submit review");
@@ -275,9 +280,10 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
     : trip.description;
 
   const agent = packageDetail?.agent;
-  const reviews = packageDetail?.reviews || [];
+  const reviews = agent?.reviews || [];
   const participants = packageDetail?.participants || [];
-  const reviewsCount = packageDetail?.reviews_count || 0;
+  const reviewsCount = agent?.reviews_count ?? 0;
+  const userCanReviewAgent = agent?.user_can_review_agent ?? false;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -308,11 +314,11 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
             </Text>
           </View>
 
-          {/* Rating */}
+          {/* Agent Rating */}
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color="#f7b500" />
-            <Text style={styles.ratingValue}>{packageDetail?.rating || trip.rating}</Text>
-            <Text style={styles.ratingMeta}> ({reviewsCount} Reviews)</Text>
+            <Text style={styles.ratingValue}>{packageDetail?.agent_rating ?? agent?.rating ?? trip.rating}</Text>
+            <Text style={styles.ratingMeta}> ({reviewsCount} Agent Reviews)</Text>
           </View>
 
           {/* Trip Dates */}
@@ -413,20 +419,36 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
                   )}
                 </View>
               </View>
+
+              {/* Reminder to review agent after completing trip */}
+              {(userHasBooked || trip.user_has_booked) && !userHasReviewed && (
+                <View style={[styles.reviewReminderCard, userCanReviewAgent && styles.reviewReminderCardHighlight]}>
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={22}
+                    color={userCanReviewAgent ? "#1f6b2a" : "#6f747a"}
+                  />
+                  <Text style={[styles.reviewReminderText, userCanReviewAgent && styles.reviewReminderTextHighlight]}>
+                    {userCanReviewAgent
+                      ? "You've completed your trip! Don't forget to leave a review for your agent."
+                      : "Don't forget to provide a review for your agent after completing your trip."}
+                  </Text>
+                </View>
+              )}
             </>
           )}
 
-          {/* Reviews Section */}
+          {/* Agent Reviews Section */}
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Reviews ({reviewsCount})</Text>
-            {userHasBooked && !userHasReviewed && (
+            <Text style={styles.sectionTitle}>Agent Reviews ({reviewsCount})</Text>
+            {userCanReviewAgent && !userHasReviewed && (
               <TouchableOpacity
                 style={styles.writeReviewButton}
                 onPress={() => setReviewModalVisible(true)}
                 activeOpacity={0.8}
               >
                 <Ionicons name="create-outline" size={16} color="#1f6b2a" />
-                <Text style={styles.writeReviewText}>Write Review</Text>
+                <Text style={styles.writeReviewText}>Review Agent</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -445,7 +467,7 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
             <View style={styles.noReviewsCard}>
               <Ionicons name="chatbubble-outline" size={32} color="#d1d5db" />
               <Text style={styles.noReviewsText}>No reviews yet</Text>
-              <Text style={styles.noReviewsSubtext}>Be the first to review this package!</Text>
+              <Text style={styles.noReviewsSubtext}>Reviews appear here after travelers complete a trip with this agent</Text>
             </View>
           )}
 
@@ -748,6 +770,31 @@ const styles = StyleSheet.create({
   agentLocationText: {
     fontSize: 13,
     color: "#6f747a",
+  },
+  reviewReminderCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#f8fafc",
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  reviewReminderCardHighlight: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
+  reviewReminderText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#6f747a",
+    lineHeight: 20,
+  },
+  reviewReminderTextHighlight: {
+    color: "#166534",
+    fontWeight: "500",
   },
   // Reviews
   writeReviewButton: {

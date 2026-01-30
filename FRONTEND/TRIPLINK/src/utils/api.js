@@ -211,27 +211,27 @@ export const getMyBookings = async (accessToken) => {
 };
 
 /**
- * Get reviews for a package
- * @param {number|string} packageId - Package ID
+ * Get reviews for an agent
+ * @param {number|string} agentId - Agent (user) ID
  * @returns {Promise<object>}
  */
-export const getPackageReviews = async (packageId) => {
-  const id = typeof packageId === "string" ? packageId : String(packageId);
-  return apiRequest(`/api/auth/packages/${id}/reviews/`, { method: "GET" });
+export const getAgentReviews = async (agentId) => {
+  const id = typeof agentId === "string" ? agentId : String(agentId);
+  return apiRequest(`/api/auth/agents/${id}/reviews/`, { method: "GET" });
 };
 
 /**
- * Create a review for a package
- * @param {number|string} packageId - Package ID
+ * Create a review for an agent (only after completing a trip with that agent)
+ * @param {number|string} agentId - Agent (user) ID
  * @param {number} rating - Rating (1-5)
  * @param {string} comment - Review comment
  * @param {string} accessToken - JWT access token
  * @returns {Promise<object>}
  */
-export const createReview = async (packageId, rating, comment, accessToken) => {
-  const id = typeof packageId === "string" ? packageId : String(packageId);
+export const createAgentReview = async (agentId, rating, comment, accessToken) => {
+  const id = typeof agentId === "string" ? agentId : String(agentId);
   return apiRequest(
-    `/api/auth/packages/${id}/reviews/`,
+    `/api/auth/agents/${id}/reviews/`,
     {
       method: "POST",
       body: JSON.stringify({ rating, comment }),

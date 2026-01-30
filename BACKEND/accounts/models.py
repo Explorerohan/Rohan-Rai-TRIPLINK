@@ -112,6 +112,7 @@ class AgentProfile(models.Model):
     # Simplified profile: single location field instead of multiple address / company fields
     location = models.CharField(max_length=200, blank=True, help_text="Agent location")
     is_verified = models.BooleanField(default=False)
+    rating = models.DecimalField(max_digits=3, decimal_places=1, default=0.0, help_text="Average rating from travelers (0-5)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -182,7 +183,6 @@ class Package(models.Model):
         choices=PackageStatus.choices,
         default=PackageStatus.ACTIVE
     )
-    rating = models.DecimalField(max_digits=3, decimal_places=1, default=0.0, help_text="Average rating (0-5)")
     participants_count = models.PositiveIntegerField(default=0, help_text="Number of people who joined")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -198,6 +198,14 @@ class Package(models.Model):
     @property
     def duration_display(self):
         return f"{self.duration_days} Days / {self.duration_nights} Nights"
+
+    @property
+    def agent_rating(self):
+        """Rating from the package's agent (from AgentProfile)"""
+        try:
+            return float(self.agent.agent_profile.rating)
+        except (AgentProfile.DoesNotExist, AttributeError):
+            return 0.0
 
 
 class BookingStatus(models.TextChoices):
@@ -234,59 +242,58 @@ class Booking(models.Model):
         return f"{self.user.email} – {self.package.title}"
 
 
-class Review(models.Model):
-    """Review left by a traveler for a package they booked"""
+class AgentReview(models.Model):
+    """Review left by a traveler for an agent after completing a trip with them"""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name="reviews",
+        related_name="agent_reviews",
         limit_choices_to={"role": Roles.TRAVELER},
     )
-    package = models.ForeignKey(
-        Package,
+    agent = models.ForeignKey(
+        User,
         on_delete=models.CASCADE,
-        related_name="reviews",
+        related_name="reviews_received",
+        limit_choices_to={"role": Roles.AGENT},
     )
-    rating = models.PositiveIntegerField(
-        help_text="Rating from 1 to 5"
-    )
+    rating = models.PositiveIntegerField(help_text="Rating from 1 to 5")
     comment = models.TextField(blank=True, help_text="Review comment")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Review"
-        verbose_name_plural = "Reviews"
+        verbose_name = "Agent Review"
+        verbose_name_plural = "Agent Reviews"
         ordering = ["-created_at"]
-        unique_together = ["user", "package"]  # One review per user per package
+        unique_together = ["user", "agent"]  # One review per traveler per agent
 
     def __str__(self):
-        return f"{self.user.email} - {self.package.title} ({self.rating}/5)"
+        return f"{self.user.email} - {self.agent.email} ({self.rating}/5)"
 
     def save(self, *args, **kwargs):
-        # Ensure rating is between 1 and 5
         if self.rating < 1:
             self.rating = 1
         elif self.rating > 5:
             self.rating = 5
         super().save(*args, **kwargs)
-        # Update package average rating
-        self._update_package_rating()
+        self._update_agent_rating()
 
     def delete(self, *args, **kwargs):
-        package = self.package
+        agent_user = self.agent
         super().delete(*args, **kwargs)
-        # Update package rating after deletion
-        self._update_package_rating_for(package)
+        AgentReview._update_agent_rating_for(agent_user)
 
-    def _update_package_rating(self):
-        """Update the package's average rating"""
-        self._update_package_rating_for(self.package)
+    def _update_agent_rating(self):
+        AgentReview._update_agent_rating_for(self.agent)
 
     @staticmethod
-    def _update_package_rating_for(package):
-        """Update average rating for a specific package"""
+    def _update_agent_rating_for(agent_user):
+        """Update average rating on AgentProfile"""
         from django.db.models import Avg
-        avg_rating = package.reviews.aggregate(Avg('rating'))['rating__avg']
-        package.rating = round(avg_rating, 1) if avg_rating else 0.0
-        package.save(update_fields=['rating'])
+        try:
+            agent_profile = AgentProfile.objects.get(user=agent_user)
+        except AgentProfile.DoesNotExist:
+            return
+        avg_rating = AgentReview.objects.filter(agent=agent_user).aggregate(Avg('rating'))['rating__avg']
+        agent_profile.rating = round(avg_rating, 1) if avg_rating else 0.0
+        agent_profile.save(update_fields=['rating'])

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile, Package, PackageFeature, Booking, Review
+from .models import User, UserProfile, AgentProfile, Package, PackageFeature, Booking, AgentReview
 
 
 @admin.register(User)
@@ -45,7 +45,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(AgentProfile)
 class AgentProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'full_name', 'phone_number', 'location', 'is_verified', 'created_at']
+    list_display = ['user', 'full_name', 'phone_number', 'location', 'rating', 'is_verified', 'created_at']
     list_filter = ['is_verified', 'created_at']
     search_fields = ['user__email', 'first_name', 'last_name', 'phone_number']
     readonly_fields = ['created_at', 'updated_at']
@@ -75,9 +75,9 @@ class BookingAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at']
 
 
-@admin.register(Review)
-class ReviewAdmin(admin.ModelAdmin):
-    list_display = ['user', 'package', 'rating', 'created_at']
+@admin.register(AgentReview)
+class AgentReviewAdmin(admin.ModelAdmin):
+    list_display = ['user', 'agent', 'rating', 'created_at']
     list_filter = ['rating', 'created_at']
-    search_fields = ['user__email', 'package__title', 'comment']
+    search_fields = ['user__email', 'agent__email', 'comment']
     readonly_fields = ['created_at', 'updated_at']

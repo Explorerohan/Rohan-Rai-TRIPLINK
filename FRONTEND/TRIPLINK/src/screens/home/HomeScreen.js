@@ -167,7 +167,7 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
             image: pkg.main_image_url || "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
             price: pkg.price_per_person, // Pass numeric value, DetailsScreen will format it
             nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
-            rating: parseFloat(pkg.rating) || 4.5,
+            rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
             reviews: pkg.participants_count || 0,
             perks: pkg.features?.map(f => f.name) || [],
             region: "All",
