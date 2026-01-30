@@ -282,7 +282,6 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
   const agent = packageDetail?.agent;
   const reviews = agent?.reviews || [];
   const participants = packageDetail?.participants || [];
-  const reviewsCount = agent?.reviews_count ?? 0;
   const userCanReviewAgent = agent?.user_can_review_agent ?? false;
 
   return (
@@ -318,7 +317,7 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color="#f7b500" />
             <Text style={styles.ratingValue}>{packageDetail?.agent_rating ?? agent?.rating ?? trip.rating}</Text>
-            <Text style={styles.ratingMeta}> ({reviewsCount} Agent Reviews)</Text>
+            <Text style={styles.ratingMeta}> Agent rating</Text>
           </View>
 
           {/* Trip Dates */}
@@ -392,30 +391,58 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
             })()}
           </View>
 
-          {/* Agent/Host Info */}
+          {/* Agent/Host Info with Review action and Reviews */}
           {agent && (
             <>
               <Text style={styles.sectionTitle}>Hosted by</Text>
               <View style={styles.agentCard}>
-                <Image
-                  source={{ uri: agent.profile_picture_url || DEFAULT_AVATAR_URL }}
-                  style={styles.agentAvatar}
-                />
-                <View style={styles.agentInfo}>
-                  <View style={styles.agentNameRow}>
-                    <Text style={styles.agentName}>{agent.full_name || "Travel Agent"}</Text>
-                    {agent.is_verified && (
-                      <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark-circle" size={16} color="#1f6b2a" />
-                        <Text style={styles.verifiedText}>Verified</Text>
-                      </View>
-                    )}
-                  </View>
-                  {agent.location && (
-                    <View style={styles.agentLocation}>
-                      <Ionicons name="location-outline" size={14} color="#6f747a" />
-                      <Text style={styles.agentLocationText}>{agent.location}</Text>
+                <View style={styles.agentCardTop}>
+                  <Image
+                    source={{ uri: agent.profile_picture_url || DEFAULT_AVATAR_URL }}
+                    style={styles.agentAvatar}
+                  />
+                  <View style={styles.agentInfo}>
+                    <View style={styles.agentNameRow}>
+                      <Text style={styles.agentName}>{agent.full_name || "Travel Agent"}</Text>
+                      {agent.is_verified && (
+                        <View style={styles.verifiedBadge}>
+                          <Ionicons name="checkmark-circle" size={16} color="#1f6b2a" />
+                          <Text style={styles.verifiedText}>Verified</Text>
+                        </View>
+                      )}
                     </View>
+                  </View>
+                  {!userHasReviewed && (
+                    <TouchableOpacity
+                      style={styles.agentReviewButton}
+                      onPress={() => setReviewModalVisible(true)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="create-outline" size={18} color="#1f6b2a" />
+                      <Text style={styles.agentReviewButtonText}>Review</Text>
+                    </TouchableOpacity>
+                  )}
+                  {userHasReviewed && (
+                    <View style={styles.reviewedBadge}>
+                      <Ionicons name="checkmark-circle" size={18} color="#1f6b2a" />
+                      <Text style={styles.reviewedBadgeText}>Reviewed</Text>
+                    </View>
+                  )}
+                </View>
+                {/* Reviews inside agent section */}
+                <View style={styles.agentReviewsInline}>
+                  {loading ? (
+                    <View style={styles.loadingSection}>
+                      <ActivityIndicator size="small" color="#1f6b2a" />
+                    </View>
+                  ) : reviews.length > 0 ? (
+                    <View style={styles.reviewsList}>
+                      {reviews.map((review, index) => (
+                        <ReviewCard key={review.id || index} review={review} />
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.noReviewsInline}>No reviews yet</Text>
                   )}
                 </View>
               </View>
@@ -430,7 +457,7 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
                   />
                   <Text style={[styles.reviewReminderText, userCanReviewAgent && styles.reviewReminderTextHighlight]}>
                     {userCanReviewAgent
-                      ? "You've completed your trip! Don't forget to leave a review for your agent."
+                      ? "You've completed your trip! Tap Review above to leave feedback for your agent."
                       : "Don't forget to provide a review for your agent after completing your trip."}
                   </Text>
                 </View>
@@ -438,40 +465,8 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
             </>
           )}
 
-          {/* Agent Reviews Section */}
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Agent Reviews ({reviewsCount})</Text>
-            {userCanReviewAgent && !userHasReviewed && (
-              <TouchableOpacity
-                style={styles.writeReviewButton}
-                onPress={() => setReviewModalVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="create-outline" size={16} color="#1f6b2a" />
-                <Text style={styles.writeReviewText}>Review Agent</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {loading ? (
-            <View style={styles.loadingSection}>
-              <ActivityIndicator size="small" color="#1f6b2a" />
-            </View>
-          ) : reviews.length > 0 ? (
-            <View style={styles.reviewsList}>
-              {reviews.map((review, index) => (
-                <ReviewCard key={review.id || index} review={review} />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.noReviewsCard}>
-              <Ionicons name="chatbubble-outline" size={32} color="#d1d5db" />
-              <Text style={styles.noReviewsText}>No reviews yet</Text>
-              <Text style={styles.noReviewsSubtext}>Reviews appear here after travelers complete a trip with this agent</Text>
-            </View>
-          )}
-
           {/* Participants Section */}
+          <View style={styles.participantsSectionWrap}>
           <Text style={styles.sectionTitle}>
             Travelers Joined ({packageDetail?.participants_count || participants.length})
           </Text>
@@ -511,6 +506,7 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
               <Text style={styles.noParticipantsSubtext}>Be the first to book this trip!</Text>
             </View>
           )}
+          </View>
         </View>
       </ScrollView>
 
@@ -719,14 +715,17 @@ const styles = StyleSheet.create({
   },
   // Agent Card
   agentCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
     backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 14,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: "#e1e5ea",
+  },
+  agentCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   agentAvatar: {
     width: 56,
@@ -770,6 +769,52 @@ const styles = StyleSheet.create({
   agentLocationText: {
     fontSize: 13,
     color: "#6f747a",
+  },
+  agentReviewsInline: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  noReviewsInline: {
+    fontSize: 14,
+    color: "#94a3b8",
+  },
+  agentReviewButton: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f0fdf4",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    gap: 4,
+    flexShrink: 0,
+    minWidth: 70,
+  },
+  agentReviewButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1f6b2a",
+  },
+  reviewedBadge: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f0fdf4",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    gap: 4,
+  },
+  reviewedBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1f6b2a",
   },
   reviewReminderCard: {
     flexDirection: "row",
@@ -877,6 +922,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   // Participants
+  participantsSectionWrap: {
+    marginTop: 28,
+  },
   participantsSection: {
     backgroundColor: "#ffffff",
     borderRadius: 14,
