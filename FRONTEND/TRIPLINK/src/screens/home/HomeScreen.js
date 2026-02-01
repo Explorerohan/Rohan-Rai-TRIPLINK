@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import {
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -109,12 +110,14 @@ const cleanPrice = (price) => {
   return price;
 };
 
-const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, onProfilePress = () => {}, onCalendarPress = () => {} }) => {
+const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, onProfilePress = () => {}, onCalendarPress = () => {}, onSearchPress = () => {} }) => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterVisible, setFilterVisible] = useState(false);
 
   // Prefer first name from profile; fall back to session / email username
   const displayName =
@@ -197,12 +200,22 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
 
   const filteredPopular = useMemo(() => {
     if (!Array.isArray(packages)) return [];
-    if (activeCategory === "All") return packages;
-    const categoryLower = String(activeCategory).trim().toLowerCase();
-    return packages.filter(
-      (place) => String(place?.locationName ?? "").trim().toLowerCase() === categoryLower
-    );
-  }, [activeCategory, packages]);
+    let list = packages;
+    if (activeCategory !== "All") {
+      const categoryLower = String(activeCategory).trim().toLowerCase();
+      list = list.filter(
+        (place) => String(place?.locationName ?? "").trim().toLowerCase() === categoryLower
+      );
+    }
+    const query = String(searchQuery || "").trim().toLowerCase();
+    if (!query) return list;
+    return list.filter((place) => {
+      const title = String(place?.title ?? "").toLowerCase();
+      const location = String(place?.location ?? "").toLowerCase();
+      const locationName = String(place?.locationName ?? "").toLowerCase();
+      return title.includes(query) || location.includes(query) || locationName.includes(query);
+    });
+  }, [activeCategory, packages, searchQuery]);
 
   const handleTripSelect = (trip) => {
     if (!trip || typeof trip !== "object") return;
@@ -260,18 +273,61 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
         </View>
 
         <View style={styles.searchRow}>
-          <View style={styles.searchBox}>
+          <TouchableOpacity style={styles.searchBox} activeOpacity={0.8} onPress={onSearchPress}>
             <Ionicons name="search-outline" size={20} color="#7a7f85" style={styles.searchIcon} />
-            <TextInput
-              placeholder="Search Places"
-              placeholderTextColor="#9aa0a6"
-              style={styles.searchInput}
-            />
-          </View>
-          <TouchableOpacity style={styles.filterButton} activeOpacity={0.85}>
+            <Text style={styles.searchPlaceholder}>Search Places</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.filterButton}
+            activeOpacity={0.85}
+            onPress={() => setFilterVisible(true)}
+          >
             <Ionicons name="options-outline" size={22} color="#ffffff" />
           </TouchableOpacity>
         </View>
+
+        <Modal
+          visible={filterVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setFilterVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.filterOverlay}
+            activeOpacity={1}
+            onPress={() => setFilterVisible(false)}
+          >
+            <View style={styles.filterModal} onStartShouldSetResponder={() => true}>
+              <View style={styles.filterHeader}>
+                <Text style={styles.filterTitle}>Filter by location</Text>
+                <TouchableOpacity onPress={() => setFilterVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={24} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.filterList} showsVerticalScrollIndicator={false}>
+                {categories.map((cat) => {
+                  const active = activeCategory === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[styles.filterItem, active && styles.filterItemActive]}
+                      onPress={() => {
+                        setActiveCategory(cat);
+                        setFilterVisible(false);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.filterItemText, active && styles.filterItemTextActive]}>
+                        {cat}
+                      </Text>
+                      {active && <Ionicons name="checkmark" size={20} color="#1f6b2a" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         <ScrollView
           horizontal
@@ -316,7 +372,11 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
         ) : filteredPopular.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {activeCategory === "All" ? "No packages available" : `No packages in ${activeCategory}`}
+              {searchQuery.trim()
+                ? "No packages match your search"
+                : activeCategory === "All"
+                  ? "No packages available"
+                  : `No packages in ${activeCategory}`}
             </Text>
           </View>
         ) : (
@@ -338,7 +398,7 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
 
               <View style={styles.placeBody}>
                 <View style={styles.placeTitleRow}>
-                  <Text style={styles.placeTitle}>{place.title}</Text>
+                  <Text style={styles.placeTitle} numberOfLines={2}>{place.title}</Text>
                 </View>
 
                 <View style={styles.priceRow}>
@@ -543,6 +603,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#1f1f1f",
   },
+  searchPlaceholder: {
+    flex: 1,
+    fontSize: 15,
+    color: "#9aa0a6",
+  },
   filterButton: {
     width: 48,
     height: 50,
@@ -550,6 +615,58 @@ const styles = StyleSheet.create({
     backgroundColor: "#1f6b2a",
     alignItems: "center",
     justifyContent: "center",
+  },
+  filterOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  filterModal: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "70%",
+    paddingBottom: 24,
+  },
+  filterHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  filterList: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    maxHeight: 320,
+  },
+  filterItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 6,
+  },
+  filterItemActive: {
+    backgroundColor: "#f0f9f4",
+  },
+  filterItemText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#1e293b",
+  },
+  filterItemTextActive: {
+    color: "#1f6b2a",
+    fontWeight: "600",
   },
   chipRow: {
     gap: 8,
@@ -642,6 +759,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   placeTitle: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 16,
     fontWeight: "800",
     color: "#1f1f1f",

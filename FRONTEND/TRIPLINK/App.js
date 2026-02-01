@@ -9,6 +9,7 @@ import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
 import { ScheduleScreen } from "./src/screens/schedule";
+import SearchScreen from "./src/screens/search/SearchScreen";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { createBooking } from "./src/utils/api";
 
@@ -160,6 +161,17 @@ export default function App() {
           onTripPress={handleTripPress}
           onProfilePress={() => setScreen("profile")}
           onCalendarPress={() => setScreen("schedule")}
+          onSearchPress={() => setScreen("search")}
+        />
+      )}
+      {screen === "search" && (
+        <SearchScreen
+          session={session}
+          onBack={() => setScreen("home")}
+          onTripPress={(trip) => {
+            setSelectedTrip(trip?.packageData ? { ...trip, id: String(trip.packageData.id) } : trip);
+            setScreen("details");
+          }}
         />
       )}
       {screen === "schedule" && (

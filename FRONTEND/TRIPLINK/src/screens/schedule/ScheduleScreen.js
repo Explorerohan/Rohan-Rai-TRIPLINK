@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   viewAll: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#3b82f6",
+    color: "#1f6b2a",
   },
   card: {
     flexDirection: "row",

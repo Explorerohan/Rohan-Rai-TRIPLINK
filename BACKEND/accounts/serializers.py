@@ -139,7 +139,8 @@ class PackageSerializer(serializers.ModelSerializer):
     agent_rating = serializers.SerializerMethodField()
     duration_display = serializers.ReadOnlyField()
     user_has_booked = serializers.SerializerMethodField()
-    
+    participants_preview = serializers.SerializerMethodField()
+
     class Meta:
         model = Package
         fields = [
@@ -147,11 +148,27 @@ class PackageSerializer(serializers.ModelSerializer):
             'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
             'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'status',
-            'agent_rating', 'participants_count', 'agent_name', 'user_has_booked',
+            'agent_rating', 'participants_count', 'participants_preview', 'agent_name', 'user_has_booked',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-    
+
+    def get_participants_preview(self, obj):
+        """Up to 5 participants with profile picture URL for list/card preview."""
+        bookings = obj.bookings.filter(status=BookingStatus.CONFIRMED)[:5]
+        out = []
+        for booking in bookings:
+            try:
+                profile = booking.user.user_profile
+                url = None
+                if profile.profile_picture:
+                    request = self.context.get('request')
+                    url = request.build_absolute_uri(profile.profile_picture.url) if request else profile.profile_picture.url
+            except UserProfile.DoesNotExist:
+                url = None
+            out.append({'profile_picture_url': url})
+        return out
+
     def get_main_image_url(self, obj):
         if obj.main_image:
             request = self.context.get('request')
