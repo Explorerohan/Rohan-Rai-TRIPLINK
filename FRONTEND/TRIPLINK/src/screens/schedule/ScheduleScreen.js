@@ -10,7 +10,7 @@ import {
   StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getMyBookings } from "../../utils/api";
+import { getMyBookings, getPackages } from "../../utils/api";
 
 const DAYS_HEADER = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -57,11 +57,20 @@ const navItems = [
   { key: "profile", label: "Profile", icon: "person-outline", active: false },
 ];
 
-const ScheduleScreen = ({ session, onBack, onScheduleItemPress, onHomePress, onProfilePress }) => {
+const toDateString = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const ScheduleScreen = ({ session, onBack, onScheduleItemPress, onHomePress, onProfilePress, onTripPress }) => {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleItems, setScheduleItems] = useState([]);
   const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [packagesOnDate, setPackagesOnDate] = useState([]);
+  const [loadingPackagesOnDate, setLoadingPackagesOnDate] = useState(false);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -89,6 +98,25 @@ const ScheduleScreen = ({ session, onBack, onScheduleItemPress, onHomePress, onP
     if (dayNum == null) return;
     setSelectedDate(new Date(year, month, dayNum));
   };
+
+  useEffect(() => {
+    const dateStr = toDateString(selectedDate);
+    let cancelled = false;
+    setLoadingPackagesOnDate(true);
+    getPackages({ date: dateStr }, session?.access ?? null)
+      .then((res) => {
+        if (!cancelled && res?.data) {
+          setPackagesOnDate(Array.isArray(res.data) ? res.data : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPackagesOnDate([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPackagesOnDate(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedDate, session?.access]);
 
   useEffect(() => {
     if (!session?.access) {
@@ -207,6 +235,58 @@ const ScheduleScreen = ({ session, onBack, onScheduleItemPress, onHomePress, onP
               );
             })}
           </View>
+        </View>
+
+        {/* Trips on selected date */}
+        <View style={styles.tripsOnDateSection}>
+          <Text style={styles.tripsOnDateTitle}>
+            Trips on {formatDayMonth(selectedDate)}
+          </Text>
+          {loadingPackagesOnDate ? (
+            <View style={styles.scheduleEmpty}>
+              <Text style={styles.scheduleEmptyText}>Checking trips…</Text>
+            </View>
+          ) : packagesOnDate.length === 0 ? (
+            <View style={styles.scheduleEmpty}>
+              <Text style={styles.scheduleEmptyText}>No trips on this date.</Text>
+            </View>
+          ) : (
+            packagesOnDate.map((pkg) => {
+              const dateStr = pkg.trip_start_date
+                ? new Date(pkg.trip_start_date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                : "—";
+              const locationStr = pkg.location && pkg.country ? `${pkg.location}, ${pkg.country}` : pkg.location || "—";
+              return (
+                <TouchableOpacity
+                  key={pkg.id}
+                  style={styles.card}
+                  activeOpacity={0.85}
+                  onPress={() => onTripPress?.(pkg)}
+                >
+                  <Image
+                    source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
+                    style={styles.cardImage}
+                  />
+                  <View style={styles.cardBody}>
+                    <View style={styles.cardDateRow}>
+                      <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
+                      <Text style={styles.cardDate}>{dateStr}</Text>
+                    </View>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {pkg.title}
+                    </Text>
+                    <View style={styles.cardLocationRow}>
+                      <Ionicons name="location-outline" size={14} color="#94a3b8" />
+                      <Text style={styles.cardLocation} numberOfLines={1}>
+                        {locationStr}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#94a3b8" style={styles.cardArrow} />
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         {/* My Schedule */}
@@ -417,8 +497,18 @@ const styles = StyleSheet.create({
   cellNumSelected: {
     color: "#ffffff",
   },
+  tripsOnDateSection: {
+    marginTop: 16,
+    marginBottom: 0,
+  },
+  tripsOnDateTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
   section: {
-    marginTop: 0,
+    marginTop: 16,
   },
   sectionHeader: {
     flexDirection: "row",

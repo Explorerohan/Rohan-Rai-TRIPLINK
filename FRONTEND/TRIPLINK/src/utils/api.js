@@ -165,6 +165,7 @@ export const getPackages = async (filters = {}, accessToken = null) => {
   const queryParams = new URLSearchParams();
   if (filters.location) queryParams.append('location', filters.location);
   if (filters.country) queryParams.append('country', filters.country);
+  if (filters.date) queryParams.append('date', filters.date);
   
   const queryString = queryParams.toString();
   const endpoint = `/api/auth/packages/${queryString ? `?${queryString}` : ''}`;

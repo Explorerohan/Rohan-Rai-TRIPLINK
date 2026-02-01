@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, date
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.db.models import Q
@@ -839,12 +839,24 @@ class PackageListView(generics.ListAPIView):
         # Optional filters
         location = self.request.query_params.get('location', None)
         country = self.request.query_params.get('country', None)
+        date_str = self.request.query_params.get('date', None)
         
         if location:
             queryset = queryset.filter(location__icontains=location)
         if country:
             queryset = queryset.filter(country__icontains=country)
-        
+        if date_str:
+            try:
+                filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                # Packages where the given date falls within [trip_start_date, trip_end_date]
+                queryset = queryset.filter(
+                    trip_start_date__isnull=False,
+                    trip_start_date__lte=filter_date,
+                ).filter(
+                    Q(trip_end_date__gte=filter_date) | Q(trip_end_date__isnull=True)
+                )
+            except ValueError:
+                pass
         return queryset
     
     def get_serializer_context(self):

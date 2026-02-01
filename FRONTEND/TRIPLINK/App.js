@@ -168,6 +168,12 @@ export default function App() {
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
           onProfilePress={() => setScreen("profile")}
+          onTripPress={(pkg) => {
+            if (pkg?.id != null) {
+              setSelectedTrip({ id: String(pkg.id) });
+              setScreen("details");
+            }
+          }}
           onScheduleItemPress={(item) => {
             const packageId = item?.booking?.package_id ?? item?.packageData?.id;
             if (packageId != null) {
