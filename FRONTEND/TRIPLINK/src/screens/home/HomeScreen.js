@@ -21,47 +21,36 @@ const AVATAR = {
   uri: DEFAULT_AVATAR_URL,
 };
 
-const categories = ["All", "Kathmandu", "Pokhara", "Dharan", "Mustang"];
-
 const popularTrips = [
   {
     id: "1",
     title: "Paris City Lights",
     location: "Paris, France",
-    distance: "2450 kms",
+    locationName: "Paris",
     image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
     price: "$899",
     nights: "5D/4N",
-    rating: 4.8,
-    reviews: 1200,
     perks: ["Free cancel", "Breakfast", "Guide"],
-    region: "All",
   },
   {
     id: "2",
     title: "Great Ocean Drive",
     location: "Melbourne, AU",
-    distance: "870 kms",
+    locationName: "Melbourne",
     image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80",
     price: "$1040",
     nights: "6D/5N",
-    rating: 4.7,
-    reviews: 860,
     perks: ["Transfers", "Breakfast", "Guide"],
-    region: "All",
   },
   {
     id: "3",
     title: "Tokyo Culture Run",
     location: "Tokyo, Japan",
-    distance: "5420 kms",
+    locationName: "Tokyo",
     image: "https://the-running-ginger.blog/wp-content/uploads/2024/03/TokyoBannerBona.png",
     price: "$1299",
     nights: "7D/6N",
-    rating: 4.9,
-    reviews: 1430,
     perks: ["Rail pass", "Guide", "Meals"],
-    region: "All",
   },
 ];
 
@@ -121,7 +110,7 @@ const cleanPrice = (price) => {
 };
 
 const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, onProfilePress = () => {}, onCalendarPress = () => {} }) => {
-  const [activeCategory, setActiveCategory] = useState(categories[0]);
+  const [activeCategory, setActiveCategory] = useState("All");
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -141,7 +130,7 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
       if (!session?.access) return;
       try {
         const response = await getProfile(session.access);
-        setProfile(response.data);
+        setProfile(response?.data ?? {});
       } catch (err) {
         console.error("Error fetching profile in HomeScreen:", err);
         setProfile({}); // so we show default avatar on error, not placeholder forever
@@ -157,20 +146,20 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
       try {
         setLoading(true);
         const response = await getPackages({}, session?.access ?? null);
-        if (response.data) {
+        const rawList = Array.isArray(response?.data) ? response.data : response?.data?.results ?? [];
+        if (rawList.length > 0) {
           // Transform API data to match the expected format
-          const transformedPackages = response.data.map((pkg) => ({
+          const transformedPackages = rawList.filter(Boolean).map((pkg) => ({
             id: pkg.id.toString(),
             title: pkg.title,
-            location: `${pkg.location}, ${pkg.country}`,
-            distance: "N/A", // Distance not available from backend
+            location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
+            locationName: (pkg.location || "").trim() || "Other",
             image: pkg.main_image_url || "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
             price: pkg.price_per_person, // Pass numeric value, DetailsScreen will format it
             nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
             rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
             reviews: pkg.participants_count || 0,
             perks: pkg.features?.map(f => f.name) || [],
-            region: "All",
             description: pkg.description,
             hero: pkg.main_image_url,
             facilities: pkg.features?.map((f, idx) => ({
@@ -199,12 +188,24 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
     fetchPackages();
   }, [session?.access, packagesRefreshKey]);
 
+  const categories = useMemo(() => {
+    if (!Array.isArray(packages) || packages.length === 0) return ["All"];
+    const names = packages.map((p) => p?.locationName).filter(Boolean);
+    const unique = [...new Set(names)].sort((a, b) => String(a).localeCompare(String(b)));
+    return ["All", ...unique];
+  }, [packages]);
+
   const filteredPopular = useMemo(() => {
+    if (!Array.isArray(packages)) return [];
     if (activeCategory === "All") return packages;
-    return packages.filter((place) => place.region === activeCategory);
+    const categoryLower = String(activeCategory).trim().toLowerCase();
+    return packages.filter(
+      (place) => String(place?.locationName ?? "").trim().toLowerCase() === categoryLower
+    );
   }, [activeCategory, packages]);
 
   const handleTripSelect = (trip) => {
+    if (!trip || typeof trip !== "object") return;
     // Extract numeric price value
     let priceValue = trip.price;
     if (typeof priceValue === "string") {
@@ -314,7 +315,9 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
           </View>
         ) : filteredPopular.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No packages available</Text>
+            <Text style={styles.emptyText}>
+              {activeCategory === "All" ? "No packages available" : `No packages in ${activeCategory}`}
+            </Text>
           </View>
         ) : (
           <ScrollView
