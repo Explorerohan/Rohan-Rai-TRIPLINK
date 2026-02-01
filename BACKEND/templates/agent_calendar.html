@@ -1,0 +1,582 @@
+{% extends 'base_agent.html' %}
+{% load static %}
+
+{% block title %}Calendar - TRIPLINK{% endblock %}
+
+{% block agent_extra_css %}
+<style>
+    .cal-header {
+        position: fixed;
+        top: 0;
+        left: 260px;
+        right: 0;
+        height: 73px;
+        min-height: 70px;
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        padding: 0 40px;
+        z-index: 100;
+        box-sizing: border-box;
+    }
+
+    .cal-header-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+
+    .cal-main {
+        padding-top: 73px;
+        padding-bottom: 56px;
+    }
+
+    .cal-layout {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 36px 40px 48px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+    }
+
+    .cal-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 28px 32px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .cal-calendar-card {
+        padding: 36px 40px;
+    }
+
+    .cal-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 32px;
+    }
+
+    .cal-month-year {
+        font-size: 24px;
+        font-weight: 600;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+
+    .cal-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cal-nav-btn {
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 10px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .cal-nav-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
+    .cal-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .cal-weekday {
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        text-align: center;
+        padding: 12px 0;
+    }
+
+    .cal-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+    }
+
+    .cal-day {
+        aspect-ratio: 1;
+        min-height: 64px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        font-weight: 500;
+        color: #334155;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        position: relative;
+        border: none;
+        background: transparent;
+    }
+
+    .cal-day.other-month {
+        color: #cbd5e1;
+    }
+
+    .cal-day.today {
+        background: #e2e8f0;
+        color: #0f172a;
+        font-weight: 600;
+    }
+
+    .cal-day.has-package:not(.selected) {
+        color: #15803d;
+        font-weight: 600;
+    }
+
+    .cal-day.has-package:not(.selected)::after {
+        content: '';
+        position: absolute;
+        bottom: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #22c55e;
+    }
+
+    .cal-day.selected {
+        background: #15803d;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .cal-day.selected::after {
+        background: #fff;
+    }
+
+    .cal-day:hover:not(.other-month):not(.selected) {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .cal-day.selected:hover {
+        background: #166534;
+    }
+
+    .cal-below {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+    }
+
+    .cal-section-card {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .cal-section-header {
+        margin-bottom: 16px;
+    }
+
+    .cal-sidebar-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #0f172a;
+        margin: 0 0 4px 0;
+        letter-spacing: -0.01em;
+    }
+
+    .cal-sidebar-date {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0;
+    }
+
+    .cal-section-scroll {
+        flex: 1;
+        min-height: 120px;
+        max-height: 280px;
+        overflow-y: auto;
+    }
+
+    .cal-packages-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .cal-package-item {
+        display: block;
+        padding: 14px 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.2s, box-shadow 0.2s;
+        border: 1px solid transparent;
+    }
+
+    .cal-package-item:hover {
+        background: #f0fdf4;
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.12);
+        border-color: #bbf7d0;
+    }
+
+    .cal-package-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #0f172a;
+        margin: 0 0 6px 0;
+    }
+
+    .cal-package-meta {
+        font-size: 13px;
+        color: #64748b;
+        margin: 0;
+    }
+
+    .cal-empty-msg {
+        text-align: center;
+        padding: 40px 24px;
+        color: #94a3b8;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .cal-upcoming-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 14px;
+    }
+
+    .cal-upcoming-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .cal-upcoming-item {
+        font-size: 13px;
+        color: #475569;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .cal-upcoming-item:last-child {
+        border-bottom: none;
+    }
+
+    .cal-upcoming-item a {
+        color: #15803d;
+        font-weight: 500;
+        text-decoration: none;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cal-upcoming-item a:hover {
+        text-decoration: underline;
+    }
+
+    .cal-upcoming-item span {
+        font-size: 12px;
+        color: #94a3b8;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 1024px) {
+        .cal-below {
+            grid-template-columns: 1fr;
+        }
+
+        .cal-section-scroll {
+            max-height: 240px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .cal-header {
+            left: 80px;
+            padding: 0 24px;
+        }
+
+        .cal-layout {
+            padding: 24px 20px 36px;
+        }
+
+        .cal-calendar-card {
+            padding: 24px 20px;
+        }
+
+        .cal-month-year {
+            font-size: 20px;
+        }
+
+        .cal-day {
+            min-height: 48px;
+            font-size: 15px;
+            border-radius: 10px;
+        }
+
+        .cal-days {
+            gap: 6px;
+        }
+
+        .cal-below {
+            gap: 20px;
+        }
+    }
+</style>
+{% endblock agent_extra_css %}
+
+{% block main_content %}
+<header class="cal-header">
+    <h1 class="cal-header-title">Calendar</h1>
+</header>
+
+<div class="cal-main">
+    <div class="cal-layout">
+        <div class="cal-card cal-calendar-card">
+            <div class="cal-controls">
+                <span class="cal-month-year" id="cal-month-year">January 2026</span>
+                <div class="cal-nav">
+                    <button type="button" class="cal-nav-btn" id="cal-prev" aria-label="Previous month">‹</button>
+                    <button type="button" class="cal-nav-btn" id="cal-next" aria-label="Next month">›</button>
+                </div>
+            </div>
+            <div class="cal-weekdays">
+                <span class="cal-weekday">Sun</span>
+                <span class="cal-weekday">Mon</span>
+                <span class="cal-weekday">Tue</span>
+                <span class="cal-weekday">Wed</span>
+                <span class="cal-weekday">Thu</span>
+                <span class="cal-weekday">Fri</span>
+                <span class="cal-weekday">Sat</span>
+            </div>
+            <div class="cal-days" id="cal-days"></div>
+        </div>
+
+        <div class="cal-below">
+            <div class="cal-card cal-section-card">
+                <div class="cal-section-header">
+                    <p class="cal-sidebar-title" id="cal-sidebar-title">Packages on selected date</p>
+                    <p class="cal-sidebar-date" id="cal-sidebar-date">Select a date to see packages</p>
+                </div>
+                <div class="cal-section-scroll" id="cal-packages-list">
+                    <p class="cal-empty-msg" id="cal-empty-msg">Click a date on the calendar to see trip packages for that day.</p>
+                    <div id="cal-packages-items" style="display: none;" class="cal-packages-list"></div>
+                </div>
+            </div>
+            <div class="cal-card cal-section-card">
+                <div class="cal-section-header">
+                    <p class="cal-upcoming-title">Upcoming trips this month</p>
+                </div>
+                <div class="cal-section-scroll">
+                    <div class="cal-upcoming-list" id="cal-upcoming-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ packages_for_calendar|json_script:"packages-data" }}
+{% endblock main_content %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    var packages = [];
+    try {
+        var el = document.getElementById('packages-data');
+        if (el) packages = JSON.parse(el.textContent);
+    } catch (e) {}
+
+    function dateStr(d) {
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    }
+
+    function packageCoversDate(pkg, dStr) {
+        var start = pkg.trip_start_date;
+        var end = pkg.trip_end_date;
+        if (start && end) return dStr >= start && dStr <= end;
+        if (start) return dStr === start;
+        if (end) return dStr === end;
+        return false;
+    }
+
+    function getPackagesForDate(dStr) {
+        return packages.filter(function(p) { return packageCoversDate(p, dStr); });
+    }
+
+    function hasPackageOnDate(dStr) {
+        return getPackagesForDate(dStr).length > 0;
+    }
+
+    var current = new Date();
+    current.setDate(1);
+    var selectedDate = null;
+
+    function renderCalendar() {
+        var year = current.getFullYear();
+        var month = current.getMonth();
+        document.getElementById('cal-month-year').textContent = MONTHS[month] + ' ' + year;
+
+        var first = new Date(year, month, 1);
+        var last = new Date(year, month + 1, 0);
+        var startPad = first.getDay();
+        var lastDay = last.getDate();
+        var prevMonth = month === 0 ? 11 : month - 1;
+        var prevYear = month === 0 ? year - 1 : year;
+        var prevLast = new Date(prevYear, prevMonth + 1, 0).getDate();
+
+        var html = '';
+        var i, d, dStr, isOther, isToday, hasPkg, isSel;
+
+        for (i = 0; i < startPad; i++) {
+            d = prevLast - startPad + i + 1;
+            dStr = prevYear + '-' + String(prevMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            isToday = (new Date()).toDateString() === new Date(prevYear, prevMonth, d).toDateString();
+            hasPkg = hasPackageOnDate(dStr);
+            html += '<button type="button" class="cal-day other-month' + (isToday ? ' today' : '') + (hasPkg ? ' has-package' : '') + '" data-date="' + dStr + '">' + d + '</button>';
+        }
+
+        for (d = 1; d <= lastDay; d++) {
+            dStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            isToday = (new Date()).toDateString() === new Date(year, month, d).toDateString();
+            hasPkg = hasPackageOnDate(dStr);
+            isSel = selectedDate === dStr;
+            html += '<button type="button" class="cal-day' + (isSel ? ' selected' : '') + (isToday ? ' today' : '') + (hasPkg ? ' has-package' : '') + '" data-date="' + dStr + '">' + d + '</button>';
+        }
+
+        var totalCells = startPad + lastDay;
+        var remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+        for (i = 0; i < remaining; i++) {
+            d = i + 1;
+            var nextMonth = month === 11 ? 0 : month + 1;
+            var nextYear = month === 11 ? year + 1 : year;
+            dStr = nextYear + '-' + String(nextMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            html += '<button type="button" class="cal-day other-month" data-date="' + dStr + '">' + d + '</button>';
+        }
+
+        document.getElementById('cal-days').innerHTML = html;
+
+        document.querySelectorAll('#cal-days .cal-day').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var d = this.getAttribute('data-date');
+                selectedDate = d;
+                renderCalendar();
+                renderSidebar(d);
+            });
+        });
+
+        renderUpcoming();
+    }
+
+    function formatDisplayDate(dStr) {
+        var parts = dStr.split('-');
+        var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        return MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    }
+
+    function renderSidebar(dStr) {
+        document.getElementById('cal-empty-msg').style.display = 'none';
+        var container = document.getElementById('cal-packages-items');
+        container.style.display = 'block';
+        container.innerHTML = '';
+        document.getElementById('cal-sidebar-date').textContent = dStr ? formatDisplayDate(dStr) : 'Select a date';
+
+        if (!dStr) return;
+
+        var list = getPackagesForDate(dStr);
+        if (list.length === 0) {
+            container.innerHTML = '<p class="cal-empty-msg">No trip packages on this date.</p>';
+            return;
+        }
+        list.forEach(function(p) {
+            var a = document.createElement('a');
+            a.href = p.detail_url;
+            a.className = 'cal-package-item';
+            a.innerHTML = '<p class="cal-package-title">' + (p.title || 'Package') + '</p><p class="cal-package-meta">' + (p.location || '') + ', ' + (p.country || '') + '</p>';
+            container.appendChild(a);
+        });
+    }
+
+    function renderUpcoming() {
+        var year = current.getFullYear();
+        var month = current.getMonth();
+        var start = new Date(year, month, 1);
+        var end = new Date(year, month + 1, 0);
+        var startStr = dateStr(start);
+        var endStr = dateStr(end);
+
+        var inMonth = packages.filter(function(p) {
+            var s = p.trip_start_date;
+            var e = p.trip_end_date;
+            if (!s && !e) return false;
+            if (s && s <= endStr && (!e || e >= startStr)) return true;
+            if (e && e >= startStr && (!s || s <= endStr)) return true;
+            return false;
+        });
+        inMonth.sort(function(a, b) {
+            var da = a.trip_start_date || a.trip_end_date || '';
+            var db = b.trip_start_date || b.trip_end_date || '';
+            return da.localeCompare(db);
+        });
+
+        var ul = document.getElementById('cal-upcoming-list');
+        ul.innerHTML = '';
+        inMonth.slice(0, 8).forEach(function(p) {
+            var span = document.createElement('div');
+            span.className = 'cal-upcoming-item';
+            var range = (p.trip_start_date || p.trip_end_date || '');
+            if (p.trip_start_date && p.trip_end_date) range = p.trip_start_date + ' – ' + p.trip_end_date;
+            else if (p.trip_start_date) range = 'From ' + p.trip_start_date;
+            else if (p.trip_end_date) range = 'Until ' + p.trip_end_date;
+            span.innerHTML = '<a href="' + p.detail_url + '">' + (p.title || 'Package') + '</a><span>' + range + '</span>';
+            ul.appendChild(span);
+        });
+        if (inMonth.length === 0) {
+            ul.innerHTML = '<p class="cal-empty-msg" style="padding: 0; margin: 0;">No trips this month</p>';
+        }
+    }
+
+    document.getElementById('cal-prev').addEventListener('click', function() {
+        current.setMonth(current.getMonth() - 1);
+        renderCalendar();
+    });
+    document.getElementById('cal-next').addEventListener('click', function() {
+        current.setMonth(current.getMonth() + 1);
+        renderCalendar();
+    });
+
+    renderCalendar();
+})();
+</script>
+{% endblock extra_js %}

@@ -33,8 +33,12 @@
     }
 
     .sidebar-header {
-        padding: 24px 20px;
-        border-bottom: 1px solid #e9ecef;
+        padding: 20px 20px;
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #e2e8f0;
+        box-sizing: border-box;
     }
 
     .sidebar-header .logo {
@@ -167,7 +171,7 @@
                 <i>🎯</i>
                 <span>Deals</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{% url 'agent_calendar' %}" class="nav-item{% if active_nav == 'calendar' %} active{% endif %}">
                 <i>📅</i>
                 <span>Calendar</span>
             </a>

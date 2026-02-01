@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from rest_framework import generics, permissions, response, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -544,6 +545,46 @@ def agent_packages_view(request):
         'search_query': search_query,
     }
     return render(request, 'agent_packages.html', context)
+
+
+def agent_calendar_view(request):
+    """Calendar view: see which dates have trip packages and switch months."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    packages_with_dates = Package.objects.filter(agent=request.user).filter(
+        Q(trip_start_date__isnull=False) | Q(trip_end_date__isnull=False)
+    ).order_by('trip_start_date')
+
+    packages_for_calendar = []
+    for p in packages_with_dates:
+        start = p.trip_start_date.isoformat() if p.trip_start_date else None
+        end = p.trip_end_date.isoformat() if p.trip_end_date else None
+        packages_for_calendar.append({
+            'id': p.id,
+            'title': p.title,
+            'location': p.location,
+            'country': p.country,
+            'trip_start_date': start,
+            'trip_end_date': end,
+            'detail_url': reverse('agent_package_detail', args=[p.id]),
+            'status': p.status,
+        })
+
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'packages_for_calendar': packages_for_calendar,
+        'active_nav': 'calendar',
+    }
+    return render(request, 'agent_calendar.html', context)
 
 
 def agent_add_package_view(request):
