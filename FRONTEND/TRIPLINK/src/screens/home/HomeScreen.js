@@ -331,19 +331,11 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
             >
               <View>
                 <Image source={{ uri: place.image }} style={styles.placeImage} />
-                <View style={styles.ratingBadge}>
-                  <Ionicons name="star" size={12} color="#fcd34d" />
-                  <Text style={styles.ratingText}>{place.rating}</Text>
-                  <Text style={styles.ratingCount}>({place.reviews})</Text>
-                </View>
               </View>
 
               <View style={styles.placeBody}>
                 <View style={styles.placeTitleRow}>
                   <Text style={styles.placeTitle}>{place.title}</Text>
-                  <TouchableOpacity style={styles.saveBadge} activeOpacity={0.8}>
-                    <Ionicons name="bookmark-outline" size={18} color="#1f6b2a" />
-                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.priceRow}>
@@ -359,15 +351,9 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
                     <Ionicons name="location-outline" size={14} color="#6b7076" />
                     <Text style={styles.placeMeta}>{place.location}</Text>
                   </View>
-                  <Text style={styles.placeDistance}>{place.distance}</Text>
-                </View>
-
-                <View style={styles.perkRow}>
-                  {place.perks.map((perk) => (
-                    <View key={perk} style={styles.perkChip}>
-                      <Text style={styles.perkText}>{perk}</Text>
-                    </View>
-                  ))}
+                  <TouchableOpacity style={styles.saveBadge} activeOpacity={0.8}>
+                    <Ionicons name="bookmark-outline" size={18} color="#1f6b2a" />
+                  </TouchableOpacity>
                 </View>
               </View>
             </TouchableOpacity>
@@ -618,7 +604,7 @@ const styles = StyleSheet.create({
   },
   placeImage: {
     width: "100%",
-    height: 160,
+    height: 220,
   },
   ratingBadge: {
     position: "absolute",
@@ -642,7 +628,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   placeBody: {
-    padding: 12,
+    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
     gap: 6,
   },
   placeTitleRow: {
