@@ -34,7 +34,7 @@ const menuItems = [
   { id: "logout", label: "Logout", icon: "log-out-outline" },
 ];
 
-const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout = () => {} }) => {
+const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout = () => {}, onCalendarPress = () => {} }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -129,12 +129,12 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Travel Trips</Text>
+            <Text style={styles.statLabel}>Past Trips</Text>
             <Text style={styles.statValue}>238</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Bucket List</Text>
+            <Text style={styles.statLabel}>Upcoming Trips</Text>
             <Text style={styles.statValue}>473</Text>
           </View>
         </View>
@@ -183,7 +183,7 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
                   key={item.key}
                   style={styles.navItem}
                   activeOpacity={0.85}
-                  onPress={item.key === "home" ? onBack : undefined}
+                  onPress={item.key === "home" ? onBack : item.key === "calendar" ? onCalendarPress : undefined}
                 >
                   <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
                   <Text

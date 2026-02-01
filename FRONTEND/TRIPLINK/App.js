@@ -8,6 +8,7 @@ import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
+import { ScheduleScreen } from "./src/screens/schedule";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { createBooking } from "./src/utils/api";
 
@@ -158,6 +159,22 @@ export default function App() {
           packagesRefreshKey={packagesRefreshKey}
           onTripPress={handleTripPress}
           onProfilePress={() => setScreen("profile")}
+          onCalendarPress={() => setScreen("schedule")}
+        />
+      )}
+      {screen === "schedule" && (
+        <ScheduleScreen
+          session={session}
+          onBack={() => setScreen("home")}
+          onHomePress={() => setScreen("home")}
+          onProfilePress={() => setScreen("profile")}
+          onScheduleItemPress={(item) => {
+            const packageId = item?.booking?.package_id ?? item?.packageData?.id;
+            if (packageId != null) {
+              setSelectedTrip({ id: String(packageId) });
+              setScreen("details");
+            }
+          }}
         />
       )}
       {screen === "details" && (
@@ -174,6 +191,7 @@ export default function App() {
           session={session}
           onBack={() => setScreen("home")}
           onEdit={() => setScreen("editProfile")}
+          onCalendarPress={() => setScreen("schedule")}
           onLogout={handleLogout}
         />
       )}

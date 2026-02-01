@@ -120,7 +120,7 @@ const cleanPrice = (price) => {
   return price;
 };
 
-const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, onProfilePress = () => {} }) => {
+const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, onProfilePress = () => {}, onCalendarPress = () => {} }) => {
   const [activeCategory, setActiveCategory] = useState(categories[0]);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -424,7 +424,12 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
           {navItems.slice(0, 2).map((item) => {
             const color = item.active ? "#1f6b2a" : "#7a7f85";
             return (
-              <TouchableOpacity key={item.key} style={styles.navItem} activeOpacity={0.85}>
+              <TouchableOpacity
+                key={item.key}
+                style={styles.navItem}
+                activeOpacity={0.85}
+                onPress={item.key === "calendar" ? onCalendarPress : undefined}
+              >
                 <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
                 <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
               </TouchableOpacity>

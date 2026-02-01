@@ -189,11 +189,27 @@ class BookingSerializer(serializers.ModelSerializer):
         queryset=Package.objects.filter(status=PackageStatus.ACTIVE),
         source='package',
     )
+    package_image_url = serializers.SerializerMethodField()
+    package_location = serializers.CharField(source='package.location', read_only=True)
+    package_country = serializers.CharField(source='package.country', read_only=True)
+    trip_start_date = serializers.DateField(source='package.trip_start_date', read_only=True)
 
     class Meta:
         model = Booking
-        fields = ['id', 'user', 'package_id', 'package_title', 'status', 'created_at']
+        fields = [
+            'id', 'user', 'package_id', 'package_title', 'status', 'created_at',
+            'package_image_url', 'package_location', 'package_country', 'trip_start_date',
+        ]
         read_only_fields = ['id', 'user', 'status', 'created_at']
+
+    def get_package_image_url(self, obj):
+        pkg = obj.package
+        if pkg and pkg.main_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(pkg.main_image.url)
+            return pkg.main_image.url
+        return None
 
     def create(self, validated_data):
         user = self.context['request'].user
