@@ -5,718 +5,682 @@
 
 {% block agent_extra_css %}
 <style>
-    .header {
+    .pd-header {
         position: fixed;
         top: 0;
         left: 260px;
         right: 0;
-        height: 70px;
-        background: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        height: 64px;
+        background: #fff;
+        border-bottom: 1px solid #f1f5f9;
         display: flex;
         align-items: center;
-        padding: 0 30px;
+        justify-content: space-between;
+        padding: 0 32px;
         z-index: 100;
     }
 
-    .header-left {
-        flex: 1;
+    .pd-header-left {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 24px;
     }
 
-    .back-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    .pd-back {
         color: #64748b;
         text-decoration: none;
         font-size: 14px;
         font-weight: 500;
-        padding: 8px 16px;
-        border-radius: 8px;
-        transition: all 0.3s;
+        transition: color 0.2s;
     }
 
-    .back-btn:hover {
-        background: #f1f5f9;
-        color: #1f6b2a;
-    }
-
-    .header-title {
-        font-size: 20px;
-        font-weight: 700;
+    .pd-back:hover {
         color: #1e293b;
     }
 
-    .header-right {
+    .pd-page-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .pd-header-actions {
         display: flex;
         align-items: center;
         gap: 12px;
     }
 
-    .btn-edit {
+    .pd-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+
+    .pd-btn-edit {
         background: #1f6b2a;
-        color: white;
-        padding: 10px 20px;
+        color: #fff;
         border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s;
     }
 
-    .btn-edit:hover {
-        background: #2d8f3f;
+    .pd-btn-edit:hover {
+        background: #166534;
     }
 
-    .btn-delete {
-        background: #fee2e2;
-        color: #dc2626;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s;
+    .pd-btn-delete {
+        background: transparent;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
     }
 
-    .btn-delete:hover {
-        background: #fecaca;
+    .pd-btn-delete:hover {
+        background: #fef2f2;
     }
 
-    .main-content {
-        padding-top: 70px;
+    .pd-main {
+        padding-top: 64px;
+        padding-bottom: 48px;
     }
 
-    .detail-container {
+    .pd-layout {
         display: grid;
-        grid-template-columns: 1fr 380px;
-        gap: 30px;
-        padding: 30px 0 0;
+        grid-template-columns: 6fr 4fr;  /* 60% Package Details, 40% Reviews & Travelers */
+        gap: 32px;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 0 0;
     }
 
-    /* Package Info Section */
-    .package-info {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-    }
-
-    .package-hero {
-        position: relative;
-        border-radius: 16px;
+    /* Hero */
+    .pd-hero-wrap {
+        border-radius: 12px;
         overflow: hidden;
-        height: 350px;
-        background: #f1f5f9;
+        background: #f8fafc;
+        margin-bottom: 24px;
+        position: relative;
     }
 
-    .package-hero img {
+    .pd-hero {
         width: 100%;
-        height: 100%;
+        aspect-ratio: 21 / 9;
+        max-height: 320px;
         object-fit: cover;
+        display: block;
     }
 
-    .package-status-badge {
+    .pd-hero-placeholder {
+        width: 100%;
+        aspect-ratio: 21 / 9;
+        max-height: 320px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+        color: #64748b;
+        font-size: 48px;
+    }
+
+    .pd-status {
         position: absolute;
         top: 16px;
         right: 16px;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
         font-weight: 600;
         text-transform: uppercase;
+        letter-spacing: 0.02em;
     }
 
-    .package-status-badge.active {
-        background: #dcfce7;
+    .pd-status.active {
+        background: #fff;
         color: #166534;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
-    .package-status-badge.completed {
-        background: #dbeafe;
+    .pd-status.completed {
+        background: #fff;
         color: #1e40af;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
-    .package-status-badge.draft {
-        background: #fef3c7;
+    .pd-status.draft {
+        background: #fff;
         color: #92400e;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
-    .info-card {
-        background: white;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    /* Main card */
+    .pd-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 28px 32px;
+        margin-bottom: 24px;
     }
 
-    .package-title {
-        font-size: 28px;
-        font-weight: 800;
+    .pd-title {
+        font-size: 24px;
+        font-weight: 700;
         color: #1e293b;
-        margin-bottom: 8px;
+        margin: 0 0 6px 0;
+        letter-spacing: -0.02em;
+        line-height: 1.3;
     }
 
-    .package-location {
+    .pd-location {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0 0 24px 0;
         display: flex;
         align-items: center;
         gap: 6px;
-        color: #64748b;
-        font-size: 16px;
-        margin-bottom: 16px;
     }
 
-    .package-stats {
-        display: flex;
+    .pd-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
         gap: 24px;
-        padding: 16px 0;
-        border-top: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
-        margin-bottom: 16px;
+        padding: 20px 0;
+        border-top: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
+        margin-bottom: 24px;
     }
 
-    .stat-item {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .stat-label {
-        font-size: 12px;
-        color: #94a3b8;
+    .pd-stat-label {
+        font-size: 11px;
         font-weight: 500;
-    }
-
-    .stat-value {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1e293b;
-    }
-
-    .stat-value.price {
-        color: #1f6b2a;
-    }
-
-    .rating-stars {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .star {
-        color: #fbbf24;
-        font-size: 16px;
-    }
-
-    .star.empty {
-        color: #e2e8f0;
-    }
-
-    .package-dates {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #1f6b2a;
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 16px;
-    }
-
-    .section-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 12px;
-    }
-
-    .package-description {
-        color: #475569;
-        font-size: 15px;
-        line-height: 1.7;
-    }
-
-    .features-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 8px;
-    }
-
-    .feature-tag {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        font-size: 14px;
-        color: #475569;
-    }
-
-    .feature-tag ion-icon {
-        font-size: 18px;
-        color: #64748b;
-    }
-
-    /* Right Sidebar */
-    .detail-sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-    }
-
-    .sidebar-card {
-        background: white;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-
-    .sidebar-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-    .sidebar-card-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1e293b;
-    }
-
-    .count-badge {
-        background: #f1f5f9;
-        color: #64748b;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    /* Reviews */
-    .reviews-list {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        max-height: 400px;
-        overflow-y: auto;
-    }
-
-    .review-item {
-        padding: 16px;
-        background: #f8fafc;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-    }
-
-    .review-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 10px;
-    }
-
-    .review-avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        object-fit: cover;
-        background: #e2e8f0;
-    }
-
-    .review-info {
-        flex: 1;
-    }
-
-    .review-name {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 2px;
-    }
-
-    .review-date {
-        font-size: 12px;
         color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 4px;
     }
 
-    .review-rating {
+    .pd-stat-value {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .pd-stat-value.price {
+        color: #15803d;
+    }
+
+    .pd-stars {
         display: flex;
+        align-items: center;
         gap: 2px;
     }
 
-    .review-rating .star {
+    .pd-star {
+        color: #e2e8f0;
         font-size: 14px;
     }
 
-    .review-comment {
+    .pd-star.filled {
+        color: #fbbf24;
+    }
+
+    .pd-rating-num {
         font-size: 14px;
+        font-weight: 600;
+        color: #64748b;
+        margin-left: 6px;
+    }
+
+    .pd-dates {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .pd-desc-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+    }
+
+    .pd-desc {
+        font-size: 15px;
         color: #475569;
-        line-height: 1.6;
+        line-height: 1.65;
+        margin: 0 0 24px 0;
     }
 
-    /* Participants */
-    .participants-list {
+    .pd-features-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 12px;
+    }
+
+    .pd-features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .pd-feature {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #f8fafc;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #475569;
+    }
+
+    .pd-feature ion-icon {
+        font-size: 14px;
+        color: #94a3b8;
+    }
+
+    /* Sidebar */
+    .pd-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .pd-side-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #f1f5f9;
+    }
+
+    .pd-side-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 16px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .pd-side-count {
+        font-size: 12px;
+        font-weight: 500;
+        color: #94a3b8;
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .pd-empty {
+        text-align: center;
+        padding: 32px 16px;
+    }
+
+    .pd-empty-icon {
+        font-size: 32px;
+        margin-bottom: 12px;
+        opacity: 0.6;
+    }
+
+    .pd-empty-text {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0 0 4px 0;
+    }
+
+    .pd-empty-sub {
+        font-size: 12px;
+        color: #94a3b8;
+        margin: 0;
+    }
+
+    .pd-reviews-list,
+    .pd-participants-list {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        max-height: 350px;
+        max-height: 320px;
         overflow-y: auto;
     }
 
-    .participant-item {
+    .pd-review-item {
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 8px;
+    }
+
+    .pd-review-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .pd-review-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .pd-review-meta {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .pd-review-stars {
+        display: flex;
+        gap: 1px;
+    }
+
+    .pd-review-stars .pd-star {
+        font-size: 12px;
+    }
+
+    .pd-review-comment {
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .pd-participant {
         display: flex;
         align-items: center;
         gap: 12px;
         padding: 12px;
         background: #f8fafc;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
+        border-radius: 8px;
     }
 
-    .participant-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+    .pd-participant-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
         object-fit: cover;
         background: #e2e8f0;
+        flex-shrink: 0;
     }
 
-    .participant-info {
-        flex: 1;
-    }
-
-    .participant-name {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 2px;
-    }
-
-    .participant-email {
-        font-size: 12px;
-        color: #64748b;
-        margin-bottom: 2px;
-    }
-
-    .participant-location {
+    .pd-participant-avatar-placeholder {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: #e2e8f0;
         display: flex;
         align-items: center;
-        gap: 4px;
-        font-size: 12px;
-        color: #94a3b8;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
     }
 
-    .participant-date {
+    .pd-participant-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pd-participant-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 2px 0;
+    }
+
+    .pd-participant-email {
+        font-size: 12px;
+        color: #64748b;
+        margin: 0 0 2px 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .pd-participant-location {
         font-size: 11px;
         color: #94a3b8;
-        text-align: right;
+        margin: 0;
     }
 
-    /* Empty States */
-    .empty-state {
-        text-align: center;
-        padding: 40px 20px;
+    .pd-participant-date {
+        font-size: 11px;
         color: #94a3b8;
+        flex-shrink: 0;
     }
 
-    .empty-state-icon {
-        font-size: 48px;
+    .pd-messages {
+        margin: 0 0 20px 0;
+    }
+
+    .pd-alert {
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
         margin-bottom: 12px;
     }
 
-    .empty-state-text {
-        font-size: 14px;
-        color: #64748b;
+    .pd-alert-success {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
     }
 
-    .empty-state-subtext {
-        font-size: 13px;
-        color: #94a3b8;
-        margin-top: 4px;
-    }
-
-    /* Messages */
-    .messages {
-        margin: 20px 0;
-    }
-
-    .alert {
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-    }
-
-    .alert-success {
-        background: #d1fae5;
-        color: #065f46;
-        border: 1px solid #a7f3d0;
-    }
-
-    .alert-error {
-        background: #fee2e2;
+    .pd-alert-error {
+        background: #fef2f2;
         color: #991b1b;
         border: 1px solid #fecaca;
     }
 
-    @media (max-width: 1200px) {
-        .detail-container {
+    @media (max-width: 1024px) {
+        .pd-layout {
             grid-template-columns: 1fr;
         }
-        
-        .detail-sidebar {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
+
+        .pd-stats {
+            grid-template-columns: repeat(2, 1fr);
         }
     }
 
     @media (max-width: 768px) {
-        .header {
+        .pd-header {
             left: 80px;
+            padding: 0 20px;
         }
-        
-        .detail-sidebar {
+
+        .pd-stats {
             grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .pd-card {
+            padding: 20px;
         }
     }
 </style>
 {% endblock agent_extra_css %}
 
 {% block main_content %}
-<header class="header">
-    <div class="header-left">
-        <a href="{% url 'agent_packages' %}" class="back-btn">
-            ← Back to Packages
-        </a>
-        <span class="header-title">Package Details</span>
+<header class="pd-header">
+    <div class="pd-header-left">
+        <a href="{% url 'agent_packages' %}" class="pd-back">← Back to Packages</a>
+        <span class="pd-page-title">Package Details</span>
     </div>
-    <div class="header-right">
-        <a href="{% url 'agent_edit_package' package.id %}" class="btn-edit">
-            ✏️ Edit Package
-        </a>
-        <a href="{% url 'agent_delete_package' package.id %}" class="btn-delete" onclick="return confirm('Are you sure you want to delete this package?');">
-            🗑️ Delete
-        </a>
+    <div class="pd-header-actions">
+        <a href="{% url 'agent_edit_package' package.id %}" class="pd-btn pd-btn-edit">Edit</a>
+        <a href="{% url 'agent_delete_package' package.id %}" class="pd-btn pd-btn-delete" onclick="return confirm('Are you sure you want to delete this package?');">Delete</a>
     </div>
 </header>
 
 {% if messages %}
-    <div class="messages">
+    <div class="pd-messages">
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
+            <div class="pd-alert pd-alert-{{ message.tags }}">{{ message }}</div>
         {% endfor %}
     </div>
 {% endif %}
 
-<div class="detail-container">
-    <!-- Left Column: Package Info -->
-    <div class="package-info">
-        <!-- Hero Image -->
-        <div class="package-hero">
-            {% if package.main_image %}
-                <img src="{{ package.main_image.url }}" alt="{{ package.title }}">
-            {% else %}
-                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 72px;">
-                    📦
-                </div>
-            {% endif %}
-            <span class="package-status-badge {{ package.status }}">{{ package.get_status_display }}</span>
-        </div>
-
-        <!-- Package Info Card -->
-        <div class="info-card">
-            <h1 class="package-title">{{ package.title }}</h1>
-            <div class="package-location">
-                📍 {{ package.location }}, {{ package.country }}
+<div class="pd-main">
+    <div class="pd-layout">
+        <div>
+            <!-- Hero -->
+            <div class="pd-hero-wrap">
+                {% if package.main_image %}
+                    <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="pd-hero">
+                {% else %}
+                    <div class="pd-hero-placeholder">📦</div>
+                {% endif %}
+                <span class="pd-status {{ package.status }}">{{ package.get_status_display }}</span>
             </div>
 
-            <div class="package-stats">
-                <div class="stat-item">
-                    <span class="stat-label">Price</span>
-                    <span class="stat-value price">Rs. {{ package.price_per_person|floatformat:0 }}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Duration</span>
-                    <span class="stat-value">{{ package.duration_display }}</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Agent Rating</span>
-                    <div class="rating-stars">
-                        {% for i in "12345"|make_list %}
-                            {% if forloop.counter <= agent_rating %}
-                                <span class="star">★</span>
-                            {% else %}
-                                <span class="star empty">★</span>
-                            {% endif %}
-                        {% endfor %}
-                        <span style="margin-left: 4px; font-size: 14px; color: #64748b;">({{ agent_rating|floatformat:1 }})</span>
+            <!-- Main card -->
+            <div class="pd-card">
+                <h1 class="pd-title">{{ package.title }}</h1>
+                <p class="pd-location">📍 {{ package.location }}, {{ package.country }}</p>
+
+                <div class="pd-stats">
+                    <div>
+                        <div class="pd-stat-label">Price</div>
+                        <div class="pd-stat-value price">Rs. {{ package.price_per_person|floatformat:0 }}</div>
+                    </div>
+                    <div>
+                        <div class="pd-stat-label">Duration</div>
+                        <div class="pd-stat-value">{{ package.duration_display }}</div>
+                    </div>
+                    <div>
+                        <div class="pd-stat-label">Rating</div>
+                        <div class="pd-stars">
+                            {% for i in "12345"|make_list %}
+                                <span class="pd-star {% if forloop.counter <= agent_rating %}filled{% endif %}">★</span>
+                            {% endfor %}
+                            <span class="pd-rating-num">({{ agent_rating|floatformat:1 }})</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="pd-stat-label">Participants</div>
+                        <div class="pd-stat-value">{{ participants_count }}</div>
                     </div>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">Participants</span>
-                    <span class="stat-value">{{ participants_count }}</span>
+
+                {% if package.trip_start_date or package.trip_end_date %}
+                    <p class="pd-dates">
+                        📅
+                        {% if package.trip_start_date and package.trip_end_date %}
+                            {{ package.trip_start_date|date:"M d, Y" }} – {{ package.trip_end_date|date:"M d, Y" }}
+                        {% elif package.trip_start_date %}
+                            From {{ package.trip_start_date|date:"M d, Y" }}
+                        {% else %}
+                            To {{ package.trip_end_date|date:"M d, Y" }}
+                        {% endif %}
+                    </p>
+                {% endif %}
+
+                <p class="pd-desc-label">Description</p>
+                <p class="pd-desc">{{ package.description }}</p>
+
+                <p class="pd-features-label">Features & facilities</p>
+                <div class="pd-features">
+                    {% for feature in package.features.all %}
+                        <span class="pd-feature">
+                            {% if feature.icon and "-" in feature.icon %}
+                                <ion-icon name="{{ feature.icon }}"></ion-icon>
+                            {% else %}
+                                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                            {% endif %}
+                            {{ feature.name }}
+                        </span>
+                    {% empty %}
+                        <span class="pd-feature">
+                            <ion-icon name="checkmark-circle-outline"></ion-icon>
+                            All inclusive
+                        </span>
+                    {% endfor %}
                 </div>
             </div>
+        </div>
 
-            {% if package.trip_start_date or package.trip_end_date %}
-            <div class="package-dates">
-                📅 
-                {% if package.trip_start_date and package.trip_end_date %}
-                    {{ package.trip_start_date|date:"M d, Y" }} – {{ package.trip_end_date|date:"M d, Y" }}
-                {% elif package.trip_start_date %}
-                    From {{ package.trip_start_date|date:"M d, Y" }}
+        <!-- Sidebar -->
+        <aside class="pd-sidebar">
+            <div class="pd-side-card">
+                <h3 class="pd-side-title">
+                    Agent Reviews
+                    <span class="pd-side-count">{{ reviews_count }}</span>
+                </h3>
+                {% if reviews %}
+                    <div class="pd-reviews-list">
+                        {% for item in reviews %}
+                            <div class="pd-review-item">
+                                <div class="pd-review-top">
+                                    <div>
+                                        <div class="pd-review-name">
+                                            {% if item.profile %}{{ item.profile.full_name }}{% else %}{{ item.review.user.email|slice:":20" }}{% endif %}
+                                        </div>
+                                        <div class="pd-review-meta">{{ item.review.created_at|date:"M d, Y" }}</div>
+                                    </div>
+                                    <div class="pd-review-stars">
+                                        {% for i in "12345"|make_list %}
+                                            <span class="pd-star {% if forloop.counter <= item.review.rating %}filled{% endif %}">★</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% if item.review.comment %}
+                                    <p class="pd-review-comment">{{ item.review.comment }}</p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    To {{ package.trip_end_date|date:"M d, Y" }}
+                    <div class="pd-empty">
+                        <div class="pd-empty-icon">💬</div>
+                        <p class="pd-empty-text">No reviews yet</p>
+                        <p class="pd-empty-sub">Reviews appear after travelers complete a trip</p>
+                    </div>
                 {% endif %}
             </div>
-            {% endif %}
 
-            <h3 class="section-title">Description</h3>
-            <p class="package-description">{{ package.description }}</p>
-        </div>
-
-        <!-- Features Card -->
-        <div class="info-card">
-            <h3 class="section-title">Features & Facilities</h3>
-            <div class="features-grid">
-                {% for feature in package.features.all %}
-                    <div class="feature-tag">
-                        {% if feature.icon and "-" in feature.icon %}
-                            <ion-icon name="{{ feature.icon }}"></ion-icon>
-                        {% else %}
-                            <ion-icon name="checkmark-circle-outline"></ion-icon>
-                        {% endif %}
-                        {{ feature.name }}
-                    </div>
-                {% empty %}
-                    <div class="feature-tag">
-                        <ion-icon name="checkmark-circle-outline"></ion-icon>
-                        All Inclusive
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Reviews & Participants -->
-    <div class="detail-sidebar">
-        <!-- Reviews Card -->
-        <div class="sidebar-card">
-            <div class="sidebar-card-header">
-                <h3 class="sidebar-card-title">Agent Reviews</h3>
-                <span class="count-badge">{{ reviews_count }}</span>
-            </div>
-            
-            {% if reviews %}
-                <div class="reviews-list">
-                    {% for item in reviews %}
-                        <div class="review-item">
-                            <div class="review-header">
+            <div class="pd-side-card">
+                <h3 class="pd-side-title">
+                    Travelers Joined
+                    <span class="pd-side-count">{{ participants_count }}</span>
+                </h3>
+                {% if participants %}
+                    <div class="pd-participants-list">
+                        {% for item in participants %}
+                            <div class="pd-participant">
                                 {% if item.profile and item.profile.profile_picture %}
-                                    <img src="{{ item.profile.profile_picture.url }}" alt="{{ item.profile.full_name }}" class="review-avatar">
+                                    <img src="{{ item.profile.profile_picture.url }}" alt="" class="pd-participant-avatar">
                                 {% else %}
-                                    <div class="review-avatar" style="display: flex; align-items: center; justify-content: center; font-size: 20px;">
-                                        👤
-                                    </div>
+                                    <div class="pd-participant-avatar-placeholder">👤</div>
                                 {% endif %}
-                                <div class="review-info">
-                                    <div class="review-name">
-                                        {% if item.profile %}
-                                            {{ item.profile.full_name }}
-                                        {% else %}
-                                            {{ item.review.user.email|slice:":20" }}
-                                        {% endif %}
-                                    </div>
-                                    <div class="review-date">{{ item.review.created_at|date:"M d, Y" }}</div>
-                                </div>
-                                <div class="review-rating">
-                                    {% for i in "12345"|make_list %}
-                                        {% if forloop.counter <= item.review.rating %}
-                                            <span class="star">★</span>
-                                        {% else %}
-                                            <span class="star empty">★</span>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% if item.review.comment %}
-                                <p class="review-comment">{{ item.review.comment }}</p>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-state">
-                    <div class="empty-state-icon">💬</div>
-                    <div class="empty-state-text">No reviews yet</div>
-                    <div class="empty-state-subtext">Reviews will appear here once travelers complete a trip and rate this agent</div>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- Participants Card -->
-        <div class="sidebar-card">
-            <div class="sidebar-card-header">
-                <h3 class="sidebar-card-title">Travelers Joined</h3>
-                <span class="count-badge">{{ participants_count }}</span>
-            </div>
-            
-            {% if participants %}
-                <div class="participants-list">
-                    {% for item in participants %}
-                        <div class="participant-item">
-                            {% if item.profile and item.profile.profile_picture %}
-                                <img src="{{ item.profile.profile_picture.url }}" alt="{{ item.profile.full_name }}" class="participant-avatar">
-                            {% else %}
-                                <div class="participant-avatar" style="display: flex; align-items: center; justify-content: center; font-size: 24px;">
-                                    👤
-                                </div>
-                            {% endif %}
-                            <div class="participant-info">
-                                <div class="participant-name">
-                                    {% if item.profile %}
-                                        {{ item.profile.full_name }}
-                                    {% else %}
-                                        {{ item.booking.user.email|slice:":20" }}
+                                <div class="pd-participant-info">
+                                    <p class="pd-participant-name">
+                                        {% if item.profile %}{{ item.profile.full_name }}{% else %}{{ item.booking.user.email|slice:":20" }}{% endif %}
+                                    </p>
+                                    <p class="pd-participant-email">{{ item.booking.user.email }}</p>
+                                    {% if item.profile and item.profile.location %}
+                                        <p class="pd-participant-location">{{ item.profile.location }}</p>
                                     {% endif %}
                                 </div>
-                                <div class="participant-email">{{ item.booking.user.email }}</div>
-                                {% if item.profile and item.profile.location %}
-                                    <div class="participant-location">
-                                        📍 {{ item.profile.location }}
-                                    </div>
-                                {% endif %}
+                                <p class="pd-participant-date">Booked {{ item.booking.created_at|date:"M d" }}</p>
                             </div>
-                            <div class="participant-date">
-                                Booked<br>{{ item.booking.created_at|date:"M d" }}
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-state">
-                    <div class="empty-state-icon">👥</div>
-                    <div class="empty-state-text">No travelers yet</div>
-                    <div class="empty-state-subtext">Travelers who book this package will appear here</div>
-                </div>
-            {% endif %}
-        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="pd-empty">
+                        <div class="pd-empty-icon">👥</div>
+                        <p class="pd-empty-text">No travelers yet</p>
+                        <p class="pd-empty-sub">Bookings will appear here</p>
+                    </div>
+                {% endif %}
+            </div>
+        </aside>
     </div>
 </div>
 {% endblock main_content %}
