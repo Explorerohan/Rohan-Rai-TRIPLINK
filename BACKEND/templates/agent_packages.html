@@ -611,10 +611,10 @@
 <header class="header">
     <div class="header-left">
         <div class="header-logo">TRIPLINK</div>
-        <div class="search-bar">
+        <form class="search-bar" method="get" action="{% url 'agent_packages' %}" role="search">
             <span class="search-icon">🔍</span>
-            <input type="text" placeholder="Search here">
-        </div>
+            <input type="search" name="q" placeholder="Search by title, location or country" value="{{ search_query|default:'' }}" aria-label="Search packages">
+        </form>
     </div>
     <div class="header-right">
         <div class="notification-icon">

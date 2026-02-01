@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
+from django.db.models import Q
 from django.shortcuts import render, redirect
 from rest_framework import generics, permissions, response, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -509,10 +510,22 @@ def agent_packages_view(request):
     packages = Package.objects.filter(agent=request.user).exclude(
         status=PackageStatus.COMPLETED
     ).order_by('-created_at')
-    recent_packages = packages[:7]  # Last 7 non-completed packages
+    
+    # Search by title, location, or country
+    search_query = request.GET.get('q', '').strip()
+    if search_query:
+        packages = packages.filter(
+            Q(title__icontains=search_query)
+            | Q(location__icontains=search_query)
+            | Q(country__icontains=search_query)
+        )
+    
+    recent_packages = Package.objects.filter(agent=request.user).exclude(
+        status=PackageStatus.COMPLETED
+    ).order_by('-created_at')[:7]
     completed_packages = Package.objects.filter(
         agent=request.user, status=PackageStatus.COMPLETED
-    ).order_by('-updated_at')[:4]  # Last 4 completed
+    ).order_by('-updated_at')[:4]
     
     # Get agent profile for display name
     try:
@@ -528,6 +541,7 @@ def agent_packages_view(request):
         'recent_packages': recent_packages,
         'completed_packages': completed_packages,
         'active_nav': 'packages',
+        'search_query': search_query,
     }
     return render(request, 'agent_packages.html', context)
 
