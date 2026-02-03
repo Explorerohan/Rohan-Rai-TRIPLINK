@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import {
   Image,
   Modal,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -157,6 +158,7 @@ const HomeScreen = ({
   const [profile, setProfile] = useState(() => initialProfile ?? null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const displayName =
     profile?.first_name ||
@@ -217,6 +219,30 @@ const HomeScreen = ({
     fetchPackages();
   }, [session?.access, packagesRefreshKey]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const token = session?.access ?? null;
+      const [profileRes, packagesRes] = await Promise.all([
+        token ? getProfile(token) : Promise.resolve({ data: null }),
+        getPackages({}, token),
+      ]);
+      if (profileRes?.data != null) {
+        setProfile(profileRes.data);
+        onUpdateCachedProfile(profileRes.data);
+      }
+      const rawList = Array.isArray(packagesRes?.data) ? packagesRes.data : packagesRes?.data?.results ?? [];
+      if (rawList.length > 0) {
+        setPackages(transformRawPackages(rawList));
+        onUpdateCachedPackages(rawList);
+      }
+    } catch (err) {
+      console.error("Home refresh failed:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const categories = useMemo(() => {
     if (!Array.isArray(packages) || packages.length === 0) return ["All"];
     const names = packages.map((p) => p?.locationName).filter(Boolean);
@@ -274,6 +300,14 @@ const HomeScreen = ({
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#1f6b2a"]}
+              tintColor="#1f6b2a"
+            />
+          }
         >
         <View style={styles.headerRow}>
           {profile === null ? (
