@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from "react";
-import { SafeAreaView } from "react-native";
+import React, { useState, useCallback, useEffect } from "react";
+import { SafeAreaView, ActivityIndicator, View, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
 import LoginScreen from "./src/screens/login/LoginScreen";
 import { SignupScreen } from "./src/screens/signup";
@@ -13,7 +14,10 @@ import SearchScreen from "./src/screens/search/SearchScreen";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { createBooking, getProfile, getPackages, getMyBookings } from "./src/utils/api";
 
+const SESSION_STORAGE_KEY = "@triplink_session";
+
 export default function App() {
+  const [isHydrated, setIsHydrated] = useState(false);
   const [screen, setScreen] = useState("onboarding");
   const [session, setSession] = useState(null);
   const [lastEmail, setLastEmail] = useState("");
@@ -45,13 +49,41 @@ export default function App() {
     }
   }, []);
 
+  // Restore session on app load so user stays logged in until they logout
+  useEffect(() => {
+    let cancelled = false;
+    const restoreSession = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(SESSION_STORAGE_KEY);
+        if (cancelled) return;
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.access) {
+            setSession(parsed);
+            setScreen("home");
+            preloadUserData(parsed.access);
+          }
+        }
+      } catch (e) {
+        if (!cancelled) console.warn("Restore session failed:", e);
+      } finally {
+        if (!cancelled) setIsHydrated(true);
+      }
+    };
+    restoreSession();
+    return () => { cancelled = true; };
+  }, []);
+
   const goToLogin = () => setScreen("login");
   const goToSignup = () => setScreen("signup");
   const goToForgot = () => setScreen("forgot");
   const handleLoginSuccess = (auth) => {
     setSession(auth);
     setScreen("home");
-    if (auth?.access) preloadUserData(auth.access);
+    if (auth?.access) {
+      preloadUserData(auth.access);
+      AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(auth)).catch((e) => console.warn("Save session failed:", e));
+    }
   };
   const handleSignupComplete = () => setScreen("login");
   const handleForgotComplete = (payload) => {
@@ -119,6 +151,7 @@ export default function App() {
         console.log("Logout API call failed:", error);
       }
     }
+    AsyncStorage.removeItem(SESSION_STORAGE_KEY).catch(() => {});
     setSession(null);
     setUserProfile(null);
     setCachedPackages(null);
@@ -143,6 +176,14 @@ export default function App() {
       // Optionally surface error to verification screen via lifted state
     }
   };
+
+  if (!isHydrated) {
+    return (
+      <View style={styles.loadingRoot}>
+        <ActivityIndicator size="large" color="#1f6b2a" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -264,3 +305,12 @@ export default function App() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingRoot: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+});
