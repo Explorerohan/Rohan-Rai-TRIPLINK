@@ -13,7 +13,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { createBooking, getProfile, getPackages, getMyBookings, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
+import { createBooking, getProfile, getPackages, getMyBookings, getCustomPackages, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
 
 const SESSION_STORAGE_KEY = "@triplink_session";
 
@@ -34,14 +34,16 @@ export default function App() {
   const [userProfile, setUserProfile] = useState(null);
   const [cachedPackages, setCachedPackages] = useState(null);
   const [cachedBookings, setCachedBookings] = useState(null);
+  const [cachedCustomPackages, setCachedCustomPackages] = useState(null);
 
   const preloadUserData = useCallback(async (accessToken) => {
     if (!accessToken) return;
     try {
-      const [profileRes, packagesRes, bookingsRes] = await Promise.all([
+      const [profileRes, packagesRes, bookingsRes, customPackagesRes] = await Promise.all([
         getProfile(accessToken),
         getPackages({}, accessToken),
         getMyBookings(accessToken),
+        getCustomPackages(accessToken),
       ]);
       setUserProfile(profileRes?.data ?? null);
       const rawList = Array.isArray(packagesRes?.data) ? packagesRes.data : packagesRes?.data?.results ?? [];
@@ -49,6 +51,8 @@ export default function App() {
       const rawBookings = bookingsRes?.data;
       const bookingsList = Array.isArray(rawBookings) ? rawBookings : (rawBookings?.results ?? []);
       setCachedBookings(Array.isArray(bookingsList) ? bookingsList : []);
+      const rawCustom = customPackagesRes?.data;
+      setCachedCustomPackages(Array.isArray(rawCustom) ? rawCustom : []);
     } catch (e) {
       console.warn("Preload user data failed:", e);
     }
@@ -71,6 +75,7 @@ export default function App() {
     setUserProfile(null);
     setCachedPackages(null);
     setCachedBookings(null);
+    setCachedCustomPackages(null);
     setScreen("login");
   }, []);
 
@@ -208,6 +213,7 @@ export default function App() {
     setUserProfile(null);
     setCachedPackages(null);
     setCachedBookings(null);
+    setCachedCustomPackages(null);
     setScreen("login");
   };
 
@@ -348,6 +354,8 @@ export default function App() {
       {screen === "customPackages" && (
         <CustomPackagesListScreen
           session={session}
+          initialCustomPackages={cachedCustomPackages}
+          onUpdateCachedCustomPackages={setCachedCustomPackages}
           onBack={() => setScreen("home")}
           onCreatePress={() => setScreen("createCustomPackage")}
           onHomePress={() => setScreen("home")}
@@ -359,7 +367,10 @@ export default function App() {
         <CreateCustomPackageScreen
           session={session}
           onBack={() => setScreen("customPackages")}
-          onCreateSuccess={() => setScreen("customPackages")}
+          onCreateSuccess={(newPackage) => {
+            if (newPackage) setCachedCustomPackages((prev) => [...(prev || []), newPackage]);
+            setScreen("customPackages");
+          }}
         />
       )}
       {screen === "editProfile" && (

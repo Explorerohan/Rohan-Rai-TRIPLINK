@@ -28,14 +28,17 @@ const navItems = [
 
 const CustomPackagesListScreen = ({
   session,
+  initialCustomPackages,
+  onUpdateCachedCustomPackages,
   onBack,
   onCreatePress,
   onHomePress,
   onCalendarPress,
   onProfilePress,
 }) => {
-  const [list, setList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const hasCache = initialCustomPackages !== undefined && initialCustomPackages !== null;
+  const [list, setList] = useState(() => (Array.isArray(initialCustomPackages) ? initialCustomPackages : []));
+  const [loading, setLoading] = useState(!hasCache);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchList = async (isRefresh = false) => {
@@ -45,19 +48,28 @@ const CustomPackagesListScreen = ({
       return;
     }
     if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    else if (!hasCache) setLoading(true);
     try {
       const res = await getCustomPackages(session.access);
       const data = res?.data;
-      setList(Array.isArray(data) ? data : []);
+      const nextList = Array.isArray(data) ? data : [];
+      setList(nextList);
+      if (onUpdateCachedCustomPackages) onUpdateCachedCustomPackages(nextList);
     } catch (e) {
       console.warn("Fetch custom packages failed:", e);
-      setList([]);
+      if (!hasCache) setList([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    if (initialCustomPackages !== undefined && initialCustomPackages !== null) {
+      setList(Array.isArray(initialCustomPackages) ? initialCustomPackages : []);
+      setLoading(false);
+    }
+  }, [initialCustomPackages]);
 
   useEffect(() => {
     fetchList();

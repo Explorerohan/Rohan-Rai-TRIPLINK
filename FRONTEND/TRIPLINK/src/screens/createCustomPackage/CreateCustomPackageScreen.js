@@ -130,9 +130,10 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
         feature_ids: featureIds,
       };
       if (mainImage) payload.main_image = mainImage;
-      await createCustomPackage(payload, session.access);
+      const res = await createCustomPackage(payload, session.access);
+      const createdPackage = res?.data;
       Alert.alert("Success", "Your custom package has been created. Only you can see it.", [
-        { text: "OK", onPress: () => { onCreateSuccess?.(); onBack?.(); } },
+        { text: "OK", onPress: () => { onCreateSuccess?.(createdPackage); onBack?.(); } },
       ]);
     } catch (err) {
       const message = err?.message || "Failed to create custom package. Please try again.";
