@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus, AgentReview
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, AgentReview
 
 User = get_user_model()
 
@@ -129,6 +129,52 @@ class PackageFeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = PackageFeature
         fields = ['id', 'name', 'icon', 'description']
+
+
+class CustomPackageSerializer(serializers.ModelSerializer):
+    """Serializer for traveler-created custom packages (private to owner)."""
+    features = PackageFeatureSerializer(many=True, read_only=True)
+    main_image_url = serializers.SerializerMethodField()
+    duration_display = serializers.ReadOnlyField()
+    feature_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=PackageFeature.objects.all(), write_only=True, required=False
+    )
+
+    class Meta:
+        model = CustomPackage
+        fields = [
+            'id', 'title', 'location', 'country', 'description',
+            'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
+            'trip_start_date', 'trip_end_date',
+            'main_image', 'main_image_url', 'features', 'feature_ids',
+            'additional_notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_main_image_url(self, obj):
+        if obj.main_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.main_image.url)
+            return obj.main_image.url
+        return None
+
+    def create(self, validated_data):
+        feature_ids = validated_data.pop('feature_ids', [])
+        user = validated_data.get('user') or self.context.get('request').user
+        validated_data['user'] = user
+        instance = super().create(validated_data)
+        if feature_ids:
+            instance.features.set(feature_ids)
+        return instance
+
+    def update(self, instance, validated_data):
+        feature_ids = validated_data.pop('feature_ids', None)
+        super().update(instance, validated_data)
+        if feature_ids is not None:
+            instance.features.set(feature_ids)
+        return instance
 
 
 class PackageSerializer(serializers.ModelSerializer):

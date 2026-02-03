@@ -10,13 +10,14 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email
-from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, Booking, BookingStatus, AgentReview
+from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, AgentReview
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
     UserProfileSerializer, AgentProfileSerializer, PackageSerializer, BookingSerializer,
-    PackageDetailSerializer, AgentReviewSerializer
+    PackageDetailSerializer, AgentReviewSerializer, CustomPackageSerializer,
+    PackageFeatureSerializer,
 )
 
 User = get_user_model()
@@ -915,3 +916,39 @@ class BookingListCreateView(generics.ListCreateAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+
+# Custom Package API (traveler-created packages; only visible to the creating user)
+class CustomPackageListCreateView(generics.ListCreateAPIView):
+    """List current user's custom packages and create a new one. Travelers only."""
+    serializer_class = CustomPackageSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return CustomPackage.objects.filter(user=self.request.user).prefetch_related('features').order_by('-created_at')
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class CustomPackageDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a custom package. Only owner can access."""
+    serializer_class = CustomPackageSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return CustomPackage.objects.filter(user=self.request.user).prefetch_related('features')
+
+
+class PackageFeatureListView(generics.ListAPIView):
+    """List all package features (for custom package form and agent form). Read-only."""
+    serializer_class = PackageFeatureSerializer
+    permission_classes = [permissions.AllowAny]
+    queryset = PackageFeature.objects.all().order_by('name')

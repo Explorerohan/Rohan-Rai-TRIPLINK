@@ -72,6 +72,13 @@ def package_image_path(instance, filename):
     return f'packages/temp/{filename}'
 
 
+def custom_package_image_path(instance, filename):
+    """Generate file path for traveler custom package images"""
+    if instance.pk:
+        return f'custom_packages/{instance.user_id}/{instance.pk}/{filename}'
+    return f'custom_packages/{instance.user_id}/temp/{filename}'
+
+
 class UserProfile(models.Model):
     """Profile model for Traveler users"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_profile')
@@ -206,6 +213,48 @@ class Package(models.Model):
             return float(self.agent.agent_profile.rating)
         except (AgentProfile.DoesNotExist, AttributeError):
             return 0.0
+
+
+class CustomPackage(models.Model):
+    """
+    Custom trip package created by a traveler. Only visible to the user who created it.
+    Same core fields as Package, plus additional_notes for "things to consider on this trip".
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="custom_packages",
+        limit_choices_to={"role": Roles.TRAVELER},
+    )
+    title = models.CharField(max_length=200, help_text="Package title (e.g., PARIS)")
+    location = models.CharField(max_length=200, help_text="Location name (e.g., Paris)")
+    country = models.CharField(max_length=100, help_text="Country name (e.g., France)")
+    description = models.TextField(help_text="Detailed description of the package")
+    price_per_person = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in Rs.")
+    duration_days = models.PositiveIntegerField(default=7, help_text="Number of days")
+    duration_nights = models.PositiveIntegerField(default=6, help_text="Number of nights")
+    trip_start_date = models.DateField(null=True, blank=True, help_text="Trip start date")
+    trip_end_date = models.DateField(null=True, blank=True, help_text="Trip end date")
+    main_image = models.ImageField(upload_to=custom_package_image_path, null=True, blank=True)
+    features = models.ManyToManyField(PackageFeature, related_name="custom_packages", blank=True)
+    additional_notes = models.TextField(
+        blank=True,
+        help_text="Additional things to consider on this trip (e.g., visa, weather, packing)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Custom Package"
+        verbose_name_plural = "Custom Packages"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} (custom) - {self.user.email}"
+
+    @property
+    def duration_display(self):
+        return f"{self.duration_days} Days / {self.duration_nights} Nights"
 
 
 class BookingStatus(models.TextChoices):

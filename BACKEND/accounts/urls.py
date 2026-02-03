@@ -13,6 +13,9 @@ from .views import (
     PackageDetailView,
     BookingListCreateView,
     AgentReviewListCreateView,
+    CustomPackageListCreateView,
+    CustomPackageDetailView,
+    PackageFeatureListView,
 )
 
 urlpatterns = [
@@ -32,4 +35,9 @@ urlpatterns = [
     path("agents/<int:agent_id>/reviews/", AgentReviewListCreateView.as_view(), name="agent_review_list_create"),
     # Booking endpoints
     path("bookings/", BookingListCreateView.as_view(), name="booking_list_create"),
+    # Custom packages (traveler-created; only visible to owner)
+    path("custom-packages/", CustomPackageListCreateView.as_view(), name="custom_package_list_create"),
+    path("custom-packages/<int:pk>/", CustomPackageDetailView.as_view(), name="custom_package_detail"),
+    # Features list (for custom package / agent forms)
+    path("features/", PackageFeatureListView.as_view(), name="package_feature_list"),
 ]
