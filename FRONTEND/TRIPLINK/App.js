@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { SafeAreaView, ActivityIndicator, View, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
@@ -13,7 +13,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { createBooking, getProfile, getPackages, getMyBookings } from "./src/utils/api";
+import { createBooking, getProfile, getPackages, getMyBookings, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
 
 const SESSION_STORAGE_KEY = "@triplink_session";
 
@@ -21,6 +21,10 @@ export default function App() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [screen, setScreen] = useState("onboarding");
   const [session, setSession] = useState(null);
+  const sessionRef = useRef(null);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
   const [lastEmail, setLastEmail] = useState("");
   const [otpSession, setOtpSession] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
@@ -50,6 +54,51 @@ export default function App() {
     }
   }, []);
 
+  // When access token is refreshed, update session and persist (optionally save new refresh token if backend returns it)
+  const handleNewAccessToken = useCallback((access, refresh) => {
+    setSession((prev) => {
+      if (!prev) return null;
+      const next = { ...prev, access, ...(refresh != null && refresh !== "" ? { refresh } : {}) };
+      sessionRef.current = next;
+      AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const handleRefreshFailed = useCallback(() => {
+    AsyncStorage.removeItem(SESSION_STORAGE_KEY).catch(() => {});
+    setSession(null);
+    setUserProfile(null);
+    setCachedPackages(null);
+    setCachedBookings(null);
+    setScreen("login");
+  }, []);
+
+  useEffect(() => {
+    setTokenRefreshHandler({
+      getRefreshToken: () => sessionRef.current?.refresh ?? null,
+      onNewAccessToken: handleNewAccessToken,
+      onRefreshFailed: handleRefreshFailed,
+    });
+  }, [handleNewAccessToken, handleRefreshFailed]);
+
+  // Proactive refresh: get new access token before it expires (backend access lifetime 30 min, refresh every 25 min)
+  useEffect(() => {
+    if (!session?.refresh) return;
+    const PROACTIVE_REFRESH_MS = 25 * 60 * 1000; // 25 minutes
+    const intervalId = setInterval(async () => {
+      const refreshToken = sessionRef.current?.refresh;
+      if (!refreshToken) return;
+      try {
+        const tokens = await refreshAccessToken(refreshToken);
+        handleNewAccessToken(tokens.access, tokens.refresh);
+      } catch (_) {
+        // Refresh failed (e.g. refresh token expired); next API call will 401 and trigger handleRefreshFailed
+      }
+    }, PROACTIVE_REFRESH_MS);
+    return () => clearInterval(intervalId);
+  }, [session?.refresh, handleNewAccessToken]);
+
   // Restore session on app load so user stays logged in until they logout
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +109,7 @@ export default function App() {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed && parsed.access) {
+            sessionRef.current = parsed; // so 401 handler has refresh token before first request
             setSession(parsed);
             setScreen("home");
             preloadUserData(parsed.access);
@@ -79,6 +129,7 @@ export default function App() {
   const goToSignup = () => setScreen("signup");
   const goToForgot = () => setScreen("forgot");
   const handleLoginSuccess = (auth) => {
+    sessionRef.current = auth; // so 401 handler has refresh token before first request
     setSession(auth);
     setScreen("home");
     if (auth?.access) {

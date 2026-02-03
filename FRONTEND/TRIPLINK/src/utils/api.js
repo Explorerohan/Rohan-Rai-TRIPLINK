@@ -1,29 +1,59 @@
 const API_BASE = "http://192.168.18.6:8000";
 
+// Token refresh: when we get 401, get new access token and retry (or log out if refresh fails)
+let tokenRefreshHandler = null;
+// Single refresh in flight so concurrent 401s don't trigger multiple refresh calls
+let refreshPromise = null;
+
 /**
- * Make an authenticated API request
+ * Register handler for token refresh. Call from App with getRefreshToken, onNewAccessToken, onRefreshFailed.
+ * onNewAccessToken(access, refresh?) – refresh optional if backend returns new refresh token.
+ * @param {{ getRefreshToken: () => string|null, onNewAccessToken: (access: string, refresh?: string) => void, onRefreshFailed?: () => void }} handler
+ */
+export const setTokenRefreshHandler = (handler) => {
+  tokenRefreshHandler = handler;
+};
+
+/**
+ * Call backend refresh endpoint; returns { access, refresh? } or throws.
+ * @param {string} refreshToken
+ * @returns {Promise<{ access: string, refresh?: string }>}
+ */
+export const refreshAccessToken = async (refreshToken) => {
+  const url = `${API_BASE}/api/auth/refresh/`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh: refreshToken }),
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (_) {}
+  if (!response.ok) {
+    const msg = data.detail || data.message || `Refresh failed (${response.status})`;
+    throw new Error(msg);
+  }
+  if (!data.access) throw new Error("No access token in refresh response");
+  return { access: data.access, refresh: data.refresh || null };
+};
+
+/**
+ * Make an authenticated API request. On 401, tries to refresh token and retry once.
  * @param {string} endpoint - API endpoint (e.g., '/api/auth/profile/')
  * @param {object} options - Fetch options
  * @param {string} accessToken - JWT access token
  * @returns {Promise<Response>}
  */
 export const apiRequest = async (endpoint, options = {}, accessToken = null) => {
-  const url = `${API_BASE}${endpoint}`;
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
-
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
-  }
-
-  const config = {
-    ...options,
-    headers,
-  };
-
-  try {
+  const doRequest = async (token) => {
+    const url = `${API_BASE}${endpoint}`;
+    const headers = {
+      "Content-Type": "application/json",
+      ...options.headers,
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const config = { ...options, headers };
     const response = await fetch(url, config);
     let data;
     try {
@@ -31,92 +61,110 @@ export const apiRequest = async (endpoint, options = {}, accessToken = null) => 
     } catch (_) {
       data = {};
     }
+    return { response, data };
+  };
 
-    if (!response.ok) {
-      // DRF validation errors: { "field": ["msg"] } or { "detail": "..." }
-      let message = data.detail || data.message;
-      if (!message && typeof data === "object") {
-        const firstKey = Object.keys(data)[0];
-        if (firstKey) {
-          const val = data[firstKey];
-          message = Array.isArray(val) ? val[0] : val;
+  let result = await doRequest(accessToken);
+
+  if (result.response.status === 401 && accessToken && tokenRefreshHandler) {
+    const refreshToken = tokenRefreshHandler.getRefreshToken && tokenRefreshHandler.getRefreshToken();
+    if (refreshToken) {
+      try {
+        if (!refreshPromise) {
+          refreshPromise = refreshAccessToken(refreshToken).then((tokens) => {
+            if (tokenRefreshHandler.onNewAccessToken) tokenRefreshHandler.onNewAccessToken(tokens.access, tokens.refresh);
+            return tokens;
+          }).finally(() => { refreshPromise = null; });
         }
+        const tokens = await refreshPromise;
+        result = await doRequest(tokens.access);
+      } catch (refreshErr) {
+        refreshPromise = null;
+        if (tokenRefreshHandler.onRefreshFailed) tokenRefreshHandler.onRefreshFailed();
+        const msg = result.data?.detail || result.data?.message || "Session expired. Please log in again.";
+        throw new Error(msg);
       }
-      throw new Error(message || `HTTP error ${response.status}`);
     }
-
-    return { data, status: response.status };
-  } catch (error) {
-    throw error;
   }
+
+  if (!result.response.ok) {
+    const data = result.data;
+    let message = data.detail || data.message;
+    if (!message && typeof data === "object") {
+      const firstKey = Object.keys(data)[0];
+      if (firstKey) {
+        const val = data[firstKey];
+        message = Array.isArray(val) ? val[0] : val;
+      }
+    }
+    throw new Error(message || `HTTP error ${result.response.status}`);
+  }
+
+  return { data: result.data, status: result.response.status };
 };
 
 /**
- * Make an authenticated multipart/form-data request (for file uploads)
+ * Make an authenticated multipart/form-data request (for file uploads). On 401, tries refresh and retry once.
  * @param {string} endpoint - API endpoint
  * @param {FormData} formData - FormData object
  * @param {string} accessToken - JWT access token
  * @returns {Promise<Response>}
  */
 export const apiRequestMultipart = async (endpoint, formData, accessToken) => {
-  const url = `${API_BASE}${endpoint}`;
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    // Don't set Content-Type for FormData - browser will set it with boundary
-  };
-
-  try {
+  const doRequest = async (token) => {
+    const url = `${API_BASE}${endpoint}`;
     const response = await fetch(url, {
       method: "PUT",
-      headers,
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
-
     let data;
-    let rawText = null;
     try {
-      rawText = await response.text();
+      const rawText = await response.text();
       data = rawText ? JSON.parse(rawText) : {};
     } catch (e) {
-      data = { raw: rawText };
+      data = {};
     }
+    return { response, data };
+  };
 
-    if (!response.ok) {
-      // Log full error payload for debugging (field-level validation errors, etc.)
-      console.log("Profile update error response:", response.status, data);
+  let result = await doRequest(accessToken);
 
-      // Try to surface a more helpful message if possible
-      const messageFromDetail = data?.detail || data?.message;
-      let messageFromFields = null;
-
-      if (!messageFromDetail && data && typeof data === "object" && !Array.isArray(data)) {
-        const firstKey = Object.keys(data)[0];
-        if (firstKey) {
-          const fieldError = data[firstKey];
-          if (Array.isArray(fieldError) && fieldError.length > 0) {
-            messageFromFields = `${firstKey}: ${fieldError[0]}`;
-          } else if (typeof fieldError === "string") {
-            messageFromFields = `${firstKey}: ${fieldError}`;
-          }
+  if (result.response.status === 401 && accessToken && tokenRefreshHandler) {
+    const refreshToken = tokenRefreshHandler.getRefreshToken && tokenRefreshHandler.getRefreshToken();
+    if (refreshToken) {
+      try {
+        if (!refreshPromise) {
+          refreshPromise = refreshAccessToken(refreshToken).then((tokens) => {
+            if (tokenRefreshHandler.onNewAccessToken) tokenRefreshHandler.onNewAccessToken(tokens.access, tokens.refresh);
+            return tokens;
+          }).finally(() => { refreshPromise = null; });
         }
+        const tokens = await refreshPromise;
+        result = await doRequest(tokens.access);
+      } catch (refreshErr) {
+        refreshPromise = null;
+        if (tokenRefreshHandler.onRefreshFailed) tokenRefreshHandler.onRefreshFailed();
+        throw new Error(result.data?.detail || result.data?.message || "Session expired. Please log in again.");
       }
-
-      const finalMessage =
-        messageFromDetail ||
-        messageFromFields ||
-        `HTTP error! status: ${response.status}`;
-
-      throw new Error(finalMessage);
     }
-
-    if (!response.ok) {
-      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
-    }
-    
-    return { data, status: response.status };
-  } catch (error) {
-    throw error;
   }
+
+  if (!result.response.ok) {
+    const data = result.data;
+    const messageFromDetail = data?.detail || data?.message;
+    let messageFromFields = null;
+    if (!messageFromDetail && data && typeof data === "object" && !Array.isArray(data)) {
+      const firstKey = Object.keys(data)[0];
+      if (firstKey) {
+        const fieldError = data[firstKey];
+        messageFromFields = Array.isArray(fieldError) ? fieldError[0] : fieldError;
+      }
+    }
+    throw new Error(messageFromDetail || messageFromFields || `HTTP error ${result.response.status}`);
+  }
+
+  return { data: result.data, status: result.response.status };
 };
 
 /**
@@ -285,16 +333,38 @@ export const createCustomPackage = async (payload, accessToken) => {
     const name = uri.split("/").pop() || "image.jpg";
     formData.append("main_image", { uri, name, type: "image/jpeg" });
     const url = `${API_BASE}/api/auth/custom-packages/`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: formData,
-    });
+    let token = accessToken;
+    let response = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
     let data;
     try {
       data = await response.json();
     } catch (_) {
       data = {};
+    }
+    if (response.status === 401 && token && tokenRefreshHandler) {
+      const refreshToken = tokenRefreshHandler.getRefreshToken && tokenRefreshHandler.getRefreshToken();
+      if (refreshToken) {
+        try {
+          if (!refreshPromise) {
+            refreshPromise = refreshAccessToken(refreshToken).then((tokens) => {
+              if (tokenRefreshHandler.onNewAccessToken) tokenRefreshHandler.onNewAccessToken(tokens.access, tokens.refresh);
+              return tokens;
+            }).finally(() => { refreshPromise = null; });
+          }
+          const tokens = await refreshPromise;
+          token = tokens.access;
+          response = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+          try {
+            data = await response.json();
+          } catch (_) {
+            data = {};
+          }
+        } catch (refreshErr) {
+          refreshPromise = null;
+          if (tokenRefreshHandler.onRefreshFailed) tokenRefreshHandler.onRefreshFailed();
+          throw new Error(data?.detail || data?.message || "Session expired. Please log in again.");
+        }
+      }
     }
     if (!response.ok) {
       const msg = data.detail || data.message || (data && typeof data === "object" && Object.keys(data)[0] && (Array.isArray(data[Object.keys(data)[0]]) ? data[Object.keys(data)[0]][0] : data[Object.keys(data)[0]])) || `HTTP ${response.status}`;
