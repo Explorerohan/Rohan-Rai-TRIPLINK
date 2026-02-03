@@ -11,6 +11,7 @@ import HomeScreen from "./src/screens/home/HomeScreen";
 import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
+import { CreateCustomPackageScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { createBooking, getProfile, getPackages, getMyBookings } from "./src/utils/api";
 
@@ -233,6 +234,7 @@ export default function App() {
           onProfilePress={() => setScreen("profile")}
           onCalendarPress={() => setScreen("schedule")}
           onSearchPress={() => setScreen("search")}
+          onPlusPress={() => setScreen("createCustomPackage")}
         />
       )}
       {screen === "search" && (
@@ -254,6 +256,7 @@ export default function App() {
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
           onProfilePress={() => setScreen("profile")}
+          onPlusPress={() => setScreen("createCustomPackage")}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });
@@ -288,6 +291,14 @@ export default function App() {
           onEdit={() => setScreen("editProfile")}
           onCalendarPress={() => setScreen("schedule")}
           onLogout={handleLogout}
+          onPlusPress={() => setScreen("createCustomPackage")}
+        />
+      )}
+      {screen === "createCustomPackage" && (
+        <CreateCustomPackageScreen
+          session={session}
+          onBack={() => setScreen("home")}
+          onCreateSuccess={() => {}}
         />
       )}
       {screen === "editProfile" && (

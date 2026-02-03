@@ -241,3 +241,80 @@ export const createAgentReview = async (agentId, rating, comment, accessToken) =
   );
 };
 
+/**
+ * Get list of package features (for custom package / agent forms)
+ * @returns {Promise<object>}
+ */
+export const getFeatures = async () => {
+  return apiRequest("/api/auth/features/", { method: "GET" });
+};
+
+/**
+ * Get current user's custom packages (traveler only)
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const getCustomPackages = async (accessToken) => {
+  return apiRequest("/api/auth/custom-packages/", { method: "GET" }, accessToken);
+};
+
+/**
+ * Create a custom package (traveler only). Sends JSON or FormData if main_image is provided.
+ * @param {object} payload - { title, location, country, description, price_per_person, duration_days, duration_nights, trip_start_date?, trip_end_date?, feature_ids?, additional_notes?, main_image? (uri for FormData) }
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const createCustomPackage = async (payload, accessToken) => {
+  const hasImage = payload.main_image != null && typeof payload.main_image === "object" && payload.main_image.uri;
+  if (hasImage) {
+    const formData = new FormData();
+    formData.append("title", payload.title || "");
+    formData.append("location", payload.location || "");
+    formData.append("country", payload.country || "");
+    formData.append("description", payload.description || "");
+    formData.append("price_per_person", String(payload.price_per_person ?? ""));
+    formData.append("duration_days", String(payload.duration_days ?? 7));
+    formData.append("duration_nights", String(payload.duration_nights ?? 6));
+    if (payload.trip_start_date) formData.append("trip_start_date", payload.trip_start_date);
+    if (payload.trip_end_date) formData.append("trip_end_date", payload.trip_end_date);
+    if (payload.additional_notes) formData.append("additional_notes", payload.additional_notes);
+    if (Array.isArray(payload.feature_ids)) {
+      payload.feature_ids.forEach((id) => formData.append("feature_ids", String(id)));
+    }
+    const uri = payload.main_image.uri;
+    const name = uri.split("/").pop() || "image.jpg";
+    formData.append("main_image", { uri, name, type: "image/jpeg" });
+    const url = `${API_BASE}/api/auth/custom-packages/`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    });
+    let data;
+    try {
+      data = await response.json();
+    } catch (_) {
+      data = {};
+    }
+    if (!response.ok) {
+      const msg = data.detail || data.message || (data && typeof data === "object" && Object.keys(data)[0] && (Array.isArray(data[Object.keys(data)[0]]) ? data[Object.keys(data)[0]][0] : data[Object.keys(data)[0]])) || `HTTP ${response.status}`;
+      throw new Error(msg);
+    }
+    return { data, status: response.status };
+  }
+  const body = {
+    title: payload.title || "",
+    location: payload.location || "",
+    country: payload.country || "",
+    description: payload.description || "",
+    price_per_person: payload.price_per_person ?? 0,
+    duration_days: payload.duration_days ?? 7,
+    duration_nights: payload.duration_nights ?? 6,
+    trip_start_date: payload.trip_start_date || null,
+    trip_end_date: payload.trip_end_date || null,
+    additional_notes: payload.additional_notes || "",
+    feature_ids: Array.isArray(payload.feature_ids) ? payload.feature_ids : [],
+  };
+  return apiRequest("/api/auth/custom-packages/", { method: "POST", body: JSON.stringify(body) }, accessToken);
+};
+

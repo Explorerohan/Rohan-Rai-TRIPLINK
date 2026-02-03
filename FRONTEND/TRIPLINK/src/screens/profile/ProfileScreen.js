@@ -42,6 +42,7 @@ const ProfileScreen = ({
   onEdit = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
+  onPlusPress = () => {},
 }) => {
   const hasInitial = initialProfile != null;
   const [profile, setProfile] = useState(() => initialProfile);
@@ -214,7 +215,7 @@ const ProfileScreen = ({
             })}
           </View>
 
-          <TouchableOpacity style={styles.fab} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.fab} activeOpacity={0.9} onPress={onPlusPress}>
             <Ionicons name="add" size={26} color="#ffffff" />
           </TouchableOpacity>
 

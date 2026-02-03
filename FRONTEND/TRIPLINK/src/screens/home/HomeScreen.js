@@ -149,6 +149,7 @@ const HomeScreen = ({
   onProfilePress = () => {},
   onCalendarPress = () => {},
   onSearchPress = () => {},
+  onPlusPress = () => {},
 }) => {
   const hasInitialPackages = initialPackages && initialPackages.length > 0;
   const [activeCategory, setActiveCategory] = useState("All");
@@ -546,7 +547,7 @@ const HomeScreen = ({
           })}
         </View>
 
-        <TouchableOpacity style={styles.fab} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.fab} activeOpacity={0.9} onPress={onPlusPress}>
           <Ionicons name="add" size={26} color="#ffffff" />
         </TouchableOpacity>
 

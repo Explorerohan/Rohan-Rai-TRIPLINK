@@ -100,6 +100,7 @@ const ScheduleScreen = ({
   onHomePress,
   onProfilePress,
   onTripPress,
+  onPlusPress = () => {},
 }) => {
   const hasInitialBookings = Array.isArray(initialBookings) && initialBookings.length > 0;
   const [viewDate, setViewDate] = useState(new Date());
@@ -379,7 +380,7 @@ const ScheduleScreen = ({
             );
           })}
         </View>
-        <TouchableOpacity style={styles.fab} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.fab} activeOpacity={0.9} onPress={onPlusPress}>
           <Ionicons name="add" size={26} color="#ffffff" />
         </TouchableOpacity>
         <View style={styles.navSide}>
