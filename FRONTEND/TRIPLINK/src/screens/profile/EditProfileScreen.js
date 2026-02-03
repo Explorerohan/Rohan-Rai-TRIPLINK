@@ -20,19 +20,47 @@ import { getProfile, updateProfile, updateProfileWithImage } from "../../utils/a
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
 
-const EditProfileScreen = ({ session, onBack, onSave }) => {
+const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) => {
+  const hasInitial = initialProfile != null && typeof initialProfile === "object";
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [profileData, setProfileData] = useState({
-    first_name: "",
-    last_name: "",
-    phone_number: "",
-    location: "",
+  const [fetching, setFetching] = useState(!hasInitial);
+  const [profileData, setProfileData] = useState(() => {
+    if (!hasInitial) return { first_name: "", last_name: "", phone_number: "", location: "" };
+    return {
+      first_name: initialProfile.first_name || "",
+      last_name: initialProfile.last_name || "",
+      phone_number: initialProfile.phone_number || "",
+      location: initialProfile.location || "",
+    };
   });
   const [profileImage, setProfileImage] = useState(null);
-  const [profileImageUri, setProfileImageUri] = useState(null);
-  const [isFirstTimeProfile, setIsFirstTimeProfile] = useState(false);
+  const [profileImageUri, setProfileImageUri] = useState(() => {
+    if (!hasInitial) return null;
+    const url = initialProfile.profile_picture_url && String(initialProfile.profile_picture_url).trim();
+    return url || null;
+  });
+  const [isFirstTimeProfile, setIsFirstTimeProfile] = useState(() => {
+    if (!hasInitial) return true;
+    const required = ["first_name", "last_name", "phone_number", "location"];
+    return !required.every((f) => !!initialProfile[f]);
+  });
   const isAgent = session?.user?.role === "agent";
+
+  useEffect(() => {
+    if (initialProfile && typeof initialProfile === "object" && fetching) {
+      setProfileData({
+        first_name: initialProfile.first_name || "",
+        last_name: initialProfile.last_name || "",
+        phone_number: initialProfile.phone_number || "",
+        location: initialProfile.location || "",
+      });
+      const url = initialProfile.profile_picture_url && String(initialProfile.profile_picture_url).trim();
+      if (url) setProfileImageUri(url);
+      const required = ["first_name", "last_name", "phone_number", "location"];
+      setIsFirstTimeProfile(!required.every((f) => !!initialProfile[f]));
+      setFetching(false);
+    }
+  }, [initialProfile]);
 
   useEffect(() => {
     fetchProfileData();
@@ -43,10 +71,9 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
       setFetching(false);
       return;
     }
-
     try {
       const response = await getProfile(session.access);
-      const data = response.data;
+      const data = response?.data ?? {};
 
       setProfileData({
         first_name: data.first_name || "",
@@ -55,24 +82,15 @@ const EditProfileScreen = ({ session, onBack, onSave }) => {
         location: data.location || "",
       });
 
-      // Determine if this is effectively the "first time" profile is being completed
-      const requiredBaseFields = [
-        "first_name",
-        "last_name",
-        "phone_number",
-        "location",
-      ];
-      const requiredFields = requiredBaseFields;
-
-      const isComplete = requiredFields.every((field) => !!data[field]);
+      const requiredBaseFields = ["first_name", "last_name", "phone_number", "location"];
+      const isComplete = requiredBaseFields.every((field) => !!data[field]);
       setIsFirstTimeProfile(!isComplete);
 
-      // Only set avatar from API when user has actually set a profile image
       const url = data.profile_picture_url && String(data.profile_picture_url).trim();
       if (url) setProfileImageUri(url);
     } catch (error) {
       console.error("Error fetching profile:", error);
-      Alert.alert("Error", "Failed to load profile data");
+      if (!hasInitial) Alert.alert("Error", "Failed to load profile data");
     } finally {
       setFetching(false);
     }

@@ -110,16 +110,54 @@ const cleanPrice = (price) => {
   return price;
 };
 
-const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, onProfilePress = () => {}, onCalendarPress = () => {}, onSearchPress = () => {} }) => {
+const transformRawPackages = (rawList) => {
+  if (!rawList?.length) return [];
+  return rawList.filter(Boolean).map((pkg) => ({
+    id: pkg.id.toString(),
+    title: pkg.title,
+    location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
+    locationName: (pkg.location || "").trim() || "Other",
+    image: pkg.main_image_url || "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
+    price: pkg.price_per_person,
+    nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
+    rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
+    reviews: pkg.participants_count || 0,
+    perks: pkg.features?.map((f) => f.name) || [],
+    description: pkg.description,
+    hero: pkg.main_image_url,
+    facilities: pkg.features?.map((f, idx) => ({
+      key: `feature_${idx}`,
+      label: f.name,
+      icon: f.icon || "checkmark-circle-outline",
+    })) || defaultFacilities,
+    user_has_booked: pkg.user_has_booked ?? false,
+    trip_start_date: pkg.trip_start_date ?? null,
+    trip_end_date: pkg.trip_end_date ?? null,
+    packageData: pkg,
+  }));
+};
+
+const HomeScreen = ({
+  session,
+  packagesRefreshKey = 0,
+  initialProfile = null,
+  initialPackages = null,
+  onUpdateCachedPackages = () => {},
+  onUpdateCachedProfile = () => {},
+  onTripPress = () => {},
+  onProfilePress = () => {},
+  onCalendarPress = () => {},
+  onSearchPress = () => {},
+}) => {
+  const hasInitialPackages = initialPackages && initialPackages.length > 0;
   const [activeCategory, setActiveCategory] = useState("All");
-  const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [packages, setPackages] = useState(() => (hasInitialPackages ? transformRawPackages(initialPackages) : []));
+  const [loading, setLoading] = useState(!hasInitialPackages);
   const [error, setError] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() => initialProfile ?? null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
 
-  // Prefer first name from profile; fall back to session / email username
   const displayName =
     profile?.first_name ||
     session?.user?.first_name ||
@@ -127,67 +165,55 @@ const HomeScreen = ({ session, packagesRefreshKey = 0, onTripPress = () => {}, o
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
     "Traveler";
 
-  // Fetch profile (for avatar and first name) – show placeholder until loaded so we don't flash default then user image
+  // When cache arrives from login preload, use it so we don't show loading
   useEffect(() => {
+    if (initialPackages && initialPackages.length > 0 && packages.length === 0) {
+      setPackages(transformRawPackages(initialPackages));
+      setLoading(false);
+    }
+    if (initialProfile != null && profile == null) {
+      setProfile(initialProfile);
+    }
+  }, [initialPackages, initialProfile]);
+
+  // Fetch profile in background; use cache for first paint
+  useEffect(() => {
+    if (!session?.access) return;
     const fetchProfileData = async () => {
-      if (!session?.access) return;
       try {
         const response = await getProfile(session.access);
-        setProfile(response?.data ?? {});
+        const data = response?.data ?? {};
+        setProfile(data);
+        onUpdateCachedProfile(data);
       } catch (err) {
         console.error("Error fetching profile in HomeScreen:", err);
-        setProfile({}); // so we show default avatar on error, not placeholder forever
+        if (!profile) setProfile({});
       }
     };
-
     fetchProfileData();
-  }, [session]);
+  }, [session?.access]);
 
-  // Fetch packages from API (pass token when logged in so backend can set user_has_booked)
+  // Fetch packages when no cache or when explicitly refreshing (e.g. after booking)
   useEffect(() => {
     const fetchPackages = async () => {
+      const alreadyHaveData = packages.length > 0;
+      if (!alreadyHaveData) setLoading(true);
       try {
-        setLoading(true);
         const response = await getPackages({}, session?.access ?? null);
         const rawList = Array.isArray(response?.data) ? response.data : response?.data?.results ?? [];
         if (rawList.length > 0) {
-          // Transform API data to match the expected format
-          const transformedPackages = rawList.filter(Boolean).map((pkg) => ({
-            id: pkg.id.toString(),
-            title: pkg.title,
-            location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
-            locationName: (pkg.location || "").trim() || "Other",
-            image: pkg.main_image_url || "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
-            price: pkg.price_per_person, // Pass numeric value, DetailsScreen will format it
-            nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
-            rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
-            reviews: pkg.participants_count || 0,
-            perks: pkg.features?.map(f => f.name) || [],
-            description: pkg.description,
-            hero: pkg.main_image_url,
-            facilities: pkg.features?.map((f, idx) => ({
-              key: `feature_${idx}`,
-              label: f.name,
-              icon: f.icon || "checkmark-circle-outline",
-            })) || defaultFacilities,
-            user_has_booked: pkg.user_has_booked ?? false,
-            trip_start_date: pkg.trip_start_date ?? null,
-            trip_end_date: pkg.trip_end_date ?? null,
-            // Include full package data for detail view
-            packageData: pkg,
-          }));
+          const transformedPackages = transformRawPackages(rawList);
           setPackages(transformedPackages);
+          onUpdateCachedPackages(rawList);
         }
       } catch (err) {
         console.error("Error fetching packages:", err);
         setError(err.message);
-        // Fallback to hardcoded data on error
-        setPackages(popularTrips);
+        if (!alreadyHaveData) setPackages(popularTrips);
       } finally {
         setLoading(false);
       }
     };
-
     fetchPackages();
   }, [session?.access, packagesRefreshKey]);
 

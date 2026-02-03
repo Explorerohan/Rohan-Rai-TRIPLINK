@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { SafeAreaView } from "react-native";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
 import LoginScreen from "./src/screens/login/LoginScreen";
@@ -11,7 +11,7 @@ import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { createBooking } from "./src/utils/api";
+import { createBooking, getProfile, getPackages, getMyBookings } from "./src/utils/api";
 
 export default function App() {
   const [screen, setScreen] = useState("onboarding");
@@ -21,6 +21,29 @@ export default function App() {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [packagesRefreshKey, setPackagesRefreshKey] = useState(0);
+  // Cached user data loaded at login so screens don't show loading on every switch
+  const [userProfile, setUserProfile] = useState(null);
+  const [cachedPackages, setCachedPackages] = useState(null);
+  const [cachedBookings, setCachedBookings] = useState(null);
+
+  const preloadUserData = useCallback(async (accessToken) => {
+    if (!accessToken) return;
+    try {
+      const [profileRes, packagesRes, bookingsRes] = await Promise.all([
+        getProfile(accessToken),
+        getPackages({}, accessToken),
+        getMyBookings(accessToken),
+      ]);
+      setUserProfile(profileRes?.data ?? null);
+      const rawList = Array.isArray(packagesRes?.data) ? packagesRes.data : packagesRes?.data?.results ?? [];
+      setCachedPackages(rawList);
+      const rawBookings = bookingsRes?.data;
+      const bookingsList = Array.isArray(rawBookings) ? rawBookings : (rawBookings?.results ?? []);
+      setCachedBookings(Array.isArray(bookingsList) ? bookingsList : []);
+    } catch (e) {
+      console.warn("Preload user data failed:", e);
+    }
+  }, []);
 
   const goToLogin = () => setScreen("login");
   const goToSignup = () => setScreen("signup");
@@ -28,6 +51,7 @@ export default function App() {
   const handleLoginSuccess = (auth) => {
     setSession(auth);
     setScreen("home");
+    if (auth?.access) preloadUserData(auth.access);
   };
   const handleSignupComplete = () => setScreen("login");
   const handleForgotComplete = (payload) => {
@@ -95,8 +119,10 @@ export default function App() {
         console.log("Logout API call failed:", error);
       }
     }
-    // Clear session and navigate to login
     setSession(null);
+    setUserProfile(null);
+    setCachedPackages(null);
+    setCachedBookings(null);
     setScreen("login");
   };
 
@@ -158,6 +184,10 @@ export default function App() {
         <HomeScreen
           session={session}
           packagesRefreshKey={packagesRefreshKey}
+          initialProfile={userProfile}
+          initialPackages={cachedPackages}
+          onUpdateCachedPackages={setCachedPackages}
+          onUpdateCachedProfile={setUserProfile}
           onTripPress={handleTripPress}
           onProfilePress={() => setScreen("profile")}
           onCalendarPress={() => setScreen("schedule")}
@@ -167,6 +197,7 @@ export default function App() {
       {screen === "search" && (
         <SearchScreen
           session={session}
+          initialPackages={cachedPackages}
           onBack={() => setScreen("home")}
           onTripPress={(trip) => {
             setSelectedTrip(trip?.packageData ? { ...trip, id: String(trip.packageData.id) } : trip);
@@ -177,6 +208,8 @@ export default function App() {
       {screen === "schedule" && (
         <ScheduleScreen
           session={session}
+          initialBookings={cachedBookings}
+          onUpdateCachedBookings={setCachedBookings}
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
           onProfilePress={() => setScreen("profile")}
@@ -198,6 +231,7 @@ export default function App() {
       {screen === "details" && (
         <DetailsScreen
           trip={selectedTrip}
+          initialPackageFromCache={cachedPackages}
           session={session}
           onBack={() => setScreen("home")}
           onBook={handleBookTrip}
@@ -207,6 +241,8 @@ export default function App() {
         <ProfileScreen
           key={profileRefreshKey}
           session={session}
+          initialProfile={userProfile}
+          onUpdateCachedProfile={setUserProfile}
           onBack={() => setScreen("home")}
           onEdit={() => setScreen("editProfile")}
           onCalendarPress={() => setScreen("schedule")}
@@ -216,8 +252,10 @@ export default function App() {
       {screen === "editProfile" && (
         <EditProfileScreen
           session={session}
+          initialProfile={userProfile}
           onBack={() => setScreen("profile")}
           onSave={(updatedProfile) => {
+            if (updatedProfile) setUserProfile(updatedProfile);
             setProfileRefreshKey((prev) => prev + 1);
             setScreen("profile");
           }}

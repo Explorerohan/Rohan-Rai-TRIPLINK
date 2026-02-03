@@ -64,11 +64,48 @@ const toDateString = (date) => {
   return `${y}-${m}-${d}`;
 };
 
-const ScheduleScreen = ({ session, onBack, onScheduleItemPress, onHomePress, onProfilePress, onTripPress }) => {
+const mapBookingsToScheduleItems = (list) => {
+  if (!Array.isArray(list) || list.length === 0) return [];
+  return list.map((b) => {
+    const startDate = b.trip_start_date || b.created_at;
+    let dateStr = "";
+    if (startDate) {
+      const d = new Date(startDate);
+      dateStr = d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    } else {
+      dateStr = "Date TBA";
+    }
+    const location =
+      b.package_location && b.package_country
+        ? `${b.package_location}, ${b.package_country}`
+        : b.package_location || "—";
+    return {
+      id: String(b.id),
+      title: b.package_title || "Trip",
+      location,
+      date: dateStr,
+      image: b.package_image_url || PLACEHOLDER_IMAGE,
+      booking: b,
+      packageData: { id: b.package_id, title: b.package_title, location: b.package_location, country: b.package_country, main_image_url: b.package_image_url },
+    };
+  });
+};
+
+const ScheduleScreen = ({
+  session,
+  initialBookings = null,
+  onUpdateCachedBookings = () => {},
+  onBack,
+  onScheduleItemPress,
+  onHomePress,
+  onProfilePress,
+  onTripPress,
+}) => {
+  const hasInitialBookings = Array.isArray(initialBookings) && initialBookings.length > 0;
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [scheduleItems, setScheduleItems] = useState([]);
-  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [scheduleItems, setScheduleItems] = useState(() => (hasInitialBookings ? mapBookingsToScheduleItems(initialBookings) : []));
+  const [scheduleLoading, setScheduleLoading] = useState(!hasInitialBookings);
   const [packagesOnDate, setPackagesOnDate] = useState([]);
   const [loadingPackagesOnDate, setLoadingPackagesOnDate] = useState(false);
 
@@ -119,47 +156,30 @@ const ScheduleScreen = ({ session, onBack, onScheduleItemPress, onHomePress, onP
   }, [selectedDate, session?.access]);
 
   useEffect(() => {
+    if (initialBookings && initialBookings.length > 0 && scheduleItems.length === 0) {
+      setScheduleItems(mapBookingsToScheduleItems(initialBookings));
+      setScheduleLoading(false);
+    }
+  }, [initialBookings]);
+
+  useEffect(() => {
     if (!session?.access) {
       setScheduleLoading(false);
       setScheduleItems([]);
       return;
     }
     const fetchBookings = async () => {
+      const alreadyHaveData = scheduleItems.length > 0;
+      if (!alreadyHaveData) setScheduleLoading(true);
       try {
-        setScheduleLoading(true);
         const res = await getMyBookings(session.access);
         const list = res?.data ?? [];
-        if (Array.isArray(list) && list.length > 0) {
-          const items = list.map((b) => {
-            const startDate = b.trip_start_date || b.created_at;
-            let dateStr = "";
-            if (startDate) {
-              const d = new Date(startDate);
-              dateStr = d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-            } else {
-              dateStr = "Date TBA";
-            }
-            const location =
-              b.package_location && b.package_country
-                ? `${b.package_location}, ${b.package_country}`
-                : b.package_location || "—";
-            return {
-              id: String(b.id),
-              title: b.package_title || "Trip",
-              location,
-              date: dateStr,
-              image: b.package_image_url || PLACEHOLDER_IMAGE,
-              booking: b,
-              packageData: { id: b.package_id, title: b.package_title, location: b.package_location, country: b.package_country, main_image_url: b.package_image_url },
-            };
-          });
-          setScheduleItems(items);
-        } else {
-          setScheduleItems([]);
-        }
+        const items = Array.isArray(list) && list.length > 0 ? mapBookingsToScheduleItems(list) : [];
+        setScheduleItems(items);
+        onUpdateCachedBookings(Array.isArray(list) ? list : []);
       } catch (e) {
         console.warn("Schedule: could not load bookings", e);
-        setScheduleItems([]);
+        if (!alreadyHaveData) setScheduleItems([]);
       } finally {
         setScheduleLoading(false);
       }

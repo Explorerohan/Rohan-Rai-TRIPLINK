@@ -41,48 +41,61 @@ const formatDateRange = (start, end) => {
   return s || e || "—";
 };
 
-const SearchScreen = ({ session, onBack, onTripPress }) => {
-  const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(true);
+const transformRawPackages = (rawList) => {
+  if (!rawList?.length) return [];
+  return rawList.filter(Boolean).map((pkg) => ({
+    id: pkg.id.toString(),
+    title: pkg.title,
+    location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
+    locationName: (pkg.location || "").trim() || "Other",
+    image: pkg.main_image_url || PLACEHOLDER_IMAGE,
+    price: pkg.price_per_person,
+    nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
+    description: pkg.description,
+    hero: pkg.main_image_url,
+    trip_start_date: pkg.trip_start_date ?? null,
+    trip_end_date: pkg.trip_end_date ?? null,
+    rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
+    participants_count: pkg.participants_count ?? 0,
+    participants_preview: Array.isArray(pkg.participants_preview) ? pkg.participants_preview.slice(0, 5) : [],
+    facilities: pkg.features?.map((f, idx) => ({
+      key: `feature_${idx}`,
+      label: f.name,
+      icon: f.icon || "checkmark-circle-outline",
+    })) || defaultFacilities,
+    user_has_booked: pkg.user_has_booked ?? false,
+    packageData: pkg,
+  }));
+};
+
+const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) => {
+  const hasInitial = initialPackages && initialPackages.length > 0;
+  const [packages, setPackages] = useState(() => (hasInitial ? transformRawPackages(initialPackages) : []));
+  const [loading, setLoading] = useState(!hasInitial);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [filterVisible, setFilterVisible] = useState(false);
 
   useEffect(() => {
+    if (initialPackages && initialPackages.length > 0 && packages.length === 0) {
+      setPackages(transformRawPackages(initialPackages));
+      setLoading(false);
+    }
+  }, [initialPackages]);
+
+  useEffect(() => {
     const fetchPackages = async () => {
+      const alreadyHaveData = packages.length > 0;
+      if (!alreadyHaveData) setLoading(true);
       try {
-        setLoading(true);
         const response = await getPackages({}, session?.access ?? null);
         const rawList = Array.isArray(response?.data) ? response.data : response?.data?.results ?? [];
         if (rawList.length > 0) {
-          const transformedPackages = rawList.filter(Boolean).map((pkg) => ({
-            id: pkg.id.toString(),
-            title: pkg.title,
-            location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
-            locationName: (pkg.location || "").trim() || "Other",
-            image: pkg.main_image_url || PLACEHOLDER_IMAGE,
-            price: pkg.price_per_person,
-            nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
-            description: pkg.description,
-            hero: pkg.main_image_url,
-            trip_start_date: pkg.trip_start_date ?? null,
-            trip_end_date: pkg.trip_end_date ?? null,
-            rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
-            participants_count: pkg.participants_count ?? 0,
-            participants_preview: Array.isArray(pkg.participants_preview) ? pkg.participants_preview.slice(0, 5) : [],
-            facilities: pkg.features?.map((f, idx) => ({
-              key: `feature_${idx}`,
-              label: f.name,
-              icon: f.icon || "checkmark-circle-outline",
-            })) || defaultFacilities,
-            user_has_booked: pkg.user_has_booked ?? false,
-            packageData: pkg,
-          }));
-          setPackages(transformedPackages);
+          setPackages(transformRawPackages(rawList));
         }
       } catch (err) {
         console.error("SearchScreen fetch packages:", err);
-        setPackages([]);
+        if (!alreadyHaveData) setPackages([]);
       } finally {
         setLoading(false);
       }

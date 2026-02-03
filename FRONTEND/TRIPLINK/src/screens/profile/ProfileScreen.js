@@ -34,9 +34,25 @@ const menuItems = [
   { id: "logout", label: "Logout", icon: "log-out-outline" },
 ];
 
-const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout = () => {}, onCalendarPress = () => {} }) => {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+const ProfileScreen = ({
+  session,
+  initialProfile = null,
+  onUpdateCachedProfile = () => {},
+  onBack = () => {},
+  onEdit = () => {},
+  onLogout = () => {},
+  onCalendarPress = () => {},
+}) => {
+  const hasInitial = initialProfile != null;
+  const [profile, setProfile] = useState(() => initialProfile);
+  const [loading, setLoading] = useState(!hasInitial);
+
+  useEffect(() => {
+    if (initialProfile != null && profile == null) {
+      setProfile(initialProfile);
+      setLoading(false);
+    }
+  }, [initialProfile]);
 
   useEffect(() => {
     fetchProfile();
@@ -47,12 +63,14 @@ const ProfileScreen = ({ session, onBack = () => {}, onEdit = () => {}, onLogout
       setLoading(false);
       return;
     }
-
     try {
       const response = await getProfile(session.access);
-      setProfile(response.data);
+      const data = response?.data ?? {};
+      setProfile(data);
+      onUpdateCachedProfile(data);
     } catch (error) {
       console.error("Error fetching profile:", error);
+      if (!profile) setProfile({});
     } finally {
       setLoading(false);
     }

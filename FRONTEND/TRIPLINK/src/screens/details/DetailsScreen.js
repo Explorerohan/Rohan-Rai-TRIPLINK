@@ -186,16 +186,25 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
   );
 };
 
-const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBook = () => {} }) => {
+const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, onBack = () => {}, onBook = () => {} }) => {
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
   const [userHasBooked, setUserHasBooked] = useState(false);
   const [userHasReviewed, setUserHasReviewed] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [packageDetail, setPackageDetail] = useState(null);
-  const [reviewModalVisible, setReviewModalVisible] = useState(false);
-  const [submittingReview, setSubmittingReview] = useState(false);
 
+  const packageId = useMemo(() => {
+    const incoming = tripProp || route?.params?.trip || {};
+    return incoming?.packageData?.id ?? incoming?.id ?? null;
+  }, [tripProp, route?.params?.trip]);
+
+  const cachedDetail = useMemo(() => {
+    if (!packageId || !initialPackageFromCache || !Array.isArray(initialPackageFromCache)) return null;
+    const idStr = String(packageId);
+    return initialPackageFromCache.find((p) => String(p?.id ?? "") === idStr) || null;
+  }, [packageId, initialPackageFromCache]);
+
+  const hasCachedDetail = cachedDetail != null;
+  const tripFromProp = tripProp || route?.params?.trip || {};
   const trip = useMemo(() => {
     const incoming = tripProp || route?.params?.trip || {};
     const pkg = incoming.packageData || {};
@@ -214,18 +223,42 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
     };
   }, [tripProp, route?.params?.trip]);
 
-  const packageId = trip?.id || trip?.packageData?.id;
+  const [loading, setLoading] = useState(!hasCachedDetail);
+  const [packageDetail, setPackageDetail] = useState(() => {
+    if (hasCachedDetail && cachedDetail) {
+      return {
+        ...cachedDetail,
+        user_has_booked: tripFromProp.user_has_booked ?? cachedDetail.user_has_booked ?? false,
+        user_has_reviewed: cachedDetail.user_has_reviewed ?? false,
+      };
+    }
+    return null;
+  });
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Fetch full package details with reviews and participants
+  useEffect(() => {
+    if (cachedDetail && !packageDetail) {
+      setPackageDetail({
+        ...cachedDetail,
+        user_has_booked: tripFromProp.user_has_booked ?? cachedDetail.user_has_booked ?? false,
+        user_has_reviewed: cachedDetail.user_has_reviewed ?? false,
+      });
+      setUserHasBooked(tripFromProp.user_has_booked ?? cachedDetail.user_has_booked ?? false);
+      setUserHasReviewed(cachedDetail.user_has_reviewed ?? false);
+      setLoading(false);
+    }
+  }, [cachedDetail]);
+
+  // Fetch full package details with reviews and participants (use cache for first paint)
   useEffect(() => {
     const fetchPackageDetails = async () => {
       if (!packageId) {
         setLoading(false);
         return;
       }
-
       try {
-        setLoading(true);
+        if (!packageDetail) setLoading(true);
         const response = await getPackageById(packageId, session?.access);
         if (response?.data) {
           setPackageDetail(response.data);
@@ -234,6 +267,7 @@ const DetailsScreen = ({ route, trip: tripProp, session, onBack = () => {}, onBo
         }
       } catch (error) {
         console.error("Error fetching package details:", error);
+        if (!packageDetail) setPackageDetail(null);
       } finally {
         setLoading(false);
       }
