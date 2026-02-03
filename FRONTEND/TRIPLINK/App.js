@@ -11,7 +11,7 @@ import HomeScreen from "./src/screens/home/HomeScreen";
 import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
-import { CreateCustomPackageScreen } from "./src/screens/createCustomPackage";
+import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { createBooking, getProfile, getPackages, getMyBookings } from "./src/utils/api";
 
@@ -234,7 +234,7 @@ export default function App() {
           onProfilePress={() => setScreen("profile")}
           onCalendarPress={() => setScreen("schedule")}
           onSearchPress={() => setScreen("search")}
-          onPlusPress={() => setScreen("createCustomPackage")}
+          onPlusPress={() => setScreen("customPackages")}
         />
       )}
       {screen === "search" && (
@@ -256,7 +256,7 @@ export default function App() {
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
           onProfilePress={() => setScreen("profile")}
-          onPlusPress={() => setScreen("createCustomPackage")}
+          onPlusPress={() => setScreen("customPackages")}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });
@@ -291,14 +291,24 @@ export default function App() {
           onEdit={() => setScreen("editProfile")}
           onCalendarPress={() => setScreen("schedule")}
           onLogout={handleLogout}
-          onPlusPress={() => setScreen("createCustomPackage")}
+          onPlusPress={() => setScreen("customPackages")}
+        />
+      )}
+      {screen === "customPackages" && (
+        <CustomPackagesListScreen
+          session={session}
+          onBack={() => setScreen("home")}
+          onCreatePress={() => setScreen("createCustomPackage")}
+          onHomePress={() => setScreen("home")}
+          onCalendarPress={() => setScreen("schedule")}
+          onProfilePress={() => setScreen("profile")}
         />
       )}
       {screen === "createCustomPackage" && (
         <CreateCustomPackageScreen
           session={session}
-          onBack={() => setScreen("home")}
-          onCreateSuccess={() => {}}
+          onBack={() => setScreen("customPackages")}
+          onCreateSuccess={() => setScreen("customPackages")}
         />
       )}
       {screen === "editProfile" && (
