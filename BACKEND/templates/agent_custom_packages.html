@@ -1,0 +1,188 @@
+{% extends 'base_agent.html' %}
+{% load static %}
+
+{% block title %}Custom packages - TRIPLINK{% endblock %}
+
+{% block agent_extra_css %}
+<style>
+    .custom-packages-page {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .page-head {
+        margin-bottom: 28px;
+    }
+
+    .page-head h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+    }
+
+    .page-head p {
+        font-size: 15px;
+        color: #64748b;
+    }
+
+    .custom-packages-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .custom-package-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        display: flex;
+        min-width: 0;
+    }
+
+    .custom-package-card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .custom-package-image-wrap {
+        flex: 0 0 240px;
+        width: 240px;
+        min-height: 180px;
+        background: #f1f5f9;
+        overflow: hidden;
+    }
+
+    .custom-package-image-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .custom-package-image-placeholder {
+        width: 100%;
+        height: 100%;
+        min-height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1f6b2a 0%, #15803d 100%);
+        color: white;
+        font-size: 48px;
+    }
+
+    .custom-package-content {
+        flex: 1;
+        padding: 24px 28px;
+        min-width: 0;
+    }
+
+    .custom-package-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+    }
+
+    .custom-package-location {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 12px;
+    }
+
+    .custom-package-description {
+        color: #475569;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 16px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .custom-package-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .custom-package-detail {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .custom-package-detail strong {
+        color: #1e293b;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .empty-state-icon {
+        font-size: 56px;
+        margin-bottom: 20px;
+        opacity: 0.8;
+    }
+
+    .empty-state-text {
+        font-size: 18px;
+        color: #64748b;
+        max-width: 400px;
+        margin: 0 auto;
+        line-height: 1.5;
+    }
+</style>
+{% endblock agent_extra_css %}
+
+{% block main_content %}
+<div class="custom-packages-page">
+    <div class="page-head">
+        <h1>Custom packages</h1>
+        <p>Custom packages created by travelers.</p>
+    </div>
+
+    {% if custom_packages %}
+        <div class="custom-packages-grid">
+            {% for pkg in custom_packages %}
+                <div class="custom-package-card">
+                    {% if pkg.main_image %}
+                        <div class="custom-package-image-wrap">
+                            <img src="{{ pkg.main_image.url }}" alt="{{ pkg.title }}">
+                        </div>
+                    {% else %}
+                        <div class="custom-package-image-placeholder">✨</div>
+                    {% endif %}
+                    <div class="custom-package-content">
+                        <h3 class="custom-package-title">{{ pkg.title }}</h3>
+                        <p class="custom-package-location">{{ pkg.location }}, {{ pkg.country }}</p>
+                        <p class="custom-package-description">{{ pkg.description }}</p>
+                        <div class="custom-package-details">
+                            <span class="custom-package-detail"><strong>Rs. {{ pkg.price_per_person|floatformat:0 }}</strong> per person</span>
+                            <span class="custom-package-detail">{{ pkg.duration_display }}</span>
+                            {% if pkg.trip_start_date %}
+                                <span class="custom-package-detail">{{ pkg.trip_start_date|date:"d M Y" }}{% if pkg.trip_end_date %} – {{ pkg.trip_end_date|date:"d M Y" }}{% endif %}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">✨</div>
+            <p class="empty-state-text">No custom packages available at the moment.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock main_content %}

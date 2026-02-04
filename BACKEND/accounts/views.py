@@ -588,6 +588,31 @@ def agent_calendar_view(request):
     return render(request, 'agent_calendar.html', context)
 
 
+def agent_custom_packages_view(request):
+    """View to list custom packages created by travelers (for the agent to see)."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    custom_packages = CustomPackage.objects.filter(user__role=Roles.TRAVELER).prefetch_related(
+        'features'
+    ).order_by('-created_at')
+
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'custom_packages': custom_packages,
+        'active_nav': 'custom_package',
+    }
+    return render(request, 'agent_custom_packages.html', context)
+
+
 def agent_add_package_view(request):
     """View to add a new package"""
     if not request.user.is_authenticated or request.user.role != Roles.AGENT:
