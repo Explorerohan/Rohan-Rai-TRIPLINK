@@ -1,0 +1,259 @@
+{% extends 'base_agent.html' %}
+{% load static %}
+
+{% block title %}{{ custom_package.title }} - Custom package - TRIPLINK{% endblock %}
+
+{% block agent_extra_css %}
+<style>
+    .cpd-back-wrap {
+        margin-bottom: 24px;
+    }
+
+    .cpd-back {
+        color: #64748b;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: color 0.2s;
+    }
+
+    .cpd-back:hover {
+        color: #1e293b;
+    }
+
+    .cpd-page {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .cpd-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    .cpd-hero-wrap {
+        background: #f1f5f9;
+        width: 100%;
+    }
+
+    .cpd-hero {
+        width: 100%;
+        max-height: 360px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .cpd-hero-placeholder {
+        width: 100%;
+        height: 280px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1f6b2a 0%, #15803d 100%);
+        color: white;
+        font-size: 64px;
+    }
+
+    .cpd-body {
+        padding: 32px 36px 36px;
+    }
+
+    .cpd-created-by {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .cpd-created-by strong {
+        color: #1e293b;
+    }
+
+    .cpd-title {
+        font-size: 26px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 8px 0;
+        line-height: 1.3;
+    }
+
+    .cpd-location {
+        font-size: 15px;
+        color: #64748b;
+        margin: 0 0 24px 0;
+    }
+
+    .cpd-section {
+        margin-bottom: 24px;
+    }
+
+    .cpd-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .cpd-section-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        margin-bottom: 10px;
+    }
+
+    .cpd-description {
+        font-size: 15px;
+        color: #334155;
+        line-height: 1.7;
+        white-space: pre-wrap;
+    }
+
+    .cpd-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+    }
+
+    .cpd-detail-item {
+        background: #f8fafc;
+        padding: 14px 18px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .cpd-detail-label {
+        font-size: 12px;
+        color: #64748b;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .cpd-detail-value {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .cpd-features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .cpd-feature-tag {
+        background: #f0f9f4;
+        color: #166534;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid #bbf7d0;
+    }
+
+    .cpd-notes-box {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        padding: 18px 20px;
+    }
+
+    .cpd-notes-box .cpd-section-title {
+        color: #92400e;
+    }
+
+    .cpd-notes-text {
+        font-size: 14px;
+        color: #78350f;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    .cpd-date {
+        font-size: 14px;
+        color: #475569;
+    }
+</style>
+{% endblock agent_extra_css %}
+
+{% block main_content %}
+<div class="cpd-page">
+    <div class="cpd-back-wrap">
+        <a href="{% url 'agent_custom_packages' %}" class="cpd-back">← Back to Custom packages</a>
+    </div>
+
+    <div class="cpd-card">
+        {% if custom_package.main_image %}
+            <div class="cpd-hero-wrap">
+                <img src="{{ custom_package.main_image.url }}" alt="{{ custom_package.title }}" class="cpd-hero">
+            </div>
+        {% else %}
+            <div class="cpd-hero-placeholder">✨</div>
+        {% endif %}
+
+        <div class="cpd-body">
+            <p class="cpd-created-by">Created by <strong>{{ custom_package.user.email }}</strong></p>
+
+            <h1 class="cpd-title">{{ custom_package.title }}</h1>
+            <p class="cpd-location">{{ custom_package.location }}, {{ custom_package.country }}</p>
+
+            <div class="cpd-section">
+                <div class="cpd-section-title">What they want</div>
+                <div class="cpd-description">{{ custom_package.description }}</div>
+            </div>
+
+            <div class="cpd-section">
+                <div class="cpd-section-title">Details</div>
+                <div class="cpd-details-grid">
+                    <div class="cpd-detail-item">
+                        <span class="cpd-detail-label">Price per person</span>
+                        <span class="cpd-detail-value">Rs. {{ custom_package.price_per_person|floatformat:0 }}</span>
+                    </div>
+                    <div class="cpd-detail-item">
+                        <span class="cpd-detail-label">Duration</span>
+                        <span class="cpd-detail-value">{{ custom_package.duration_display }}</span>
+                    </div>
+                    {% if custom_package.trip_start_date %}
+                        <div class="cpd-detail-item">
+                            <span class="cpd-detail-label">Trip start</span>
+                            <span class="cpd-detail-value">{{ custom_package.trip_start_date|date:"d M Y" }}</span>
+                        </div>
+                    {% endif %}
+                    {% if custom_package.trip_end_date %}
+                        <div class="cpd-detail-item">
+                            <span class="cpd-detail-label">Trip end</span>
+                            <span class="cpd-detail-value">{{ custom_package.trip_end_date|date:"d M Y" }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if custom_package.features.all %}
+                <div class="cpd-section">
+                    <div class="cpd-section-title">Features they selected</div>
+                    <div class="cpd-features">
+                        {% for f in custom_package.features.all %}
+                            <span class="cpd-feature-tag">{{ f.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if custom_package.additional_notes %}
+                <div class="cpd-section">
+                    <div class="cpd-notes-box">
+                        <div class="cpd-section-title">Additional things they want to consider</div>
+                        <div class="cpd-notes-text">{{ custom_package.additional_notes }}</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock main_content %}

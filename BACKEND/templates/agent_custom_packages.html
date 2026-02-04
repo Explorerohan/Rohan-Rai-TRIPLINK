@@ -120,6 +120,25 @@
         color: #1e293b;
     }
 
+    .cpd-view-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 16px;
+        padding: 10px 20px;
+        background: #1f6b2a;
+        color: #fff;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+
+    .cpd-view-link:hover {
+        background: #166534;
+    }
+
     .empty-state {
         text-align: center;
         padding: 80px 20px;
@@ -174,6 +193,7 @@
                                 <span class="custom-package-detail">{{ pkg.trip_start_date|date:"d M Y" }}{% if pkg.trip_end_date %} – {{ pkg.trip_end_date|date:"d M Y" }}{% endif %}</span>
                             {% endif %}
                         </div>
+                        <a href="{% url 'agent_custom_package_detail' pkg.pk %}" class="cpd-view-link">View full details →</a>
                     </div>
                 </div>
             {% endfor %}
