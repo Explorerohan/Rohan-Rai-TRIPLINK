@@ -179,7 +179,7 @@
                 <i>📅</i>
                 <span>Calendar</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{% url 'agent_chat' %}" class="nav-item{% if active_nav == 'chat' %} active{% endif %}">
                 <i>💬</i>
                 <span>Chat</span>
             </a>

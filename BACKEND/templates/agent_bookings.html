@@ -12,6 +12,8 @@
 
     .page-head {
         margin-bottom: 28px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e2e8f0;
     }
 
     .page-head h1 {
@@ -31,6 +33,20 @@
         gap: 16px;
         flex-wrap: wrap;
         margin-bottom: 24px;
+        padding: 20px 0;
+        border-top: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .section-label {
+        width: 100%;
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
     }
 
     .stat-card {
@@ -64,6 +80,7 @@
         margin-bottom: 24px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         border: 1px solid #e2e8f0;
+        border-top: 2px solid #cbd5e1;
         display: flex;
         gap: 16px;
         flex-wrap: wrap;
@@ -140,6 +157,7 @@
         border-radius: 16px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         border: 1px solid #e2e8f0;
+        border-top: 2px solid #cbd5e1;
         overflow: hidden;
     }
 
@@ -286,6 +304,7 @@
     {% endif %}
 
     <div class="bookings-stats">
+        <span class="section-label">Summary</span>
         <div class="stat-card">
             <div class="stat-value">{{ total_count }}</div>
             <div class="stat-label">Total bookings</div>
@@ -301,6 +320,7 @@
     </div>
 
     <form method="get" action="{% url 'agent_bookings' %}" class="bookings-filters">
+        <span class="section-label" style="width: 100%; margin-bottom: 12px;">Filters</span>
         <div class="filter-group">
             <label for="filter-status">Status</label>
             <select name="status" id="filter-status">
@@ -331,6 +351,7 @@
     </form>
 
     <div class="bookings-card">
+        <div class="section-label" style="padding: 16px 20px 0; margin-bottom: 0;">Bookings list</div>
         {% if bookings_with_profile %}
             <div class="bookings-table-wrap">
                 <table class="bookings-table">

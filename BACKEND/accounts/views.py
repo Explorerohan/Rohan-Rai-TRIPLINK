@@ -283,6 +283,24 @@ def agent_bookings_view(request):
     return render(request, 'agent_bookings.html', context)
 
 
+def agent_chat_view(request):
+    """Agent Traveler Chat UI – UI only, no backend chat logic yet."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'active_nav': 'chat',
+    }
+    return render(request, 'agent_chat.html', context)
+
+
 # Forgot Password Views
 def admin_forgot_password_view(request):
     """Handle admin forgot password request"""
