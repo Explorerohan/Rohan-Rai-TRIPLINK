@@ -155,7 +155,7 @@
                 <i>✨</i>
                 <span>Custom package</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{% url 'agent_bookings' %}" class="nav-item{% if active_nav == 'bookings' %} active{% endif %}">
                 <i>📋</i>
                 <span>Bookings</span>
             </a>

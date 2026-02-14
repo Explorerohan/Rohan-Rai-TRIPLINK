@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import generics, permissions, response, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -80,6 +82,8 @@ class LogoutView(generics.GenericAPIView):
 
 
 # Template-based views for unified login
+@never_cache
+@ensure_csrf_cookie
 def login_view(request):
     """Unified login view that handles both admin and agent login"""
     # If user is already authenticated, redirect to appropriate dashboard
@@ -210,6 +214,73 @@ def agent_travelers_view(request):
         'active_nav': 'travelers',
     }
     return render(request, 'agent_travelers.html', context)
+
+
+def agent_bookings_view(request):
+    """List all bookings for the agent's packages with optional filters and stats."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    queryset = (
+        Booking.objects.filter(package__agent=request.user)
+        .select_related('package', 'user')
+        .order_by('-created_at')
+    )
+
+    # Filters
+    status_filter = request.GET.get('status', '').strip()
+    if status_filter and status_filter in dict(BookingStatus.choices):
+        queryset = queryset.filter(status=status_filter)
+    package_id_filter = request.GET.get('package', '').strip()
+    if package_id_filter:
+        try:
+            pid = int(package_id_filter)
+            queryset = queryset.filter(package_id=pid)
+        except ValueError:
+            pass
+
+    # Build list with profile for each booking's user
+    bookings_with_profile = []
+    for booking in queryset:
+        try:
+            profile = booking.user.user_profile
+        except UserProfile.DoesNotExist:
+            profile = None
+        bookings_with_profile.append({
+            'booking': booking,
+            'profile': profile,
+        })
+
+    # Stats (from unfiltered queryset for accurate totals when filtered)
+    all_agent_bookings = Booking.objects.filter(package__agent=request.user)
+    total_count = all_agent_bookings.count()
+    confirmed_count = all_agent_bookings.filter(status=BookingStatus.CONFIRMED).count()
+    cancelled_count = all_agent_bookings.filter(status=BookingStatus.CANCELLED).count()
+
+    # Agent's packages for filter dropdown
+    agent_packages = Package.objects.filter(agent=request.user).order_by('title')
+
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'bookings_with_profile': bookings_with_profile,
+        'agent_packages': agent_packages,
+        'total_count': total_count,
+        'confirmed_count': confirmed_count,
+        'cancelled_count': cancelled_count,
+        'status_filter': status_filter,
+        'package_id_filter': package_id_filter,
+        'booking_status_choices': BookingStatus.choices,
+        'active_nav': 'bookings',
+    }
+    return render(request, 'agent_bookings.html', context)
 
 
 # Forgot Password Views

@@ -1,0 +1,398 @@
+{% extends 'base_agent.html' %}
+{% load static %}
+
+{% block title %}Bookings - TRIPLINK{% endblock %}
+
+{% block agent_extra_css %}
+<style>
+    .bookings-page {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .page-head {
+        margin-bottom: 28px;
+    }
+
+    .page-head h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+    }
+
+    .page-head p {
+        font-size: 15px;
+        color: #64748b;
+    }
+
+    .bookings-stats {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 20px 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        min-width: 140px;
+    }
+
+    .stat-card .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .stat-card .stat-label {
+        font-size: 13px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
+    .stat-card.confirmed .stat-value { color: #1f6b2a; }
+    .stat-card.cancelled .stat-value { color: #dc3545; }
+
+    .bookings-filters {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .bookings-filters .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bookings-filters label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .bookings-filters .filter-group-label-spacer {
+        visibility: hidden;
+        font-size: 13px;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 6px;
+        line-height: 1.2;
+        user-select: none;
+    }
+
+    .bookings-filters .filter-group-apply .btn {
+        margin-top: 12px;
+    }
+
+    .bookings-filters select {
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        min-width: 160px;
+        background: #fff;
+    }
+
+    .bookings-filters .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .bookings-filters .btn-primary {
+        background: #1f6b2a;
+        color: #fff;
+    }
+
+    .bookings-filters .btn-primary:hover {
+        background: #15803d;
+    }
+
+    .bookings-filters .btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .bookings-filters .btn-secondary:hover {
+        background: #e2e8f0;
+    }
+
+    .bookings-card {
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .bookings-table-wrap {
+        overflow-x: auto;
+    }
+
+    .bookings-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    .bookings-table th {
+        text-align: left;
+        padding: 16px 20px;
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .bookings-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        vertical-align: middle;
+    }
+
+    .bookings-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .bookings-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .booking-traveler-name {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .booking-traveler-email {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .booking-package-link {
+        color: #1f6b2a;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .booking-package-link:hover {
+        text-decoration: underline;
+    }
+
+    .booking-package-location {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .booking-status {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .booking-status.confirmed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .booking-status.cancelled {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.7;
+    }
+
+    .empty-state-text {
+        font-size: 16px;
+    }
+
+    .alert {
+        padding: 14px 20px;
+        border-radius: 10px;
+        margin-bottom: 24px;
+        font-size: 14px;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 768px) {
+        .bookings-table th,
+        .bookings-table td {
+            padding: 12px 14px;
+            font-size: 13px;
+        }
+
+        .bookings-table th:nth-child(4),
+        .bookings-table td:nth-child(4),
+        .bookings-table th:nth-child(5),
+        .bookings-table td:nth-child(5) {
+            display: none;
+        }
+    }
+</style>
+{% endblock agent_extra_css %}
+
+{% block main_content %}
+<div class="bookings-page">
+    <div class="page-head">
+        <h1>Bookings</h1>
+        <p>All bookings on your packages. Filter by status or package.</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="bookings-stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_count }}</div>
+            <div class="stat-label">Total bookings</div>
+        </div>
+        <div class="stat-card confirmed">
+            <div class="stat-value">{{ confirmed_count }}</div>
+            <div class="stat-label">Confirmed</div>
+        </div>
+        <div class="stat-card cancelled">
+            <div class="stat-value">{{ cancelled_count }}</div>
+            <div class="stat-label">Cancelled</div>
+        </div>
+    </div>
+
+    <form method="get" action="{% url 'agent_bookings' %}" class="bookings-filters">
+        <div class="filter-group">
+            <label for="filter-status">Status</label>
+            <select name="status" id="filter-status">
+                <option value="">All</option>
+                {% for value, label in booking_status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter-package">Package</label>
+            <select name="package" id="filter-package">
+                <option value="">All packages</option>
+                {% for pkg in agent_packages %}
+                    <option value="{{ pkg.id }}" {% if package_id_filter|stringformat:"s" == pkg.id|stringformat:"s" %}selected{% endif %}>{{ pkg.title }} ({{ pkg.location }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group filter-group-apply">
+            <span class="filter-group-label-spacer" aria-hidden="true">Status</span>
+            <button type="submit" class="btn btn-primary">Apply</button>
+        </div>
+        {% if status_filter or package_id_filter %}
+        <div class="filter-group">
+            <a href="{% url 'agent_bookings' %}" class="btn btn-secondary">Clear filters</a>
+        </div>
+        {% endif %}
+    </form>
+
+    <div class="bookings-card">
+        {% if bookings_with_profile %}
+            <div class="bookings-table-wrap">
+                <table class="bookings-table">
+                    <thead>
+                        <tr>
+                            <th>Traveler</th>
+                            <th>Package</th>
+                            <th>Trip dates</th>
+                            <th>Status</th>
+                            <th>Booked</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in bookings_with_profile %}
+                            <tr>
+                                <td>
+                                    <span class="booking-traveler-name">
+                                        {% if item.profile and item.profile.full_name %}
+                                            {{ item.profile.full_name }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </span>
+                                    <br>
+                                    <span class="booking-traveler-email">{{ item.booking.user.email }}</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'agent_package_detail' item.booking.package.id %}" class="booking-package-link">{{ item.booking.package.title }}</a>
+                                    <br>
+                                    <span class="booking-package-location">{{ item.booking.package.location }}, {{ item.booking.package.country }}</span>
+                                </td>
+                                <td>
+                                    {% if item.booking.package.trip_start_date %}
+                                        {{ item.booking.package.trip_start_date|date:"M d, Y" }}
+                                        {% if item.booking.package.trip_end_date %}
+                                            – {{ item.booking.package.trip_end_date|date:"M d, Y" }}
+                                        {% endif %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="booking-status {{ item.booking.status }}">{{ item.booking.get_status_display }}</span>
+                                </td>
+                                <td>{{ item.booking.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-text">
+                    {% if status_filter or package_id_filter %}
+                        No bookings match your filters.
+                    {% else %}
+                        No bookings yet. Bookings will appear here when travelers book your packages.
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock main_content %}

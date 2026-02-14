@@ -300,7 +300,7 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
             ) : (
               <Text style={styles.submitButtonText}>Create custom package</Text>
             )}
-          </TouchableOpacity>
+          </TouchableOpacity> 
           <Text style={styles.hint}>This package is only visible to you.</Text>
           <View style={styles.bottomPad} />
         </ScrollView>

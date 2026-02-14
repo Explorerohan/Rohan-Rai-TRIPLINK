@@ -33,6 +33,20 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['192.168.18.6', 'localhost', '127.0.0.1', '10.0.2.2','10.52.7.183','192.168.40.62','192.168.47.30']
 
+# Required for CSRF when accessing the site by IP or non-localhost (Django 4.0+)
+CSRF_TRUSTED_ORIGINS = [
+    'http://192.168.18.6:8000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://10.0.2.2:8000',
+    'http://10.52.7.183:8000',
+    'http://192.168.40.62:8000',
+    'http://192.168.47.30:8000',
+]
+
+# Ensure CSRF cookie is sent on same-origin requests (default; explicit for clarity)
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 
 # Application definition
 
