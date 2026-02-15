@@ -1,0 +1,14 @@
+# TRIPLINK Backend Dependencies
+# Core
+Django>=5.0
+djangorestframework
+djangorestframework-simplejwt
+python-dotenv
+psycopg2-binary
+
+# Chat (WebSocket)
+channels>=4.0
+daphne>=4.0
+
+# Media/forms
+Pillow

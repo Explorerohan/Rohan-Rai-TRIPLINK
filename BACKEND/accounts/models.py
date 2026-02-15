@@ -346,3 +346,55 @@ class AgentReview(models.Model):
         avg_rating = AgentReview.objects.filter(agent=agent_user).aggregate(Avg('rating'))['rating__avg']
         agent_profile.rating = round(avg_rating, 1) if avg_rating else 0.0
         agent_profile.save(update_fields=['rating'])
+
+
+class ChatRoom(models.Model):
+    """One-to-one chat room between a traveler and an agent."""
+    traveler = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="chat_rooms_as_traveler",
+        limit_choices_to={"role": Roles.TRAVELER},
+    )
+    agent = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="chat_rooms_as_agent",
+        limit_choices_to={"role": Roles.AGENT},
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Chat Room"
+        verbose_name_plural = "Chat Rooms"
+        ordering = ["-updated_at"]
+        unique_together = ["traveler", "agent"]
+
+    def __str__(self):
+        return f"Chat: {self.traveler.email} – {self.agent.email}"
+
+
+class ChatMessage(models.Model):
+    """A single message in a chat room."""
+    room = models.ForeignKey(
+        ChatRoom,
+        on_delete=models.CASCADE,
+        related_name="messages",
+    )
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="chat_messages_sent",
+    )
+    text = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Chat Message"
+        verbose_name_plural = "Chat Messages"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.sender.email}: {self.text[:50]}..."

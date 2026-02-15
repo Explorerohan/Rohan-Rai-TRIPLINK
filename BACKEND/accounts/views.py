@@ -12,14 +12,14 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email
-from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, AgentReview
+from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, AgentReview, ChatRoom, ChatMessage
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
     UserProfileSerializer, AgentProfileSerializer, PackageSerializer, BookingSerializer,
     PackageDetailSerializer, AgentReviewSerializer, CustomPackageSerializer,
-    PackageFeatureSerializer,
+    PackageFeatureSerializer, ChatRoomSerializer, ChatMessageSerializer,
 )
 
 User = get_user_model()
@@ -284,7 +284,7 @@ def agent_bookings_view(request):
 
 
 def agent_chat_view(request):
-    """Agent Traveler Chat UI – UI only, no backend chat logic yet."""
+    """Agent Traveler Chat UI – real-time chat with WebSocket and REST API."""
     if not request.user.is_authenticated or request.user.role != Roles.AGENT:
         messages.error(request, 'Access denied. Agent access required.')
         return redirect('login')
@@ -293,10 +293,18 @@ def agent_chat_view(request):
         display_name = agent_profile.full_name
     except AgentProfile.DoesNotExist:
         display_name = request.user.email.split('@')[0]
+
+    # Build WebSocket URL from current request (ws or wss)
+    ws_scheme = 'wss' if request.is_secure() else 'ws'
+    ws_host = request.get_host()
+    ws_base = f'{ws_scheme}://{ws_host}'
+
     context = {
         'user': request.user,
         'display_name': display_name,
         'active_nav': 'chat',
+        'ws_base': ws_base,
+        'api_base': request.build_absolute_uri('/api/auth/').rstrip('/'),
     }
     return render(request, 'agent_chat.html', context)
 
@@ -1095,3 +1103,80 @@ class PackageFeatureListView(generics.ListAPIView):
     serializer_class = PackageFeatureSerializer
     permission_classes = [permissions.AllowAny]
     queryset = PackageFeature.objects.all().order_by('name')
+
+
+# ---- Chat API views ----
+
+class ChatRoomListCreateView(generics.ListCreateAPIView):
+    """List chat rooms for current user (traveler or agent). Create room with agent_id (traveler) or traveler_id (agent)."""
+    serializer_class = ChatRoomSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == Roles.TRAVELER:
+            return ChatRoom.objects.filter(traveler=user).select_related("traveler", "agent").prefetch_related("messages")
+        if user.role == Roles.AGENT:
+            return ChatRoom.objects.filter(agent=user).select_related("traveler", "agent").prefetch_related("messages")
+        return ChatRoom.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        agent_id = request.data.get("agent_id")
+        traveler_id = request.data.get("traveler_id")
+
+        if user.role == Roles.TRAVELER and agent_id:
+            try:
+                agent = User.objects.get(pk=agent_id, role=Roles.AGENT)
+            except User.DoesNotExist:
+                return response.Response(
+                    {"agent_id": "Agent not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            room, created = ChatRoom.objects.get_or_create(traveler=user, agent=agent)
+        elif user.role == Roles.AGENT and traveler_id:
+            try:
+                traveler = User.objects.get(pk=traveler_id, role=Roles.TRAVELER)
+            except User.DoesNotExist:
+                return response.Response(
+                    {"traveler_id": "Traveler not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            room, created = ChatRoom.objects.get_or_create(traveler=traveler, agent=user)
+        else:
+            return response.Response(
+                {"detail": "Provide agent_id (as traveler) or traveler_id (as agent)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.get_serializer(room)
+        return response.Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class ChatMessageListCreateView(generics.ListCreateAPIView):
+    """List messages in a room (paginated). Create sends a message. Only room participants can access."""
+    serializer_class = ChatMessageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        room_id = self.kwargs.get("room_id")
+        user = self.request.user
+        try:
+            room = ChatRoom.objects.get(pk=room_id)
+        except ChatRoom.DoesNotExist:
+            return ChatMessage.objects.none()
+        if user not in (room.traveler, room.agent):
+            return ChatMessage.objects.none()
+        return ChatMessage.objects.filter(room=room).select_related("sender").order_by("-created_at")
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["room_id"] = self.kwargs.get("room_id")
+        return context
+
+    def perform_create(self, serializer):
+        room_id = self.kwargs.get("room_id")
+        room = ChatRoom.objects.get(pk=room_id)
+        msg = serializer.save(room=room, sender=self.request.user)
+        room.updated_at = msg.created_at
+        room.save(update_fields=["updated_at"])

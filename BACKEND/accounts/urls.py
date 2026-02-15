@@ -16,6 +16,8 @@ from .views import (
     CustomPackageListCreateView,
     CustomPackageDetailView,
     PackageFeatureListView,
+    ChatRoomListCreateView,
+    ChatMessageListCreateView,
 )
 
 urlpatterns = [
@@ -40,4 +42,7 @@ urlpatterns = [
     path("custom-packages/<int:pk>/", CustomPackageDetailView.as_view(), name="custom_package_detail"),
     # Features list (for custom package / agent forms)
     path("features/", PackageFeatureListView.as_view(), name="package_feature_list"),
+    # Chat
+    path("chat/rooms/", ChatRoomListCreateView.as_view(), name="chat_room_list_create"),
+    path("chat/rooms/<int:room_id>/messages/", ChatMessageListCreateView.as_view(), name="chat_message_list_create"),
 ]

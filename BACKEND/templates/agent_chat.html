@@ -21,7 +21,6 @@
         overflow: hidden;
     }
 
-    /* Left: conversations */
     .chat-list-pane {
         width: 280px;
         flex-shrink: 0;
@@ -53,10 +52,6 @@
         background: #f1f5f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 12px center;
         outline: none;
         color: #334155;
-    }
-
-    .chat-search-input::placeholder {
-        color: #94a3b8;
     }
 
     .chat-entries {
@@ -129,13 +124,34 @@
         flex-shrink: 0;
     }
 
-    /* Right: conversation */
+    .chat-empty-state {
+        padding: 24px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 14px;
+    }
+
+    .chat-loading {
+        padding: 24px;
+        text-align: center;
+        color: #64748b;
+    }
+
     .chat-conv-pane {
         flex: 1;
         display: flex;
         flex-direction: column;
         min-width: 0;
         background: #fff;
+    }
+
+    .chat-conv-placeholder {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 15px;
     }
 
     .chat-conv-header {
@@ -175,18 +191,7 @@
     .chat-conv-header-status {
         font-size: 12px;
         color: #94a3b8;
-        display: flex;
-        align-items: center;
-        gap: 6px;
         margin-top: 2px;
-    }
-
-    .chat-conv-header-status::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #94a3b8;
     }
 
     .chat-messages {
@@ -245,34 +250,9 @@
         margin-top: 6px;
     }
 
-    .chat-msg-row.incoming .chat-msg-time {
-        text-align: left;
-    }
-
     .chat-msg-row.outgoing .chat-msg-time {
         text-align: right;
         color: rgba(255, 255, 255, 0.75);
-    }
-
-    .chat-msg-images {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 10px;
-    }
-
-    .chat-msg-images img {
-        width: 64px;
-        height: 64px;
-        object-fit: cover;
-        border-radius: 10px;
-    }
-
-    .chat-msg-images .img-placeholder {
-        width: 64px;
-        height: 64px;
-        background: #e2e8f0;
-        border-radius: 10px;
     }
 
     .chat-input-area {
@@ -300,10 +280,6 @@
         color: #1e293b;
     }
 
-    .chat-input-field::placeholder {
-        color: #94a3b8;
-    }
-
     .chat-btn-send {
         width: 40px;
         height: 40px;
@@ -316,7 +292,6 @@
         justify-content: center;
         color: #fff;
         flex-shrink: 0;
-        transition: background 0.2s ease;
     }
 
     .chat-btn-send:hover {
@@ -328,14 +303,14 @@
         height: 18px;
     }
 
+    .chat-input-area.hidden {
+        display: none;
+    }
+
     @media (max-width: 768px) {
         .chat-page {
             margin: 0 -10px -20px -20px;
-            padding: 16px;
             height: calc(100vh - 60px);
-        }
-        .chat-list-pane {
-            width: 100%;
         }
     }
 </style>
@@ -344,93 +319,249 @@
 {% block main_content %}
 <div class="chat-page">
     <div class="chat-container">
-        <!-- Left: conversation list -->
         <div class="chat-list-pane">
             <h2 class="chat-pane-title">Conversations</h2>
             <div class="chat-search-wrap">
-                <input type="text" class="chat-search-input" placeholder="Search" aria-label="Search conversations">
+                <input type="text" class="chat-search-input" placeholder="Search" id="chatSearch" aria-label="Search conversations">
             </div>
-            <div class="chat-entries">
-                <div class="chat-entry active">
-                    <div class="chat-entry-avatar">RR</div>
-                    <div class="chat-entry-body">
-                        <div class="chat-entry-name">Rohan Rai</div>
-                        <div class="chat-entry-preview">Hope to see you sooon!</div>
-                    </div>
-                    <span class="chat-entry-time">Just now</span>
-                </div>
-                <div class="chat-entry">
-                    <div class="chat-entry-avatar">MK</div>
-                    <div class="chat-entry-body">
-                        <div class="chat-entry-name">Maya K.</div>
-                        <div class="chat-entry-preview">Thanks for the details.</div>
-                    </div>
-                    <span class="chat-entry-time">2m</span>
-                </div>
-                <div class="chat-entry">
-                    <div class="chat-entry-avatar">AS</div>
-                    <div class="chat-entry-body">
-                        <div class="chat-entry-name">Alex S.</div>
-                        <div class="chat-entry-preview">When is the trip?</div>
-                    </div>
-                    <span class="chat-entry-time">1h</span>
-                </div>
+            <div class="chat-entries" id="chatEntries">
+                <div class="chat-loading">Loading...</div>
             </div>
         </div>
 
-        <!-- Right: active chat -->
         <div class="chat-conv-pane">
-            <div class="chat-conv-header">
-                <div class="chat-conv-header-avatar">RR</div>
-                <div class="chat-conv-header-info">
-                    <div class="chat-conv-header-name">Rohan Rai</div>
-                    <div class="chat-conv-header-status">Offline</div>
-                </div>
-            </div>
-
-            <div class="chat-messages">
-                <div class="chat-date-divider">Today</div>
-
-                <div class="chat-msg-row incoming">
-                    <div class="chat-msg-wrap">
-                        <div class="chat-msg-bubble">Hello</div>
-                        <div class="chat-msg-time">10:32</div>
+            <div class="chat-conv-placeholder" id="convPlaceholder">Select a conversation</div>
+            <div id="convActive" style="display: none; flex-direction: column; flex: 1; min-height: 0;">
+                <div class="chat-conv-header">
+                    <div class="chat-conv-header-avatar" id="headerAvatar">—</div>
+                    <div class="chat-conv-header-info">
+                        <div class="chat-conv-header-name" id="headerName">—</div>
+                        <div class="chat-conv-header-status" id="headerStatus">—</div>
                     </div>
                 </div>
-                <div class="chat-msg-row outgoing">
-                    <div class="chat-msg-wrap">
-                        <div class="chat-msg-bubble">Hello</div>
-                        <div class="chat-msg-time">10:33</div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area" id="chatInputArea">
+                    <div class="chat-input-wrap">
+                        <input type="text" class="chat-input-field" placeholder="Type a message..." id="chatInput" aria-label="Message">
+                        <button type="button" class="chat-btn-send" id="chatSend" aria-label="Send">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+                        </button>
                     </div>
-                </div>
-                <div class="chat-msg-row incoming">
-                    <div class="chat-msg-wrap">
-                        <div class="chat-msg-bubble">See you soon there!</div>
-                        <div class="chat-msg-time">10:34</div>
-                    </div>
-                </div>
-                <div class="chat-msg-row outgoing">
-                    <div class="chat-msg-wrap">
-                        <div class="chat-msg-bubble">See you soon there!</div>
-                        <div class="chat-msg-time">10:35</div>
-                        <div class="chat-msg-images">
-                            <img src="https://lh3.googleusercontent.com/gps-cs-s/AHVAweojY9nAAPm2fLNY6UcY19Vq5ox1eEmlYE2UPxruKL6YWMrEt_KzqOdsG8xkj9pPykU9E0or5sixP5HzJey5LJUMpqSSiBhC2HnEtWPczTGTtJPe7TOjB1C-Uahu9Sz9bpOS41ZS=w675-h390-n-k-no" alt="Shared image">
-                            <img src="https://lh3.googleusercontent.com/gps-cs-s/AHVAweopSqCPbJ8ilFsb_XnvdFXRAGeaTYF3xJnRTVvyeT-MgCkOD2VIeT9QuAdJp61JOP0b9Xa_rNTP7x-RbNA1F1UiqT0xQkHsa4SRqmu7wu2vik2gBfAyXgapHoWoZ4AzxUfvzccamA=w675-h390-n-k-no" alt="Shared image">
-                            <img src="https://encrypted-tbn0.gstatic.com/licensed-image?q=tbn:ANd9GcSZp0gy7STq3FN7h_MoPZoV-MbVfPaquHmHchQVxSRO3-Iq0i2T2HqcXn-6OD9G6Re07deDPnE6LXLNyiR66FV9bAg&s=19" alt="Shared image">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="chat-input-area">
-                <div class="chat-input-wrap">
-                    <input type="text" class="chat-input-field" placeholder="Type a message..." aria-label="Message">
-                    <button type="button" class="chat-btn-send" aria-label="Send">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock main_content %}
+
+{% block agent_extra_js %}
+<script>
+(function() {
+    const WS_BASE = '{{ ws_base|escapejs }}';
+    const API_BASE = '{{ api_base|escapejs }}';
+
+    let rooms = [];
+    let activeRoomId = null;
+    let ws = null;
+
+    const chatEntries = document.getElementById('chatEntries');
+    const convPlaceholder = document.getElementById('convPlaceholder');
+    const convActive = document.getElementById('convActive');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+    const chatInputArea = document.getElementById('chatInputArea');
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    async function apiFetch(path, options = {}) {
+        const url = API_BASE + path;
+        const res = await fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', ...options.headers },
+            ...options,
+        });
+        if (!res.ok) throw new Error('API error: ' + res.status);
+        return res.json();
+    }
+
+    function initials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return (name[0] || '?').toUpperCase();
+    }
+
+    function formatTime(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDateLabel(iso) {
+        const d = new Date(iso);
+        const today = new Date();
+        if (d.toDateString() === today.toDateString()) return 'Today';
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        return d.toLocaleDateString();
+    }
+
+    function renderRoomList() {
+        if (rooms.length === 0) {
+            chatEntries.innerHTML = '<div class="chat-empty-state">No conversations yet</div>';
+            return;
+        }
+        chatEntries.innerHTML = rooms.map(r => {
+            const isActive = r.id === activeRoomId;
+            return `<div class="chat-entry ${isActive ? 'active' : ''}" data-room-id="${r.id}">
+                <div class="chat-entry-avatar">${initials(r.other_user_name)}</div>
+                <div class="chat-entry-body">
+                    <div class="chat-entry-name">${escapeHtml(r.other_user_name || 'Unknown')}</div>
+                    <div class="chat-entry-preview">${escapeHtml((r.last_message || '').slice(0, 40)) || 'No messages yet'}</div>
+                </div>
+                <span class="chat-entry-time">${formatTime(r.last_message_at) || ''}</span>
+            </div>`;
+        }).join('');
+        chatEntries.querySelectorAll('.chat-entry').forEach(el => {
+            el.addEventListener('click', () => selectRoom(parseInt(el.dataset.roomId)));
+        });
+    }
+
+    function escapeHtml(s) {
+        if (!s) return '';
+        const div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+    }
+
+    function connectWebSocket(roomId) {
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+        const url = `${WS_BASE}/ws/chat/${roomId}/`;
+        ws = new WebSocket(url);
+        ws.onopen = () => { console.log('WS connected'); };
+        ws.onclose = (e) => { console.log('WS closed', e.code); };
+        ws.onerror = (e) => { console.error('WS error', e); };
+        ws.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                if (data.type === 'chat_message') {
+                    appendMessage(data);
+                }
+            } catch (err) { console.error(err); }
+        };
+    }
+
+    function appendMessage(data) {
+        const room = rooms.find(x => x.id === activeRoomId);
+        if (!room) return;
+        const isOutgoing = data.sender_id !== room.other_user_id;
+        const html = `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${data.id}">
+            <div class="chat-msg-wrap">
+                <div class="chat-msg-bubble">${escapeHtml(data.text)}</div>
+                <div class="chat-msg-time">${formatTime(data.created_at)}</div>
+            </div>
+        </div>`;
+        chatMessages.insertAdjacentHTML('beforeend', html);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function loadMessages(roomId) {
+        chatMessages.innerHTML = '<div class="chat-loading">Loading messages...</div>';
+        try {
+            const data = await apiFetch(`/chat/rooms/${roomId}/messages/`);
+            const list = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
+            const ordered = [...list].reverse();
+            const byDate = {};
+            ordered.forEach(m => {
+                const label = formatDateLabel(m.created_at);
+                if (!byDate[label]) byDate[label] = [];
+                byDate[label].push(m);
+            });
+            let html = '';
+            for (const [label, msgs] of Object.entries(byDate)) {
+                html += `<div class="chat-date-divider">${escapeHtml(label)}</div>`;
+                const room = rooms.find(x => x.id === roomId);
+                msgs.forEach(m => {
+                    const isOutgoing = m.sender_id !== room.other_user_id;
+                    html += `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${m.id}">
+                        <div class="chat-msg-wrap">
+                            <div class="chat-msg-bubble">${escapeHtml(m.text)}</div>
+                            <div class="chat-msg-time">${formatTime(m.created_at)}</div>
+                        </div>
+                    </div>`;
+                });
+            }
+            chatMessages.innerHTML = html || '<div class="chat-empty-state">No messages yet</div>';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (err) {
+            chatMessages.innerHTML = '<div class="chat-empty-state">Failed to load messages</div>';
+        }
+    }
+
+    async function selectRoom(roomId) {
+        activeRoomId = roomId;
+        const room = rooms.find(r => r.id === roomId);
+        if (!room) return;
+
+        convPlaceholder.style.display = 'none';
+        convActive.style.display = 'flex';
+        document.getElementById('headerAvatar').textContent = initials(room.other_user_name);
+        document.getElementById('headerName').textContent = room.other_user_name || 'Unknown';
+        document.getElementById('headerStatus').textContent = 'Online';
+
+        await loadMessages(roomId);
+        connectWebSocket(roomId);
+        renderRoomList();
+    }
+
+    async function sendMessage() {
+        const text = chatInput.value.trim();
+        if (!text || !activeRoomId) return;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'message', text }));
+            chatInput.value = '';
+            return;
+        }
+        try {
+            await apiFetch(`/chat/rooms/${activeRoomId}/messages/`, {
+                method: 'POST',
+                body: JSON.stringify({ text }),
+            });
+            chatInput.value = '';
+            await loadMessages(activeRoomId);
+        } catch (err) {
+            console.error('Send failed', err);
+        }
+    }
+
+    async function loadRooms() {
+        chatEntries.innerHTML = '<div class="chat-loading">Loading...</div>';
+        try {
+            rooms = await apiFetch('/chat/rooms/');
+            if (!Array.isArray(rooms)) rooms = [];
+            renderRoomList();
+        } catch (err) {
+            chatEntries.innerHTML = '<div class="chat-empty-state">Failed to load conversations</div>';
+        }
+    }
+
+    chatSend.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    loadRooms();
+})();
+</script>
+{% endblock agent_extra_js %}

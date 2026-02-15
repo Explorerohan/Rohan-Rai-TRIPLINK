@@ -1,16 +1,25 @@
 """
 ASGI config for TRIPLINK project.
 
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
+Supports HTTP and WebSocket. WebSocket routes to chat consumer.
 """
 
 import os
 
 from django.core.asgi import get_asgi_application
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TRIPLINK.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "TRIPLINK.settings")
 
-application = get_asgi_application()
+# Initialize Django ASGI application early so shared models work
+django_asgi_app = get_asgi_application()
+
+from accounts.routing import websocket_urlpatterns
+
+application = ProtocolTypeRouter({
+    "http": django_asgi_app,
+    "websocket": AuthMiddlewareStack(
+        URLRouter(websocket_urlpatterns)
+    ),
+})
