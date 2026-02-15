@@ -42,6 +42,7 @@ const ProfileScreen = ({
   onEdit = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
+  onMessagesPress = () => {},
   onPlusPress = () => {},
 }) => {
   const hasInitial = initialProfile != null;
@@ -227,6 +228,7 @@ const ProfileScreen = ({
                   key={item.key}
                   style={styles.navItem}
                   activeOpacity={0.85}
+                  onPress={item.key === "messages" ? onMessagesPress : undefined}
                 >
                   <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
                   <Text

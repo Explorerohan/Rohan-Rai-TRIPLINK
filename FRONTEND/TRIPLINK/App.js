@@ -9,6 +9,7 @@ import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
+import MessagesScreen from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
@@ -290,6 +291,7 @@ export default function App() {
           onTripPress={handleTripPress}
           onProfilePress={() => setScreen("profile")}
           onCalendarPress={() => setScreen("schedule")}
+          onMessagesPress={() => setScreen("messages")}
           onSearchPress={() => setScreen("search")}
           onPlusPress={() => setScreen("customPackages")}
         />
@@ -305,6 +307,15 @@ export default function App() {
           }}
         />
       )}
+      {screen === "messages" && (
+        <MessagesScreen
+          onBack={() => setScreen("home")}
+          onHomePress={() => setScreen("home")}
+          onCalendarPress={() => setScreen("schedule")}
+          onPlusPress={() => setScreen("customPackages")}
+          onProfilePress={() => setScreen("profile")}
+        />
+      )}
       {screen === "schedule" && (
         <ScheduleScreen
           session={session}
@@ -312,6 +323,7 @@ export default function App() {
           onUpdateCachedBookings={setCachedBookings}
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
+          onMessagesPress={() => setScreen("messages")}
           onProfilePress={() => setScreen("profile")}
           onPlusPress={() => setScreen("customPackages")}
           onTripPress={(pkg) => {
@@ -347,6 +359,7 @@ export default function App() {
           onBack={() => setScreen("home")}
           onEdit={() => setScreen("editProfile")}
           onCalendarPress={() => setScreen("schedule")}
+          onMessagesPress={() => setScreen("messages")}
           onLogout={handleLogout}
           onPlusPress={() => setScreen("customPackages")}
         />
@@ -360,6 +373,7 @@ export default function App() {
           onCreatePress={() => setScreen("createCustomPackage")}
           onHomePress={() => setScreen("home")}
           onCalendarPress={() => setScreen("schedule")}
+          onMessagesPress={() => setScreen("messages")}
           onProfilePress={() => setScreen("profile")}
         />
       )}

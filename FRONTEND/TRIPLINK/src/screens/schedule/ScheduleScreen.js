@@ -98,6 +98,7 @@ const ScheduleScreen = ({
   onBack,
   onScheduleItemPress,
   onHomePress,
+  onMessagesPress = () => {},
   onProfilePress,
   onTripPress,
   onPlusPress = () => {},
@@ -391,7 +392,7 @@ const ScheduleScreen = ({
                 key={item.key}
                 style={styles.navItem}
                 activeOpacity={0.85}
-                onPress={item.key === "profile" ? onProfilePress : undefined}
+                onPress={item.key === "messages" ? onMessagesPress : item.key === "profile" ? onProfilePress : undefined}
               >
                 <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
                 <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
