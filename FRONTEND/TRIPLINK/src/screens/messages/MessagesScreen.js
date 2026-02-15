@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
+  ActivityIndicator,
   Image,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -11,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getChatRooms } from "../../utils/api";
 
 const DEFAULT_AVATAR =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -24,66 +27,23 @@ const navItems = [
   { key: "profile", label: "Profile", icon: "person-outline", active: false },
 ];
 
-// Static mock chat list matching the sample design
-const MOCK_CHATS = [
-  {
-    id: "1",
-    name: "Sajib Rahman",
-    lastMessage: "Hi, John! 👋 How are you doing?",
-    time: "09:46",
-    isFromMe: false,
-    isTyping: false,
-    isRead: false,
-    avatar: DEFAULT_AVATAR,
-    statusColor: "#facc15",
-  },
-  {
-    id: "2",
-    name: "Adom Shafi",
-    lastMessage: "Typing...",
-    time: "08:42",
-    isFromMe: false,
-    isTyping: true,
-    isRead: false,
-    avatar: DEFAULT_AVATAR,
-    statusColor: "#94a3b8",
-  },
-  {
-    id: "3",
-    name: "HR Rumen",
-    lastMessage: "You: Cool! 🤩 Let's meet at 18:00 near the traveling!",
-    time: "Yesterday",
-    isFromMe: true,
-    isTyping: false,
-    isRead: false,
-    avatar: DEFAULT_AVATAR,
-    statusColor: "#22c55e",
-  },
-  {
-    id: "4",
-    name: "Anjelina",
-    lastMessage: "You: Hey, will you come to the party on Saturday?",
-    time: "07:56",
-    isFromMe: true,
-    isTyping: false,
-    isRead: false,
-    avatar: DEFAULT_AVATAR,
-    statusColor: "#ef4444",
-  },
-  {
-    id: "5",
-    name: "Alexa Shorna",
-    lastMessage: "Thank you for coming! Your or...",
-    time: "05:52",
-    isFromMe: false,
-    isTyping: false,
-    isRead: true,
-    avatar: DEFAULT_AVATAR,
-    statusColor: "#22c55e",
-  },
-];
+const formatTime = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "Yesterday";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
 
 const MessagesScreen = ({
+  session,
   onBack = () => {},
   onHomePress = () => {},
   onCalendarPress = () => {},
@@ -91,6 +51,49 @@ const MessagesScreen = ({
   onProfilePress = () => {},
   onChatPress = () => {},
 }) => {
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchRooms = useCallback(async (isRefresh = false) => {
+    if (!session?.access) {
+      setRooms([]);
+      setLoading(false);
+      return;
+    }
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
+    try {
+      const { data } = await getChatRooms(session.access);
+      setRooms(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err?.message || "Failed to load conversations");
+      setRooms([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [session?.access]);
+
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
+
+  const handleChatPress = (room) => {
+    const chatPayload = {
+      id: room.id,
+      roomId: room.id,
+      name: room.other_user_name || "Unknown",
+      avatar: room.other_user_avatar || DEFAULT_AVATAR,
+      other_user_id: room.other_user_id,
+      last_message: room.last_message,
+      last_message_at: room.last_message_at,
+    };
+    onChatPress(chatPayload);
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -107,7 +110,6 @@ const MessagesScreen = ({
       </View>
 
       <View style={styles.content}>
-        {/* Section title + edit */}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Messages</Text>
           <TouchableOpacity style={styles.editBtn} activeOpacity={0.8}>
@@ -115,7 +117,6 @@ const MessagesScreen = ({
           </TouchableOpacity>
         </View>
 
-        {/* Search bar */}
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={20} color="#9aa0a6" style={styles.searchIcon} />
           <TextInput
@@ -126,50 +127,70 @@ const MessagesScreen = ({
           />
         </View>
 
-        {/* Chat list */}
         <ScrollView
           style={styles.chatList}
           contentContainerStyle={styles.chatListContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => fetchRooms(true)}
+              colors={["#1f6b2a"]}
+              tintColor="#1f6b2a"
+            />
+          }
         >
-          {MOCK_CHATS.map((chat) => (
-            <TouchableOpacity
-              key={chat.id}
-              style={styles.chatRow}
-              activeOpacity={0.7}
-              onPress={() => onChatPress(chat)}
-            >
-              <View style={styles.avatarWrap}>
-                <Image source={{ uri: chat.avatar }} style={styles.avatar} />
-                <View style={[styles.statusDot, { backgroundColor: chat.statusColor }]} />
-              </View>
-              <View style={styles.chatBody}>
-                <View style={styles.chatTop}>
-                  <Text style={styles.chatName} numberOfLines={1}>
-                    {chat.name}
-                  </Text>
-                  <View style={styles.timeRow}>
-                    {chat.isRead ? (
-                      <Ionicons name="checkmark-done" size={18} color="#22c55e" style={styles.checkIcon} />
-                    ) : (
-                      <Ionicons name="checkmark" size={18} color="#22c55e" style={styles.checkIcon} />
-                    )}
-                    <Text style={styles.timeText}>{chat.time}</Text>
-                  </View>
+          {loading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="large" color="#1f6b2a" />
+              <Text style={styles.loadingText}>Loading conversations...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.emptyWrap}>
+              <Ionicons name="alert-circle-outline" size={48} color="#94a3b8" />
+              <Text style={styles.emptyText}>{error}</Text>
+            </View>
+          ) : rooms.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <Ionicons name="chatbubbles-outline" size={48} color="#94a3b8" />
+              <Text style={styles.emptyText}>No conversations yet</Text>
+              <Text style={styles.emptySubtext}>Chat with agents from your bookings</Text>
+            </View>
+          ) : (
+            rooms.map((room) => (
+              <TouchableOpacity
+                key={room.id}
+                style={styles.chatRow}
+                activeOpacity={0.7}
+                onPress={() => handleChatPress(room)}
+              >
+                <View style={styles.avatarWrap}>
+                  <Image
+                    source={{ uri: room.other_user_avatar || DEFAULT_AVATAR }}
+                    style={styles.avatar}
+                  />
+                  <View style={[styles.statusDot, { backgroundColor: "#22c55e" }]} />
                 </View>
-                <Text
-                  style={[styles.lastMessage, chat.isTyping && styles.typingText]}
-                  numberOfLines={1}
-                >
-                  {chat.lastMessage}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+                <View style={styles.chatBody}>
+                  <View style={styles.chatTop}>
+                    <Text style={styles.chatName} numberOfLines={1}>
+                      {room.other_user_name || "Unknown"}
+                    </Text>
+                    <View style={styles.timeRow}>
+                      <Ionicons name="checkmark-done" size={18} color="#22c55e" style={styles.checkIcon} />
+                      <Text style={styles.timeText}>{formatTime(room.last_message_at)}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.lastMessage} numberOfLines={1}>
+                    {room.last_message || "No messages yet"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
         </ScrollView>
       </View>
 
-      {/* Bottom nav bar */}
       <View style={styles.navBar}>
         <View style={styles.navSide}>
           {navItems.slice(0, 2).map((item) => {
@@ -286,6 +307,30 @@ const styles = StyleSheet.create({
   chatListContent: {
     paddingBottom: 110,
   },
+  loadingWrap: {
+    paddingVertical: 48,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#7a7f85",
+  },
+  emptyWrap: {
+    paddingVertical: 48,
+    alignItems: "center",
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  emptySubtext: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#94a3b8",
+  },
   chatRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -343,10 +388,6 @@ const styles = StyleSheet.create({
   lastMessage: {
     fontSize: 14,
     color: "#61656b",
-  },
-  typingText: {
-    color: "#3b82f6",
-    fontWeight: "500",
   },
   navBar: {
     position: "absolute",

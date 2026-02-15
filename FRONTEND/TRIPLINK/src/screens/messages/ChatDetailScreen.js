@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -13,120 +14,249 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  getChatMessages,
+  sendChatMessage,
+  getWebSocketBase,
+} from "../../utils/api";
 
 const DEFAULT_AVATAR =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
 
-// Static mock messages for Sajib Rahman chat (chronological order)
-const MOCK_MESSAGES = [
-  { id: "d1", type: "date", text: "Today" },
-  { id: "1", text: "Hello!", time: "9:24", isFromMe: true },
-  {
-    id: "2",
-    text: "Thank you very mouch for your traveling, we really like the apartments. we will stay here for anather 5 days...",
-    time: "9:30",
-    isFromMe: true,
-  },
-  { id: "3", text: "Hello!", time: "9:34", isFromMe: false, avatar: DEFAULT_AVATAR },
-  { id: "4", text: "I'm very glab you like it👍", time: "9:35", isFromMe: false, avatar: DEFAULT_AVATAR },
-  {
-    id: "5",
-    text: "We are arriving today at 01:45, will someone be at home?",
-    time: "9:37",
-    isFromMe: false,
-    avatar: DEFAULT_AVATAR,
-  },
-  { id: "6", text: "I will be at home", time: "9:39", isFromMe: true },
-];
+const formatTime = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const formatDateLabel = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "Today";
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString();
+};
 
 const ChatDetailScreen = ({
-  contactName = "Sajib Rahman",
+  roomId,
+  contactName = "Chat",
   contactAvatar = DEFAULT_AVATAR,
+  otherUserId,
+  session,
   isActive = true,
   onBack = () => {},
 }) => {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [inputText, setInputText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const scrollRef = useRef(null);
+  const wsRef = useRef(null);
+
+  const accessToken = session?.access;
+
+  const loadMessages = useCallback(async () => {
+    if (!roomId || !accessToken) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data } = await getChatMessages(roomId, accessToken);
+      const list = Array.isArray(data) ? data : [];
+      setMessages([...list].reverse());
+    } catch (err) {
+      setMessages([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [roomId, accessToken]);
+
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  useEffect(() => {
+    if (!roomId || !accessToken) return;
+
+    const wsBase = getWebSocketBase();
+    const url = `${wsBase}/ws/chat/${roomId}/?token=${encodeURIComponent(accessToken)}`;
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "chat_message") {
+          setMessages((prev) => {
+            const exists = prev.some((m) => m.id === data.id);
+            if (exists) return prev;
+            return [...prev, {
+              id: data.id,
+              text: data.text,
+              sender_id: data.sender_id,
+              sender_name: data.sender_name,
+              created_at: data.created_at,
+            }];
+          });
+        }
+      } catch (_) {}
+    };
+
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [roomId, accessToken]);
+
+  const sendMessage = async () => {
+    const text = (inputText || "").trim();
+    if (!text || !roomId || !accessToken) return;
+
+    setSending(true);
+    setInputText("");
+
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "message", text }));
+      setSending(false);
+      return;
+    }
+
+    try {
+      await sendChatMessage(roomId, { text }, accessToken);
+      await loadMessages();
+    } catch (_) {
+      setInputText(text);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const groupedByDate = (() => {
+    const map = {};
+    messages.forEach((m) => {
+      const label = formatDateLabel(m.created_at);
+      if (!map[label]) map[label] = [];
+      map[label].push(m);
+    });
+    return Object.entries(map);
+  })();
+
+  const isOutgoing = (msg) => msg.sender_id !== otherUserId;
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8} onPress={onBack}>
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerName}>{contactName}</Text>
-          {isActive && <Text style={styles.headerStatus}>Active Now</Text>}
+          {isActive && (
+            <Text style={styles.headerStatus}>
+              {wsConnected ? "Active Now" : "Offline"}
+            </Text>
+          )}
         </View>
         <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8}>
           <Ionicons name="call-outline" size={22} color="#1f1f1f" />
         </TouchableOpacity>
       </View>
 
-      {/* Chat content */}
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
-        <ScrollView
-          style={styles.chatScroll}
-          contentContainerStyle={styles.chatContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {MOCK_MESSAGES.map((msg) => {
-            if (msg.type === "date") {
-              return (
-                <View key={msg.id} style={styles.dateRow}>
+        {loading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color="#1f6b2a" />
+            <Text style={styles.loadingText}>Loading messages...</Text>
+          </View>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            style={styles.chatScroll}
+            contentContainerStyle={styles.chatContent}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          >
+            {groupedByDate.map(([dateLabel, msgs]) => (
+              <React.Fragment key={dateLabel}>
+                <View style={styles.dateRow}>
                   <View style={styles.dateBubble}>
-                    <Text style={styles.dateText}>{msg.text}</Text>
+                    <Text style={styles.dateText}>{dateLabel}</Text>
                   </View>
                 </View>
-              );
-            }
-            if (msg.isFromMe) {
-              return (
-                <View key={msg.id} style={styles.msgRowRight}>
-                  <View style={styles.msgBubbleRight}>
-                    <Text style={styles.msgText}>{msg.text}</Text>
-                    <View style={styles.msgMetaRight}>
-                      <Text style={styles.msgTime}>{msg.time}</Text>
-                      <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                {msgs.map((msg) =>
+                  isOutgoing(msg) ? (
+                    <View key={msg.id} style={styles.msgRowRight}>
+                      <View style={styles.msgBubbleRight}>
+                        <Text style={styles.msgText}>{msg.text}</Text>
+                        <View style={styles.msgMetaRight}>
+                          <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
+                          <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                </View>
-              );
-            }
-            return (
-              <View key={msg.id} style={styles.msgRowLeft}>
-                <Image source={{ uri: msg.avatar || DEFAULT_AVATAR }} style={styles.senderAvatar} />
-                <View style={styles.msgBubbleLeft}>
-                  <Text style={styles.msgText}>{msg.text}</Text>
-                  <View style={styles.msgMetaLeft}>
-                    <Text style={styles.msgTime}>{msg.time}</Text>
-                    <Ionicons name="checkmark-done" size={16} color="#22c55e" />
-                  </View>
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
+                  ) : (
+                    <View key={msg.id} style={styles.msgRowLeft}>
+                      <Image
+                        source={{ uri: contactAvatar || DEFAULT_AVATAR }}
+                        style={styles.senderAvatar}
+                      />
+                      <View style={styles.msgBubbleLeft}>
+                        <Text style={styles.msgText}>{msg.text}</Text>
+                        <View style={styles.msgMetaLeft}>
+                          <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
+                          <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                        </View>
+                      </View>
+                    </View>
+                  )
+                )}
+              </React.Fragment>
+            ))}
+          </ScrollView>
+        )}
 
-        {/* Input area */}
         <View style={styles.inputRow}>
           <View style={styles.inputBox}>
             <TextInput
               style={styles.input}
-              placeholder="Type you message"
+              placeholder="Type your message"
               placeholderTextColor="#9aa0a6"
-              editable={false}
+              value={inputText}
+              onChangeText={setInputText}
+              editable={!sending}
+              onSubmitEditing={sendMessage}
+              returnKeyType="send"
             />
             <TouchableOpacity style={styles.attachBtn} activeOpacity={0.8}>
               <Ionicons name="attach" size={22} color="#7a7f85" />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.micBtn} activeOpacity={0.8}>
-            <Ionicons name="mic" size={24} color="#ffffff" />
+          <TouchableOpacity
+            style={styles.micBtn}
+            activeOpacity={0.8}
+            onPress={sendMessage}
+            disabled={sending || !inputText.trim()}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Ionicons name="send" size={20} color="#ffffff" />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -176,6 +306,16 @@ const styles = StyleSheet.create({
     color: "#22c55e",
     marginTop: 2,
     fontWeight: "500",
+  },
+  loadingWrap: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#7a7f85",
   },
   chatScroll: {
     flex: 1,

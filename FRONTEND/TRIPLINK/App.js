@@ -14,7 +14,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { createBooking, getProfile, getPackages, getMyBookings, getCustomPackages, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
+import { createBooking, getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
 
 const SESSION_STORAGE_KEY = "@triplink_session";
 
@@ -310,6 +310,7 @@ export default function App() {
       )}
       {screen === "messages" && (
         <MessagesScreen
+          session={session}
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
           onCalendarPress={() => setScreen("schedule")}
@@ -321,10 +322,13 @@ export default function App() {
           }}
         />
       )}
-      {screen === "chatDetail" && (
+      {screen === "chatDetail" && selectedChat && (
         <ChatDetailScreen
-          contactName={selectedChat?.name ?? "Chat"}
-          contactAvatar={selectedChat?.avatar}
+          roomId={selectedChat.roomId ?? selectedChat.id}
+          contactName={selectedChat.name ?? "Chat"}
+          contactAvatar={selectedChat.avatar}
+          otherUserId={selectedChat.other_user_id}
+          session={session}
           isActive={true}
           onBack={() => setScreen("messages")}
         />
@@ -361,6 +365,26 @@ export default function App() {
           session={session}
           onBack={() => setScreen("home")}
           onBook={handleBookTrip}
+          onMessageAgent={async (agent) => {
+            if (!session?.access) {
+              alert("Please log in to message the agent.");
+              setScreen("login");
+              return;
+            }
+            try {
+              const { data: room } = await createChatRoom({ agent_id: agent.agent_id }, session.access);
+              setSelectedChat({
+                id: room.id,
+                roomId: room.id,
+                name: room.other_user_name || agent.full_name,
+                avatar: room.other_user_avatar || agent.profile_picture_url,
+                other_user_id: room.other_user_id,
+              });
+              setScreen("chatDetail");
+            } catch (err) {
+              alert(err?.message || "Failed to start chat.");
+            }
+          }}
         />
       )}
       {screen === "profile" && (

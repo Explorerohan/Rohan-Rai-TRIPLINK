@@ -186,7 +186,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
   );
 };
 
-const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, onBack = () => {}, onBook = () => {} }) => {
+const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, onBack = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
   const [userHasBooked, setUserHasBooked] = useState(false);
@@ -446,6 +446,20 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                       )}
                     </View>
                   </View>
+                  {session?.access && (
+                    <TouchableOpacity
+                      style={[styles.agentReviewButton, { marginRight: 8 }]}
+                      onPress={() => onMessageAgent({
+                        agent_id: agent.agent_id,
+                        full_name: agent.full_name || "Travel Agent",
+                        profile_picture_url: agent.profile_picture_url,
+                      })}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="chatbubble-ellipses-outline" size={18} color="#1f6b2a" />
+                      <Text style={styles.agentReviewButtonText}>Message</Text>
+                    </TouchableOpacity>
+                  )}
                   {!userHasReviewed && (
                     <TouchableOpacity
                       style={styles.agentReviewButton}

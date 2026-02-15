@@ -388,3 +388,61 @@ export const createCustomPackage = async (payload, accessToken) => {
   return apiRequest("/api/auth/custom-packages/", { method: "POST", body: JSON.stringify(body) }, accessToken);
 };
 
+// ---- Chat API ----
+
+/**
+ * Get WebSocket base URL from API_BASE (http -> ws, https -> wss)
+ */
+export const getWebSocketBase = () => {
+  const base = API_BASE.replace(/^http/, "ws");
+  return base.endsWith("/") ? base.slice(0, -1) : base;
+};
+
+/**
+ * Get list of chat rooms for the current user
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ data: Array }>}
+ */
+export const getChatRooms = async (accessToken) => {
+  return apiRequest("/api/auth/chat/rooms/", { method: "GET" }, accessToken);
+};
+
+/**
+ * Create or get a chat room
+ * @param {{ agent_id?: number, traveler_id?: number }} payload - agent_id (traveler) or traveler_id (agent)
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ data: object }>}
+ */
+export const createChatRoom = async (payload, accessToken) => {
+  return apiRequest("/api/auth/chat/rooms/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, accessToken);
+};
+
+/**
+ * Get messages in a chat room
+ * @param {number|string} roomId - Room ID
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ data: Array }>}
+ */
+export const getChatMessages = async (roomId, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequest(`/api/auth/chat/rooms/${id}/messages/`, { method: "GET" }, accessToken);
+};
+
+/**
+ * Send a message via REST (fallback when WebSocket not connected)
+ * @param {number|string} roomId - Room ID
+ * @param {{ text: string }} payload
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ data: object }>}
+ */
+export const sendChatMessage = async (roomId, payload, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequest(`/api/auth/chat/rooms/${id}/messages/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, accessToken);
+};
+
