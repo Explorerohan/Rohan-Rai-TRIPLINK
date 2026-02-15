@@ -9,7 +9,7 @@ import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
-import MessagesScreen from "./src/screens/messages";
+import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
@@ -29,6 +29,7 @@ export default function App() {
   const [lastEmail, setLastEmail] = useState("");
   const [otpSession, setOtpSession] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [packagesRefreshKey, setPackagesRefreshKey] = useState(0);
   // Cached user data loaded at login so screens don't show loading on every switch
@@ -314,6 +315,18 @@ export default function App() {
           onCalendarPress={() => setScreen("schedule")}
           onPlusPress={() => setScreen("customPackages")}
           onProfilePress={() => setScreen("profile")}
+          onChatPress={(chat) => {
+            setSelectedChat(chat);
+            setScreen("chatDetail");
+          }}
+        />
+      )}
+      {screen === "chatDetail" && (
+        <ChatDetailScreen
+          contactName={selectedChat?.name ?? "Chat"}
+          contactAvatar={selectedChat?.avatar}
+          isActive={true}
+          onBack={() => setScreen("messages")}
         />
       )}
       {screen === "schedule" && (

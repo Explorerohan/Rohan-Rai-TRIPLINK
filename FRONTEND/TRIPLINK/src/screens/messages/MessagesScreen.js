@@ -89,6 +89,7 @@ const MessagesScreen = ({
   onCalendarPress = () => {},
   onPlusPress = () => {},
   onProfilePress = () => {},
+  onChatPress = () => {},
 }) => {
   return (
     <SafeAreaView style={styles.safe}>
@@ -136,6 +137,7 @@ const MessagesScreen = ({
               key={chat.id}
               style={styles.chatRow}
               activeOpacity={0.7}
+              onPress={() => onChatPress(chat)}
             >
               <View style={styles.avatarWrap}>
                 <Image source={{ uri: chat.avatar }} style={styles.avatar} />
