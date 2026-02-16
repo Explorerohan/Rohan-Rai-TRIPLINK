@@ -44,6 +44,7 @@ const formatTime = (iso) => {
 
 const MessagesScreen = ({
   session,
+  unreadCount = 0,
   onBack = () => {},
   onHomePress = () => {},
   onCalendarPress = () => {},
@@ -80,6 +81,20 @@ const MessagesScreen = ({
   useEffect(() => {
     fetchRooms();
   }, [fetchRooms]);
+
+  useEffect(() => {
+    if (!session?.access || loading) return;
+    const poll = () => {
+      getChatRooms(session.access)
+        .then(({ data }) => {
+          const list = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+          setRooms(list);
+        })
+        .catch(() => {});
+    };
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
+  }, [session?.access, loading]);
 
   const handleChatPress = (room) => {
     const chatPayload = {
@@ -157,36 +172,50 @@ const MessagesScreen = ({
               <Text style={styles.emptySubtext}>Chat with agents from your bookings</Text>
             </View>
           ) : (
-            rooms.map((room) => (
-              <TouchableOpacity
-                key={room.id}
-                style={styles.chatRow}
-                activeOpacity={0.7}
-                onPress={() => handleChatPress(room)}
-              >
-                <View style={styles.avatarWrap}>
-                  <Image
-                    source={{ uri: room.other_user_avatar || DEFAULT_AVATAR }}
-                    style={styles.avatar}
-                  />
-                  <View style={[styles.statusDot, { backgroundColor: "#22c55e" }]} />
-                </View>
-                <View style={styles.chatBody}>
-                  <View style={styles.chatTop}>
-                    <Text style={styles.chatName} numberOfLines={1}>
-                      {room.other_user_name || "Unknown"}
-                    </Text>
-                    <View style={styles.timeRow}>
-                      <Ionicons name="checkmark-done" size={18} color="#22c55e" style={styles.checkIcon} />
-                      <Text style={styles.timeText}>{formatTime(room.last_message_at)}</Text>
-                    </View>
+            rooms.map((room) => {
+              const unread = room.unread_count || 0;
+              const showRowBadge = unread > 0;
+              return (
+                <TouchableOpacity
+                  key={room.id}
+                  style={styles.chatRow}
+                  activeOpacity={0.7}
+                  onPress={() => handleChatPress(room)}
+                >
+                  <View style={styles.avatarWrap}>
+                    <Image
+                      source={{ uri: room.other_user_avatar || DEFAULT_AVATAR }}
+                      style={styles.avatar}
+                    />
+                    {showRowBadge ? (
+                      <View style={styles.rowBadge}>
+                        <Text style={styles.rowBadgeText}>{unread > 99 ? "99+" : unread}</Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.statusDot, { backgroundColor: "#22c55e" }]} />
+                    )}
                   </View>
-                  <Text style={styles.lastMessage} numberOfLines={1}>
-                    {room.last_message || "No messages yet"}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))
+                  <View style={styles.chatBody}>
+                    <View style={styles.chatTop}>
+                      <Text style={[styles.chatName, showRowBadge && styles.chatNameUnread]} numberOfLines={1}>
+                        {room.other_user_name || "Unknown"}
+                      </Text>
+                      <View style={styles.timeRow}>
+                        {!showRowBadge && (
+                          <Ionicons name="checkmark-done" size={18} color="#22c55e" style={styles.checkIcon} />
+                        )}
+                        <Text style={[styles.timeText, showRowBadge && styles.timeTextUnread]}>
+                          {formatTime(room.last_message_at)}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.lastMessage, showRowBadge && styles.lastMessageUnread]} numberOfLines={1}>
+                      {room.last_message || "No messages yet"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
           )}
         </ScrollView>
       </View>
@@ -214,6 +243,7 @@ const MessagesScreen = ({
         <View style={styles.navSide}>
           {navItems.slice(2).map((item) => {
             const color = item.active ? "#1f6b2a" : "#7a7f85";
+            const showBadge = item.key === "messages" && unreadCount > 0;
             return (
               <TouchableOpacity
                 key={item.key}
@@ -221,7 +251,14 @@ const MessagesScreen = ({
                 activeOpacity={0.85}
                 onPress={item.key === "profile" ? onProfilePress : undefined}
               >
-                <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
+                <View style={styles.navIconWrap}>
+                  <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
+                  {showBadge && (
+                    <View style={styles.navBadge}>
+                      <Text style={styles.navBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
               </TouchableOpacity>
             );
@@ -357,6 +394,36 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#ffffff",
   },
+  rowBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#dc2626",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
+  rowBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  chatNameUnread: {
+    fontWeight: "800",
+  },
+  timeTextUnread: {
+    color: "#1f1f1f",
+    fontWeight: "600",
+  },
+  lastMessageUnread: {
+    color: "#1f1f1f",
+    fontWeight: "600",
+  },
   chatBody: {
     flex: 1,
     minWidth: 0,
@@ -418,6 +485,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
     minWidth: 68,
+  },
+  navIconWrap: {
+    position: "relative",
+  },
+  navBadge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#dc2626",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  navBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   navLabel: {
     fontSize: 11,

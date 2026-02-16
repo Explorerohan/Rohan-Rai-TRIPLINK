@@ -14,7 +14,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { createBooking, getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
+import { createBooking, getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
 
 const SESSION_STORAGE_KEY = "@triplink_session";
 
@@ -37,6 +37,7 @@ export default function App() {
   const [cachedPackages, setCachedPackages] = useState(null);
   const [cachedBookings, setCachedBookings] = useState(null);
   const [cachedCustomPackages, setCachedCustomPackages] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const preloadUserData = useCallback(async (accessToken) => {
     if (!accessToken) return;
@@ -88,6 +89,26 @@ export default function App() {
       onRefreshFailed: handleRefreshFailed,
     });
   }, [handleNewAccessToken, handleRefreshFailed]);
+
+  // Poll unread message count when logged in (for Messages badge)
+  const refreshUnreadCount = useCallback(async () => {
+    const token = sessionRef.current?.access;
+    if (!token) return;
+    try {
+      const { data } = await getUnreadCount(token);
+      const conversations = typeof data?.conversations === "number" ? data.conversations : 0;
+      setUnreadCount(conversations);
+    } catch (_) {}
+  }, []);
+  useEffect(() => {
+    if (!session?.access) {
+      setUnreadCount(0);
+      return;
+    }
+    refreshUnreadCount();
+    const interval = setInterval(refreshUnreadCount, 3000);
+    return () => clearInterval(interval);
+  }, [session?.access, refreshUnreadCount]);
 
   // Proactive refresh: get new access token before it expires (backend access lifetime 30 min, refresh every 25 min)
   useEffect(() => {
@@ -295,6 +316,7 @@ export default function App() {
           onMessagesPress={() => setScreen("messages")}
           onSearchPress={() => setScreen("search")}
           onPlusPress={() => setScreen("customPackages")}
+          unreadCount={unreadCount}
         />
       )}
       {screen === "search" && (
@@ -311,6 +333,7 @@ export default function App() {
       {screen === "messages" && (
         <MessagesScreen
           session={session}
+          unreadCount={unreadCount}
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
           onCalendarPress={() => setScreen("schedule")}
@@ -331,6 +354,7 @@ export default function App() {
           session={session}
           isActive={true}
           onBack={() => setScreen("messages")}
+          onMarkRoomRead={refreshUnreadCount}
         />
       )}
       {screen === "schedule" && (
@@ -338,6 +362,7 @@ export default function App() {
           session={session}
           initialBookings={cachedBookings}
           onUpdateCachedBookings={setCachedBookings}
+          unreadCount={unreadCount}
           onBack={() => setScreen("home")}
           onHomePress={() => setScreen("home")}
           onMessagesPress={() => setScreen("messages")}
@@ -393,6 +418,7 @@ export default function App() {
           session={session}
           initialProfile={userProfile}
           onUpdateCachedProfile={setUserProfile}
+          unreadCount={unreadCount}
           onBack={() => setScreen("home")}
           onEdit={() => setScreen("editProfile")}
           onCalendarPress={() => setScreen("schedule")}
@@ -406,6 +432,7 @@ export default function App() {
           session={session}
           initialCustomPackages={cachedCustomPackages}
           onUpdateCachedCustomPackages={setCachedCustomPackages}
+          unreadCount={unreadCount}
           onBack={() => setScreen("home")}
           onCreatePress={() => setScreen("createCustomPackage")}
           onHomePress={() => setScreen("home")}

@@ -18,6 +18,8 @@ from .views import (
     PackageFeatureListView,
     ChatRoomListCreateView,
     ChatMessageListCreateView,
+    ChatUnreadCountView,
+    ChatRoomMarkReadView,
 )
 
 urlpatterns = [
@@ -45,4 +47,6 @@ urlpatterns = [
     # Chat
     path("chat/rooms/", ChatRoomListCreateView.as_view(), name="chat_room_list_create"),
     path("chat/rooms/<int:room_id>/messages/", ChatMessageListCreateView.as_view(), name="chat_message_list_create"),
+    path("chat/unread-count/", ChatUnreadCountView.as_view(), name="chat_unread_count"),
+    path("chat/rooms/<int:room_id>/mark-read/", ChatRoomMarkReadView.as_view(), name="chat_room_mark_read"),
 ]

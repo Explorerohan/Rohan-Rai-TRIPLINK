@@ -586,6 +586,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     other_user_avatar = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     last_message_at = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatRoom
@@ -598,6 +599,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             "other_user_avatar",
             "last_message",
             "last_message_at",
+            "unread_count",
             "created_at",
             "updated_at",
         ]
@@ -636,3 +638,10 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     def get_last_message_at(self, obj):
         last = obj.messages.order_by("-created_at").first()
         return last.created_at.isoformat() if last else obj.updated_at.isoformat()
+
+    def get_unread_count(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return 0
+        user = request.user
+        return obj.messages.filter(is_read=False).exclude(sender=user).count()

@@ -432,6 +432,25 @@ export const getChatMessages = async (roomId, accessToken) => {
 };
 
 /**
+ * Get total unread message count for the current user
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ data: { count: number } }>}
+ */
+export const getUnreadCount = async (accessToken) => {
+  return apiRequest("/api/auth/chat/unread-count/", { method: "GET" }, accessToken);
+};
+
+/**
+ * Mark all messages in a room as read
+ * @param {number|string} roomId - Room ID
+ * @param {string} accessToken - JWT access token
+ */
+export const markRoomRead = async (roomId, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequest(`/api/auth/chat/rooms/${id}/mark-read/`, { method: "POST" }, accessToken);
+};
+
+/**
  * Send a message via REST (fallback when WebSocket not connected)
  * @param {number|string} roomId - Room ID
  * @param {{ text: string }} payload

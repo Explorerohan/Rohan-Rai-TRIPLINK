@@ -363,6 +363,8 @@
     let rooms = [];
     let activeRoomId = null;
     let ws = null;
+    let pollTimer = null;
+    let loadVersion = 0;
 
     const chatEntries = document.getElementById('chatEntries');
     const convPlaceholder = document.getElementById('convPlaceholder');
@@ -377,11 +379,24 @@
         return v ? v[2] : null;
     }
 
+    function getCsrfHeaders() {
+        const token = getCookie('csrftoken');
+        if (!token) return {};
+        return { 'X-CSRFToken': token };
+    }
+
     async function apiFetch(path, options = {}) {
         const url = API_BASE + path;
+        const method = (options.method || 'GET').toUpperCase();
+        const needsCsrf = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(needsCsrf ? getCsrfHeaders() : {}),
+            ...options.headers,
+        };
         const res = await fetch(url, {
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', ...options.headers },
+            headers,
             ...options,
         });
         if (!res.ok) throw new Error('API error: ' + res.status);
@@ -459,26 +474,35 @@
         };
     }
 
-    function appendMessage(data) {
+    function appendMessage(data, isOptimistic = false) {
         const room = rooms.find(x => x.id === activeRoomId);
         if (!room) return;
+        if (!isOptimistic && data.id && chatMessages.querySelector(`[data-msg-id="${data.id}"]`)) return;
         const isOutgoing = data.sender_id !== room.other_user_id;
-        const html = `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${data.id}">
+        const msgId = isOptimistic ? 'temp-' + Date.now() : data.id;
+        if (!isOptimistic && isOutgoing) {
+            const tempEl = chatMessages.querySelector('[data-msg-id^="temp-"]');
+            if (tempEl) tempEl.remove();
+        }
+        const html = `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${msgId}">
             <div class="chat-msg-wrap">
                 <div class="chat-msg-bubble">${escapeHtml(data.text)}</div>
-                <div class="chat-msg-time">${formatTime(data.created_at)}</div>
+                <div class="chat-msg-time">${formatTime(data.created_at || new Date().toISOString())}</div>
             </div>
         </div>`;
         chatMessages.insertAdjacentHTML('beforeend', html);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    async function loadMessages(roomId) {
-        chatMessages.innerHTML = '<div class="chat-loading">Loading messages...</div>';
+    async function loadMessages(roomId, silent = false) {
+        const myVersion = ++loadVersion;
+        if (!silent) chatMessages.innerHTML = '<div class="chat-loading">Loading messages...</div>';
         try {
             const data = await apiFetch(`/chat/rooms/${roomId}/messages/`);
+            if (myVersion !== loadVersion) return;
             const list = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
             const ordered = [...list].reverse();
+            const room = rooms.find(x => x.id === roomId);
             const byDate = {};
             ordered.forEach(m => {
                 const label = formatDateLabel(m.created_at);
@@ -488,9 +512,8 @@
             let html = '';
             for (const [label, msgs] of Object.entries(byDate)) {
                 html += `<div class="chat-date-divider">${escapeHtml(label)}</div>`;
-                const room = rooms.find(x => x.id === roomId);
                 msgs.forEach(m => {
-                    const isOutgoing = m.sender_id !== room.other_user_id;
+                    const isOutgoing = room ? (m.sender_id !== room.other_user_id) : false;
                     html += `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${m.id}">
                         <div class="chat-msg-wrap">
                             <div class="chat-msg-bubble">${escapeHtml(m.text)}</div>
@@ -502,11 +525,17 @@
             chatMessages.innerHTML = html || '<div class="chat-empty-state">No messages yet</div>';
             chatMessages.scrollTop = chatMessages.scrollHeight;
         } catch (err) {
+            if (myVersion !== loadVersion) return;
             chatMessages.innerHTML = '<div class="chat-empty-state">Failed to load messages</div>';
         }
     }
 
     async function selectRoom(roomId) {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+        loadVersion = 0;
         activeRoomId = roomId;
         const room = rooms.find(r => r.id === roomId);
         if (!room) return;
@@ -520,14 +549,27 @@
         await loadMessages(roomId);
         connectWebSocket(roomId);
         renderRoomList();
+
+        loadMessages(activeRoomId, true);
+        pollTimer = setInterval(() => {
+            if (!activeRoomId) return;
+            loadMessages(activeRoomId, true);
+        }, 1000);
     }
 
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text || !activeRoomId) return;
+        chatInput.value = '';
+        const room = rooms.find(r => r.id === activeRoomId);
+        appendMessage({
+            id: 'temp',
+            text,
+            sender_id: room ? -1 : null,
+            created_at: new Date().toISOString(),
+        }, true);
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'message', text }));
-            chatInput.value = '';
             return;
         }
         try {
@@ -535,10 +577,11 @@
                 method: 'POST',
                 body: JSON.stringify({ text }),
             });
-            chatInput.value = '';
             await loadMessages(activeRoomId);
         } catch (err) {
             console.error('Send failed', err);
+            const tempEl = chatMessages.querySelector('[data-msg-id^="temp-"]');
+            if (tempEl) tempEl.remove();
         }
     }
 

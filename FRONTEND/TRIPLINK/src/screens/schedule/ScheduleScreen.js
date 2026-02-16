@@ -102,6 +102,7 @@ const ScheduleScreen = ({
   onProfilePress,
   onTripPress,
   onPlusPress = () => {},
+  unreadCount = 0,
 }) => {
   const hasInitialBookings = Array.isArray(initialBookings) && initialBookings.length > 0;
   const [viewDate, setViewDate] = useState(new Date());
@@ -387,6 +388,7 @@ const ScheduleScreen = ({
         <View style={styles.navSide}>
           {navItems.slice(2).map((item) => {
             const color = item.active ? "#1f6b2a" : "#7a7f85";
+            const showBadge = item.key === "messages" && unreadCount > 0;
             return (
               <TouchableOpacity
                 key={item.key}
@@ -394,7 +396,14 @@ const ScheduleScreen = ({
                 activeOpacity={0.85}
                 onPress={item.key === "messages" ? onMessagesPress : item.key === "profile" ? onProfilePress : undefined}
               >
-                <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
+                <View style={styles.navIconWrap}>
+                  <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
+                  {showBadge && (
+                    <View style={styles.navBadge}>
+                      <Text style={styles.navBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
               </TouchableOpacity>
             );
@@ -643,6 +652,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
     minWidth: 68,
+  },
+  navIconWrap: {
+    position: "relative",
+  },
+  navBadge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#dc2626",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  navBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   navLabel: {
     fontSize: 11,

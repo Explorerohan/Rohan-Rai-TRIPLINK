@@ -1180,3 +1180,44 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
         msg = serializer.save(room=room, sender=self.request.user)
         room.updated_at = msg.created_at
         room.save(update_fields=["updated_at"])
+
+
+class ChatUnreadCountView(generics.GenericAPIView):
+    """GET: unread counts for current user.
+    - count: total unread messages across all rooms
+    - conversations: number of rooms (agents) that have unread messages (for chat icon badge)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        rooms = ChatRoom.objects.filter(
+            Q(traveler=user) | Q(agent=user)
+        ).prefetch_related("messages")
+        total = 0
+        conversations = 0
+        for room in rooms:
+            unread = room.messages.filter(is_read=False).exclude(sender=user).count()
+            if unread > 0:
+                conversations += 1
+                total += unread
+        return response.Response({"count": total, "conversations": conversations})
+
+
+class ChatRoomMarkReadView(generics.GenericAPIView):
+    """POST: mark all messages in a room as read (for current user - messages received from the other participant)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        room_id = kwargs.get("room_id")
+        if not room_id:
+            return response.Response({"detail": "Room ID required."}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        try:
+            room = ChatRoom.objects.get(pk=room_id)
+        except ChatRoom.DoesNotExist:
+            return response.Response({"detail": "Room not found."}, status=status.HTTP_404_NOT_FOUND)
+        if user not in (room.traveler, room.agent):
+            return response.Response({"detail": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
+        room.messages.filter(is_read=False).exclude(sender=user).update(is_read=True)
+        return response.Response({"status": "ok"})

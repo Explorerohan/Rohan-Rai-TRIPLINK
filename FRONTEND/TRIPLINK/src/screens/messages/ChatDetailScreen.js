@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   getChatMessages,
   sendChatMessage,
+  markRoomRead,
   getWebSocketBase,
 } from "../../utils/api";
 
@@ -48,6 +49,7 @@ const ChatDetailScreen = ({
   session,
   isActive = true,
   onBack = () => {},
+  onMarkRoomRead,
 }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,15 +61,15 @@ const ChatDetailScreen = ({
 
   const accessToken = session?.access;
 
-  const loadMessages = useCallback(async () => {
+  const loadMessages = useCallback(async (showLoading = true) => {
     if (!roomId || !accessToken) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       const { data } = await getChatMessages(roomId, accessToken);
-      const list = Array.isArray(data) ? data : [];
+      const list = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
       setMessages([...list].reverse());
     } catch (err) {
       setMessages([]);
@@ -79,6 +81,11 @@ const ChatDetailScreen = ({
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    if (!roomId || !accessToken) return;
+    markRoomRead(roomId, accessToken).then(() => onMarkRoomRead?.()).catch(() => {});
+  }, [roomId, accessToken, onMarkRoomRead]);
 
   useEffect(() => {
     if (!roomId || !accessToken) return;
@@ -96,15 +103,21 @@ const ChatDetailScreen = ({
         const data = JSON.parse(event.data);
         if (data.type === "chat_message") {
           setMessages((prev) => {
-            const exists = prev.some((m) => m.id === data.id);
+            const exists = prev.some((m) => m.id === data.id || (m.id && String(m.id) === String(data.id)));
             if (exists) return prev;
-            return [...prev, {
+            const isFromMe = data.sender_id !== otherUserId;
+            const newMsg = {
               id: data.id,
               text: data.text,
               sender_id: data.sender_id,
               sender_name: data.sender_name,
               created_at: data.created_at,
-            }];
+            };
+            if (isFromMe) {
+              const withoutTemp = prev.filter((m) => !String(m.id || "").startsWith("temp-"));
+              return [...withoutTemp, newMsg];
+            }
+            return [...prev, newMsg];
           });
         }
       } catch (_) {}
@@ -116,12 +129,41 @@ const ChatDetailScreen = ({
     };
   }, [roomId, accessToken]);
 
+  useEffect(() => {
+    if (!roomId || !accessToken || loading) return;
+    const poll = () => {
+      getChatMessages(roomId, accessToken)
+        .then(({ data }) => {
+          const list = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+          const ordered = [...list].reverse();
+          setMessages((prev) => {
+            const tempMsgs = prev.filter((m) => String(m.id || "").startsWith("temp-"));
+            return tempMsgs.length > 0 ? [...ordered, ...tempMsgs] : ordered;
+          });
+        })
+        .catch(() => {});
+    };
+    poll();
+    const pollInterval = setInterval(poll, 1000);
+    return () => clearInterval(pollInterval);
+  }, [roomId, accessToken, loading]);
+
   const sendMessage = async () => {
     const text = (inputText || "").trim();
     if (!text || !roomId || !accessToken) return;
 
     setSending(true);
     setInputText("");
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg = {
+      id: tempId,
+      text,
+      sender_id: -1,
+      sender_name: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
 
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -132,9 +174,10 @@ const ChatDetailScreen = ({
 
     try {
       await sendChatMessage(roomId, { text }, accessToken);
-      await loadMessages();
+      await loadMessages(false);
     } catch (_) {
       setInputText(text);
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
       setSending(false);
     }
@@ -143,7 +186,7 @@ const ChatDetailScreen = ({
   const groupedByDate = (() => {
     const map = {};
     messages.forEach((m) => {
-      const label = formatDateLabel(m.created_at);
+      const label = formatDateLabel(m.created_at) || "Today";
       if (!map[label]) map[label] = [];
       map[label].push(m);
     });
