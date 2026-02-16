@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from rest_framework import generics, permissions, response, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -137,8 +137,9 @@ def agent_dashboard_view(request):
     return render(request, 'agent_dashboard.html', {'user': request.user, 'active_nav': 'dashboard'})
 
 
+@csrf_exempt
 def logout_view(request):
-    """Unified logout view for admin and agent"""
+    """Unified logout view for admin and agent. CSRF exempt to avoid token mismatch after long sessions."""
     if request.user.is_authenticated:
         logout(request)
         messages.success(request, 'You have been successfully logged out.')
