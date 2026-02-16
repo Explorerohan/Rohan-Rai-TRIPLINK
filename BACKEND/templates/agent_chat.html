@@ -91,6 +91,21 @@
         font-size: 13px;
         font-weight: 600;
         flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .chat-entry-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .chat-entry-avatar .chat-entry-initials {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
     }
 
     .chat-entry.active .chat-entry-avatar {
@@ -122,6 +137,38 @@
         font-size: 11px;
         color: #94a3b8;
         flex-shrink: 0;
+    }
+
+    .chat-entry-avatar-wrap {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .chat-entry-badge {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: #dc2626;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        border: 2px solid #fff;
+    }
+
+    .chat-entry.has-unread .chat-entry-name {
+        font-weight: 600;
+    }
+
+    .chat-entry.has-unread .chat-entry-preview {
+        font-weight: 500;
+        color: #1e293b;
     }
 
     .chat-empty-state {
@@ -433,8 +480,19 @@
         }
         chatEntries.innerHTML = rooms.map(r => {
             const isActive = r.id === activeRoomId;
-            return `<div class="chat-entry ${isActive ? 'active' : ''}" data-room-id="${r.id}">
-                <div class="chat-entry-avatar">${initials(r.other_user_name)}</div>
+            const unread = r.unread_count || 0;
+            const hasUnread = unread > 0;
+            const badgeHtml = hasUnread ? `<span class="chat-entry-badge">${unread > 99 ? '99+' : unread}</span>` : '';
+            const initialsText = initials(r.other_user_name);
+            const avatarUrl = (r.other_user_avatar || '').trim();
+            const avatarHtml = avatarUrl
+                ? `<img src="${escapeHtml(avatarUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="chat-entry-initials" style="display:none">${initialsText}</span>`
+                : `<span class="chat-entry-initials">${initialsText}</span>`;
+            return `<div class="chat-entry ${isActive ? 'active' : ''} ${hasUnread ? 'has-unread' : ''}" data-room-id="${r.id}">
+                <div class="chat-entry-avatar-wrap">
+                    <div class="chat-entry-avatar">${avatarHtml}</div>
+                    ${badgeHtml}
+                </div>
                 <div class="chat-entry-body">
                     <div class="chat-entry-name">${escapeHtml(r.other_user_name || 'Unknown')}</div>
                     <div class="chat-entry-preview">${escapeHtml((r.last_message || '').slice(0, 40)) || 'No messages yet'}</div>
@@ -547,6 +605,11 @@
         document.getElementById('headerStatus').textContent = 'Online';
 
         await loadMessages(roomId);
+        try {
+            await apiFetch(`/chat/rooms/${roomId}/mark-read/`, { method: 'POST' });
+            const idx = rooms.findIndex(r => r.id === roomId);
+            if (idx >= 0) rooms[idx].unread_count = 0;
+        } catch (e) { /* ignore */ }
         connectWebSocket(roomId);
         renderRoomList();
 
@@ -585,15 +648,22 @@
         }
     }
 
-    async function loadRooms() {
-        chatEntries.innerHTML = '<div class="chat-loading">Loading...</div>';
+    async function loadRooms(silent = false) {
+        if (!silent) chatEntries.innerHTML = '<div class="chat-loading">Loading...</div>';
         try {
-            rooms = await apiFetch('/chat/rooms/');
-            if (!Array.isArray(rooms)) rooms = [];
+            const data = await apiFetch('/chat/rooms/');
+            const list = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
+            rooms = list;
             renderRoomList();
         } catch (err) {
-            chatEntries.innerHTML = '<div class="chat-empty-state">Failed to load conversations</div>';
+            if (!silent) chatEntries.innerHTML = '<div class="chat-empty-state">Failed to load conversations</div>';
         }
+    }
+
+    let roomsPollTimer = null;
+    function startRoomsPoll() {
+        if (roomsPollTimer) clearInterval(roomsPollTimer);
+        roomsPollTimer = setInterval(() => loadRooms(true), 2000);
     }
 
     chatSend.addEventListener('click', sendMessage);
@@ -604,7 +674,7 @@
         }
     });
 
-    loadRooms();
+    loadRooms().then(() => startRoomsPoll());
 })();
 </script>
 {% endblock agent_extra_js %}
