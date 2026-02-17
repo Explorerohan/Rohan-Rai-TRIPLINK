@@ -97,8 +97,57 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
   };
 
   const pickImage = () => {
-    // Directly open gallery when change photo is clicked
-    pickFromGallery();
+    // Let user choose between camera and gallery
+    Alert.alert(
+      "Change photo",
+      "How would you like to update your profile picture?",
+      [
+        {
+          text: "Take Photo",
+          onPress: () => {
+            takePhotoWithCamera();
+          },
+        },
+        {
+          text: "Choose from Gallery",
+          onPress: () => {
+            pickFromGallery();
+          },
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  const takePhotoWithCamera = async () => {
+    try {
+      // Request camera permissions
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Please grant camera permissions to take a photo");
+        return;
+      }
+
+      // Launch camera
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      console.log("Camera result:", result);
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setProfileImage(result.assets[0]);
+        setProfileImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo with camera:", error);
+      Alert.alert("Error", "Failed to open camera. Please try again.");
+    }
   };
 
   const pickFromGallery = async () => {
