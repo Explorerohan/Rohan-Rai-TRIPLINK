@@ -307,6 +307,16 @@ export const getCustomPackages = async (accessToken) => {
 };
 
 /**
+ * Get a single custom package by id (traveler's own only)
+ * @param {number} id - Custom package id
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const getCustomPackageById = async (id, accessToken) => {
+  return apiRequest(`/api/auth/custom-packages/${id}/`, { method: "GET" }, accessToken);
+};
+
+/**
  * Create a custom package (traveler only). Sends JSON or FormData if main_image is provided.
  * @param {object} payload - { title, location, country, description, price_per_person, duration_days, duration_nights, trip_start_date?, trip_end_date?, feature_ids?, additional_notes?, main_image? (uri for FormData) }
  * @param {string} accessToken - JWT access token

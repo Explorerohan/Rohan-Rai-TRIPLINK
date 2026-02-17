@@ -60,6 +60,7 @@ const ChatDetailScreen = ({
   isActive = true,
   onBack = () => {},
   onMarkRoomRead,
+  onPackagePress,
 }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -266,13 +267,20 @@ const ChatDetailScreen = ({
                     (() => {
                       const { pkg, text } = getMessageBody(msg);
                       const hasPkg = !!(pkg && (pkg.image_url || pkg.title));
+                      const BubbleWrapper = hasPkg && pkg?.id && onPackagePress ? TouchableOpacity : View;
+                      const bubbleProps = hasPkg && pkg?.id && onPackagePress
+                        ? { activeOpacity: 0.85, onPress: () => onPackagePress(pkg.id) }
+                        : {};
                       return (
                         <View key={msg.id} style={styles.msgRowLeft}>
                           <Image
                             source={{ uri: contactAvatar || DEFAULT_AVATAR }}
                             style={styles.senderAvatar}
                           />
-                          <View style={[styles.msgBubbleLeft, hasPkg && styles.msgBubbleLeftWithPkg]}>
+                          <BubbleWrapper
+                            style={[styles.msgBubbleLeft, hasPkg && styles.msgBubbleLeftWithPkg]}
+                            {...bubbleProps}
+                          >
                             {hasPkg && (
                               <View style={styles.msgPkgCard}>
                                 {pkg.image_url ? (
@@ -288,7 +296,7 @@ const ChatDetailScreen = ({
                               <Text style={[styles.msgTime, hasPkg && styles.msgTimeInPkg]}>{formatTime(msg.created_at)}</Text>
                               <Ionicons name="checkmark-done" size={16} color={hasPkg ? "#a7f3d0" : "#22c55e"} />
                             </View>
-                          </View>
+                          </BubbleWrapper>
                         </View>
                       );
                     })()

@@ -12,7 +12,7 @@ import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
-import { CreateCustomPackageScreen, CustomPackagesListScreen } from "./src/screens/createCustomPackage";
+import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { createBooking, getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
 
@@ -30,6 +30,7 @@ export default function App() {
   const [otpSession, setOtpSession] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [selectedCustomPackageId, setSelectedCustomPackageId] = useState(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [packagesRefreshKey, setPackagesRefreshKey] = useState(0);
   // Cached user data loaded at login so screens don't show loading on every switch
@@ -355,6 +356,20 @@ export default function App() {
           isActive={true}
           onBack={() => setScreen("messages")}
           onMarkRoomRead={refreshUnreadCount}
+          onPackagePress={(packageId) => {
+            setSelectedCustomPackageId(packageId);
+            setScreen("customPackageDetail");
+          }}
+        />
+      )}
+      {screen === "customPackageDetail" && selectedCustomPackageId != null && (
+        <CustomPackageDetailScreen
+          packageId={selectedCustomPackageId}
+          session={session}
+          onBack={() => {
+            setSelectedCustomPackageId(null);
+            setScreen("chatDetail");
+          }}
         />
       )}
       {screen === "schedule" && (
