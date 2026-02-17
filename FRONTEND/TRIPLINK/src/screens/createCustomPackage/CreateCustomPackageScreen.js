@@ -14,9 +14,28 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { getFeatures, createCustomPackage } from "../../utils/api";
+
+function formatDateToYYYYMMDD(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function parseYYYYMMDD(str) {
+  if (!str || typeof str !== "string") return null;
+  const parts = str.trim().split("-").map(Number);
+  if (parts.length !== 3) return null;
+  const [y, m, d] = parts;
+  if (!y || !m || m < 1 || m > 12 || !d || d < 1 || d > 31) return null;
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return date;
+}
 
 const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
   const [title, setTitle] = useState("");
@@ -28,12 +47,29 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
   const [durationNights, setDurationNights] = useState("6");
   const [tripStartDate, setTripStartDate] = useState("");
   const [tripEndDate, setTripEndDate] = useState("");
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [mainImage, setMainImage] = useState(null);
   const [featureIds, setFeatureIds] = useState([]);
   const [features, setFeatures] = useState([]);
   const [loadingFeatures, setLoadingFeatures] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  const startDateValue = parseYYYYMMDD(tripStartDate) || new Date();
+  const endDateValue = parseYYYYMMDD(tripEndDate) || new Date();
+
+  const onStartDateChange = (event, selectedDate) => {
+    if (Platform.OS === "android") setShowStartDatePicker(false);
+    if (event?.type === "set" && selectedDate) setTripStartDate(formatDateToYYYYMMDD(selectedDate));
+    if (event?.type === "cancel") setShowStartDatePicker(false);
+  };
+
+  const onEndDateChange = (event, selectedDate) => {
+    if (Platform.OS === "android") setShowEndDatePicker(false);
+    if (event?.type === "set" && selectedDate) setTripEndDate(formatDateToYYYYMMDD(selectedDate));
+    if (event?.type === "cancel") setShowEndDatePicker(false);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -232,21 +268,63 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
             </View>
           </View>
           <Text style={styles.label}>Trip start date *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#94a3b8"
-            value={tripStartDate}
-            onChangeText={setTripStartDate}
-          />
+          <TouchableOpacity
+            style={[styles.input, styles.dateInput]}
+            onPress={() => setShowStartDatePicker(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={tripStartDate ? styles.dateText : styles.datePlaceholder}>
+              {tripStartDate || "Tap to pick date"}
+            </Text>
+            <Ionicons name="calendar-outline" size={20} color="#94a3b8" style={styles.dateIcon} />
+          </TouchableOpacity>
+          {showStartDatePicker && (
+            <DateTimePicker
+              value={startDateValue}
+              mode="date"
+              display={Platform.OS === "android" ? "calendar" : "default"}
+              onChange={onStartDateChange}
+              minimumDate={new Date()}
+            />
+          )}
+          {showStartDatePicker && Platform.OS === "ios" && (
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => setShowStartDatePicker(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.label}>Trip end date *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#94a3b8"
-            value={tripEndDate}
-            onChangeText={setTripEndDate}
-          />
+          <TouchableOpacity
+            style={[styles.input, styles.dateInput]}
+            onPress={() => setShowEndDatePicker(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={tripEndDate ? styles.dateText : styles.datePlaceholder}>
+              {tripEndDate || "Tap to pick date"}
+            </Text>
+            <Ionicons name="calendar-outline" size={20} color="#94a3b8" style={styles.dateIcon} />
+          </TouchableOpacity>
+          {showEndDatePicker && (
+            <DateTimePicker
+              value={endDateValue}
+              mode="date"
+              display={Platform.OS === "android" ? "calendar" : "default"}
+              onChange={onEndDateChange}
+              minimumDate={startDateValue || new Date()}
+            />
+          )}
+          {showEndDatePicker && Platform.OS === "ios" && (
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => setShowEndDatePicker(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          )}
           <Text style={styles.label}>Cover image (optional)</Text>
           <TouchableOpacity style={styles.imageButton} onPress={pickImage} activeOpacity={0.8}>
             {mainImage?.uri ? (
@@ -360,6 +438,33 @@ const styles = StyleSheet.create({
     color: "#1e293b",
     backgroundColor: "#fff",
     marginBottom: 16,
+  },
+  dateInput: {
+    paddingRight: 44,
+  },
+  dateText: {
+    fontSize: 15,
+    color: "#1e293b",
+  },
+  datePlaceholder: {
+    fontSize: 15,
+    color: "#94a3b8",
+  },
+  dateIcon: {
+    position: "absolute",
+    right: 14,
+    top: 14,
+  },
+  doneButton: {
+    alignSelf: "flex-end",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  doneButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1f6b2a",
   },
   textArea: {
     minHeight: 90,
