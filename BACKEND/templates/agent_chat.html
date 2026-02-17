@@ -354,6 +354,12 @@
     .chat-msg-pkg-text {
         margin-top: 4px;
     }
+    .chat-msg-pkg-link {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+    }
 
     .chat-input-area {
         padding: 16px 24px 20px;
@@ -679,6 +685,11 @@
         return div.innerHTML;
     }
 
+    function getPackageDetailUrlById(id) {
+        if (!id) return '#';
+        return CP_DETAIL_URL_TEMPLATE.replace(/\/0\/?$/, '/' + id + '/');
+    }
+
     function messageBodyHtml(data) {
         const pkg = data.custom_package_detail || null;
         let text = (data.text || '').trim();
@@ -698,6 +709,9 @@
             inner += '<div class="chat-msg-pkg-text">' + escapeHtml(text) + '</div>';
         }
         if (!inner) inner = '<div class="chat-msg-pkg-text">' + escapeHtml(data.text || '') + '</div>';
+        if (pkg && pkg.id) {
+            inner = '<a href="' + escapeHtml(getPackageDetailUrlById(pkg.id)) + '" class="chat-msg-pkg-link">' + inner + '</a>';
+        }
         return inner;
     }
 
