@@ -241,6 +241,35 @@ class CustomPackage(models.Model):
         blank=True,
         help_text="Additional things to consider on this trip (e.g., visa, weather, packing)",
     )
+
+    # Claim / ownership fields for agents handling this custom request
+    class CustomPackageStatus(models.TextChoices):
+        OPEN = "open", "Open"
+        CLAIMED = "claimed", "Claimed"
+        COMPLETED = "completed", "Completed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    claimed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="claimed_custom_packages",
+        limit_choices_to={"role": Roles.AGENT},
+        help_text="Agent who claimed / is handling this custom package",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=CustomPackageStatus.choices,
+        default=CustomPackageStatus.OPEN,
+        help_text="Lifecycle status for this custom package",
+    )
+    claimed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When an agent first claimed this custom package",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -15,6 +15,7 @@ from .views import (
     AgentReviewListCreateView,
     CustomPackageListCreateView,
     CustomPackageDetailView,
+    CustomPackageClaimAndChatView,
     PackageFeatureListView,
     ChatRoomListCreateView,
     ChatMessageListCreateView,
@@ -42,6 +43,11 @@ urlpatterns = [
     # Custom packages (traveler-created; only visible to owner)
     path("custom-packages/", CustomPackageListCreateView.as_view(), name="custom_package_list_create"),
     path("custom-packages/<int:pk>/", CustomPackageDetailView.as_view(), name="custom_package_detail"),
+    path(
+        "custom-packages/<int:pk>/claim-and-chat/",
+        CustomPackageClaimAndChatView.as_view(),
+        name="custom_package_claim_and_chat",
+    ),
     # Features list (for custom package / agent forms)
     path("features/", PackageFeatureListView.as_view(), name="package_feature_list"),
     # Chat

@@ -17,10 +17,19 @@ from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, P
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
-    CustomTokenObtainPairSerializer, RegisterSerializer, UserSerializer,
-    UserProfileSerializer, AgentProfileSerializer, PackageSerializer, BookingSerializer,
-    PackageDetailSerializer, AgentReviewSerializer, CustomPackageSerializer,
-    PackageFeatureSerializer, ChatRoomSerializer, ChatMessageSerializer,
+    CustomTokenObtainPairSerializer,
+    RegisterSerializer,
+    UserSerializer,
+    UserProfileSerializer,
+    AgentProfileSerializer,
+    PackageSerializer,
+    BookingSerializer,
+    PackageDetailSerializer,
+    AgentReviewSerializer,
+    CustomPackageSerializer,
+    PackageFeatureSerializer,
+    ChatRoomSerializer,
+    ChatMessageSerializer,
 )
 
 User = get_user_model()
@@ -1098,6 +1107,69 @@ class CustomPackageDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return CustomPackage.objects.filter(user=self.request.user).prefetch_related('features')
+
+
+class CustomPackageClaimAndChatView(generics.GenericAPIView):
+    """
+    Agent-only endpoint to claim a traveler's custom package and get/create a chat room
+    between the agent and the traveler.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsAgent]
+
+    def post(self, request, *args, **kwargs):
+        custom_package_id = kwargs.get("pk")
+        if not custom_package_id:
+            return response.Response(
+                {"detail": "Custom package ID is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            custom_package = CustomPackage.objects.select_related("user", "claimed_by").get(
+                pk=custom_package_id, user__role=Roles.TRAVELER
+            )
+        except CustomPackage.DoesNotExist:
+            return response.Response(
+                {"detail": "Custom package not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        agent = request.user
+
+        # If already claimed by another agent, do not allow taking over
+        if custom_package.claimed_by and custom_package.claimed_by != agent:
+            return response.Response(
+                {
+                    "detail": "This custom package is already claimed by another agent.",
+                    "claimed_by_id": custom_package.claimed_by_id,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # First claim or re-claim by the same agent
+        from django.utils import timezone
+
+        if not custom_package.claimed_by:
+            custom_package.claimed_by = agent
+            # Use the inner TextChoices for status
+            custom_package.status = CustomPackage.CustomPackageStatus.CLAIMED
+            custom_package.claimed_at = timezone.now()
+            custom_package.save(update_fields=["claimed_by", "status", "claimed_at", "updated_at"])
+
+        # Create or get chat room between traveler and this agent
+        traveler = custom_package.user
+        room, _ = ChatRoom.objects.get_or_create(traveler=traveler, agent=agent)
+
+        serialized_room = ChatRoomSerializer(room, context={"request": request}).data
+        return response.Response(
+            {
+                "room": serialized_room,
+                "custom_package_id": custom_package.id,
+                "status": custom_package.status,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class PackageFeatureListView(generics.ListAPIView):

@@ -136,6 +136,9 @@ class CustomPackageSerializer(serializers.ModelSerializer):
     features = PackageFeatureSerializer(many=True, read_only=True)
     main_image_url = serializers.SerializerMethodField()
     duration_display = serializers.ReadOnlyField()
+    status = serializers.CharField(read_only=True)
+    claimed_by_name = serializers.SerializerMethodField()
+    claimed_by_id = serializers.IntegerField(source="claimed_by.id", read_only=True)
     feature_ids = serializers.PrimaryKeyRelatedField(
         many=True, queryset=PackageFeature.objects.all(), write_only=True, required=False
     )
@@ -148,6 +151,7 @@ class CustomPackageSerializer(serializers.ModelSerializer):
             'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'feature_ids',
             'additional_notes',
+            'status', 'claimed_by_id', 'claimed_by_name',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -175,6 +179,18 @@ class CustomPackageSerializer(serializers.ModelSerializer):
         if feature_ids is not None:
             instance.features.set(feature_ids)
         return instance
+
+    def get_claimed_by_name(self, obj):
+        """Human-friendly name for the agent who claimed this custom package."""
+        claimed_by = getattr(obj, "claimed_by", None)
+        if not claimed_by:
+            return None
+        try:
+            if claimed_by.role == Roles.AGENT and hasattr(claimed_by, "agent_profile"):
+                return claimed_by.agent_profile.full_name
+        except Exception:
+            pass
+        return claimed_by.email.split("@")[0]
 
 
 class PackageSerializer(serializers.ModelSerializer):

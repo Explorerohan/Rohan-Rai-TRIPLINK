@@ -430,6 +430,11 @@
     const WS_BASE = '{{ ws_base|escapejs }}';
     const API_BASE = '{{ api_base|escapejs }}';
 
+    // Optional room_id from query string for deep-linking from custom packages
+    const urlParams = new URLSearchParams(window.location.search || '');
+    const initialRoomIdParam = urlParams.get('room_id');
+    const initialRoomId = initialRoomIdParam ? parseInt(initialRoomIdParam, 10) : null;
+
     let rooms = [];
     let activeRoomId = null;
     let ws = null;
@@ -744,7 +749,13 @@
         }
     });
 
-    loadRooms().then(() => startRoomsPoll());
+    loadRooms().then(() => {
+        // Auto-select room if provided in query string and exists
+        if (initialRoomId && rooms.some(r => r.id === initialRoomId)) {
+            selectRoom(initialRoomId);
+        }
+        startRoomsPoll();
+    });
 })();
 </script>
 {% endblock agent_extra_js %}

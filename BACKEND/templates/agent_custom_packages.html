@@ -105,7 +105,7 @@
     .custom-package-details {
         display: flex;
         flex-wrap: wrap;
-        gap: 20px;
+        gap: 12px 20px;
         font-size: 13px;
         color: #64748b;
     }
@@ -137,6 +137,85 @@
 
     .cpd-view-link:hover {
         background: #166534;
+    }
+
+    .custom-package-status-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+    }
+
+    .custom-package-status-open {
+        background: #ecfdf3;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .custom-package-status-claimed {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+
+    .custom-package-status-completed {
+        background: #eef2ff;
+        color: #4f46e5;
+        border: 1px solid #c7d2fe;
+    }
+
+    .custom-package-status-cancelled {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    .custom-package-claimed-by {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+
+    .custom-package-actions {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .btn-message-traveler {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: none;
+        background: #1f6b2a;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-message-traveler:hover {
+        background: #166534;
+    }
+
+    .btn-message-traveler[disabled] {
+        background: #e2e8f0;
+        color: #94a3b8;
+        cursor: default;
+    }
+
+    .custom-package-claimed-note {
+        font-size: 12px;
+        color: #64748b;
     }
 
     .empty-state {
@@ -183,6 +262,13 @@
                         <div class="custom-package-image-placeholder">✨</div>
                     {% endif %}
                     <div class="custom-package-content">
+                        <div>
+                            {% with pkg.status|default:"open" as status %}
+                                <span class="custom-package-status-chip custom-package-status-{{ status }}">
+                                    {{ status|capfirst }}
+                                </span>
+                            {% endwith %}
+                        </div>
                         <h3 class="custom-package-title">{{ pkg.title }}</h3>
                         <p class="custom-package-location">{{ pkg.location }}, {{ pkg.country }}</p>
                         <p class="custom-package-description">{{ pkg.description }}</p>
@@ -193,7 +279,19 @@
                                 <span class="custom-package-detail">{{ pkg.trip_start_date|date:"d M Y" }}{% if pkg.trip_end_date %} – {{ pkg.trip_end_date|date:"d M Y" }}{% endif %}</span>
                             {% endif %}
                         </div>
-                        <a href="{% url 'agent_custom_package_detail' pkg.pk %}" class="cpd-view-link">View full details →</a>
+                        {% if pkg.claimed_by %}
+                            <div class="custom-package-claimed-by">
+                                Claimed by:
+                                {% if pkg.claimed_by.agent_profile %}
+                                    {{ pkg.claimed_by.agent_profile.full_name }}
+                                {% else %}
+                                    {{ pkg.claimed_by.email }}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        <div class="custom-package-actions">
+                            <a href="{% url 'agent_custom_package_detail' pkg.pk %}" class="cpd-view-link">View full details →</a>
+                        </div>
                     </div>
                 </div>
             {% endfor %}

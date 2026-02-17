@@ -179,6 +179,91 @@
         font-size: 14px;
         color: #475569;
     }
+
+    .cpd-status-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .cpd-status-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .cpd-status-open {
+        background: #ecfdf3;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .cpd-status-claimed {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+
+    .cpd-status-completed {
+        background: #eef2ff;
+        color: #4f46e5;
+        border: 1px solid #c7d2fe;
+    }
+
+    .cpd-status-cancelled {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    .cpd-claimed-by {
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .cpd-actions {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .cpd-btn-message-traveler {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 16px;
+        border-radius: 8px;
+        border: none;
+        background: #1f6b2a;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .cpd-btn-message-traveler:hover {
+        background: #166534;
+    }
+
+    .cpd-btn-message-traveler[disabled] {
+        background: #e2e8f0;
+        color: #94a3b8;
+        cursor: default;
+    }
+
+    .cpd-claimed-note {
+        font-size: 12px;
+        color: #64748b;
+    }
 </style>
 {% endblock agent_extra_css %}
 
@@ -200,8 +285,43 @@
         <div class="cpd-body">
             <p class="cpd-created-by">Created by <strong>{{ custom_package.user.email }}</strong></p>
 
+            <div class="cpd-status-row">
+                {% with custom_package.status|default:"open" as status %}
+                    <span class="cpd-status-chip cpd-status-{{ status }}">
+                        {{ status|capfirst }}
+                    </span>
+                {% endwith %}
+                {% if custom_package.claimed_by %}
+                    <span class="cpd-claimed-by">
+                        Claimed by:
+                        {% if custom_package.claimed_by.agent_profile %}
+                            {{ custom_package.claimed_by.agent_profile.full_name }}
+                        {% else %}
+                            {{ custom_package.claimed_by.email }}
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
+
             <h1 class="cpd-title">{{ custom_package.title }}</h1>
             <p class="cpd-location">{{ custom_package.location }}, {{ custom_package.country }}</p>
+
+            <div class="cpd-actions">
+                {% if custom_package.status == "open" or custom_package.status == "claimed" and custom_package.claimed_by_id == user.id %}
+                    <button
+                        type="button"
+                        class="cpd-btn-message-traveler"
+                        id="cpdMessageTravelerBtn"
+                        data-custom-package-id="{{ custom_package.id }}"
+                    >
+                        Message traveler
+                    </button>
+                {% elif custom_package.status == "claimed" and custom_package.claimed_by_id != user.id %}
+                    <span class="cpd-claimed-note">
+                        Another agent is already handling this custom package.
+                    </span>
+                {% endif %}
+            </div>
 
             <div class="cpd-section">
                 <div class="cpd-section-title">What they want</div>
@@ -257,3 +377,53 @@
     </div>
 </div>
 {% endblock main_content %}
+
+{% block agent_extra_js %}
+<script>
+(function() {
+    const btn = document.getElementById('cpdMessageTravelerBtn');
+    if (!btn) return;
+
+    function getCookie(name) {
+        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return v ? v[2] : null;
+    }
+
+    async function claimAndOpenChat() {
+        const pkgId = btn.dataset.customPackageId;
+        if (!pkgId) return;
+        btn.disabled = true;
+        const csrftoken = getCookie('csrftoken');
+        try {
+            const res = await fetch('/api/auth/custom-packages/' + pkgId + '/claim-and-chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(csrftoken ? { 'X-CSRFToken': csrftoken } : {}),
+                },
+                credentials: 'same-origin',
+            });
+            if (!res.ok) {
+                // Simple error handling; in future we can show a nicer toast
+                alert('Failed to start chat for this custom package.');
+                btn.disabled = false;
+                return;
+            }
+            const data = await res.json();
+            if (data && data.room && data.room.id) {
+                const roomId = data.room.id;
+                window.location.href = "{% url 'agent_chat' %}" + '?room_id=' + encodeURIComponent(roomId);
+            } else {
+                btn.disabled = false;
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Something went wrong while starting chat.');
+            btn.disabled = false;
+        }
+    }
+
+    btn.addEventListener('click', claimAndOpenChat);
+})();
+</script>
+{% endblock agent_extra_js %}
