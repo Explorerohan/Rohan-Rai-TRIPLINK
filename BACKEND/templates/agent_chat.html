@@ -266,6 +266,13 @@
         gap: 16px;
     }
 
+    .chat-messages-loading {
+        text-align: center;
+        font-size: 12px;
+        color: #94a3b8;
+        padding-bottom: 8px;
+    }
+
     .chat-date-divider {
         text-align: center;
         font-size: 11px;
@@ -426,8 +433,9 @@
     let rooms = [];
     let activeRoomId = null;
     let ws = null;
-    let pollTimer = null;
     let loadVersion = 0;
+    const roomMessageState = {};
+    let isLoadingMore = false;
 
     const chatEntries = document.getElementById('chatEntries');
     const convPlaceholder = document.getElementById('convPlaceholder');
@@ -449,7 +457,7 @@
     }
 
     async function apiFetch(path, options = {}) {
-        const url = API_BASE + path;
+        const url = path.startsWith('http') ? path : (API_BASE + path);
         const method = (options.method || 'GET').toUpperCase();
         const needsCsrf = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
         const headers = {
@@ -564,15 +572,33 @@
                 <div class="chat-msg-time">${formatTime(data.created_at || new Date().toISOString())}</div>
             </div>
         </div>`;
+        const atBottom = Math.abs(chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) < 10;
         chatMessages.insertAdjacentHTML('beforeend', html);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (atBottom) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
     }
 
-    async function loadMessages(roomId, silent = false) {
+    async function loadMessages(roomId, silent = false, reset = true) {
         const myVersion = ++loadVersion;
-        if (!silent) chatMessages.innerHTML = '<div class="chat-loading">Loading messages...</div>';
+        const state = roomMessageState[roomId] || {};
+        let path = `/chat/rooms/${roomId}/messages/`;
+        let loadingEl = null;
+        let loadingTimeout = null;
+        if (!reset) {
+            if (!state.next) return;
+            path = state.next;
+            // Only show loading indicator if the request is not instant
+            loadingTimeout = setTimeout(() => {
+                loadingEl = document.createElement('div');
+                loadingEl.className = 'chat-messages-loading';
+                loadingEl.textContent = 'Loading older messages...';
+                chatMessages.insertBefore(loadingEl, chatMessages.firstChild || null);
+            }, 250); // show after 250ms if still loading
+        }
+        if (!silent && reset) chatMessages.innerHTML = '<div class="chat-loading">Loading messages...</div>';
         try {
-            const data = await apiFetch(`/chat/rooms/${roomId}/messages/`);
+            const data = await apiFetch(path);
             if (myVersion !== loadVersion) return;
             const list = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
             const ordered = [...list].reverse();
@@ -596,21 +622,36 @@
                     </div>`;
                 });
             }
-            chatMessages.innerHTML = html || '<div class="chat-empty-state">No messages yet</div>';
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            const hasAny = !!html;
+            if (reset) {
+                chatMessages.innerHTML = hasAny ? html : '<div class="chat-empty-state">No messages yet</div>';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } else if (hasAny) {
+                const prevHeight = chatMessages.scrollHeight;
+                chatMessages.insertAdjacentHTML('afterbegin', html);
+                const newHeight = chatMessages.scrollHeight;
+                chatMessages.scrollTop = newHeight - prevHeight + chatMessages.scrollTop;
+            }
+            roomMessageState[roomId] = {
+                next: data && data.next ? data.next : null,
+            };
         } catch (err) {
             if (myVersion !== loadVersion) return;
             chatMessages.innerHTML = '<div class="chat-empty-state">Failed to load messages</div>';
+        } finally {
+            if (loadingTimeout !== null) {
+                clearTimeout(loadingTimeout);
+            }
+            if (loadingEl && loadingEl.parentNode) {
+                loadingEl.parentNode.removeChild(loadingEl);
+            }
         }
     }
 
     async function selectRoom(roomId) {
-        if (pollTimer) {
-            clearInterval(pollTimer);
-            pollTimer = null;
-        }
         loadVersion = 0;
         activeRoomId = roomId;
+        roomMessageState[roomId] = roomMessageState[roomId] || { next: null };
         const room = rooms.find(r => r.id === roomId);
         if (!room) return;
 
@@ -629,6 +670,17 @@
         document.getElementById('headerStatus').textContent = 'Online';
 
         await loadMessages(roomId);
+        chatMessages.onscroll = async () => {
+            if (isLoadingMore) return;
+            if (chatMessages.scrollTop <= 40 && roomMessageState[activeRoomId] && roomMessageState[activeRoomId].next) {
+                isLoadingMore = true;
+                try {
+                    await loadMessages(activeRoomId, true, false);
+                } finally {
+                    isLoadingMore = false;
+                }
+            }
+        };
         try {
             await apiFetch(`/chat/rooms/${roomId}/mark-read/`, { method: 'POST' });
             const idx = rooms.findIndex(r => r.id === roomId);
@@ -636,12 +688,6 @@
         } catch (e) { /* ignore */ }
         connectWebSocket(roomId);
         renderRoomList();
-
-        loadMessages(activeRoomId, true);
-        pollTimer = setInterval(() => {
-            if (!activeRoomId) return;
-            loadMessages(activeRoomId, true);
-        }, 1000);
     }
 
     async function sendMessage() {

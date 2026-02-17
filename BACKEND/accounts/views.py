@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from rest_framework import generics, permissions, response, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -1108,6 +1109,19 @@ class PackageFeatureListView(generics.ListAPIView):
 
 # ---- Chat API views ----
 
+
+class ChatMessagePagination(PageNumberPagination):
+    """Smaller pages for chat history so we don't load everything at once.
+
+    Used by both agent web chat and mobile clients. Default page size is kept
+    intentionally small; clients can override with ?page_size=... up to max_page_size.
+    """
+
+    page_size = 30
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class ChatRoomListCreateView(generics.ListCreateAPIView):
     """List chat rooms for current user (traveler or agent). Create room with agent_id (traveler) or traveler_id (agent)."""
     serializer_class = ChatRoomSerializer
@@ -1158,6 +1172,7 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
     """List messages in a room (paginated). Create sends a message. Only room participants can access."""
     serializer_class = ChatMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = ChatMessagePagination
 
     def get_queryset(self):
         room_id = self.kwargs.get("room_id")
