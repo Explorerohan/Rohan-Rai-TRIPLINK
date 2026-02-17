@@ -405,7 +405,7 @@ class ChatRoom(models.Model):
 
 
 class ChatMessage(models.Model):
-    """A single message in a chat room."""
+    """A single message in a chat room. Optionally linked to a custom package (e.g. when agent sends about that package)."""
     room = models.ForeignKey(
         ChatRoom,
         on_delete=models.CASCADE,
@@ -419,6 +419,14 @@ class ChatMessage(models.Model):
     text = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    custom_package = models.ForeignKey(
+        CustomPackage,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chat_messages",
+        help_text="When set, this message is about this custom package (show package card + message).",
+    )
 
     class Meta:
         verbose_name = "Chat Message"

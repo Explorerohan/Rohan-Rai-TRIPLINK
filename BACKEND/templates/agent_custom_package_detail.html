@@ -271,7 +271,13 @@
 
             <div class="cpd-actions">
                 {% if custom_package.status == "open" or custom_package.status == "claimed" and custom_package.claimed_by_id == user.id %}
-                    <button type="button" class="cpd-btn-message-traveler" id="cpdMessageTravelerBtn" data-custom-package-id="{{ custom_package.id }}">
+                    <button type="button" class="cpd-btn-message-traveler" id="cpdMessageTravelerBtn"
+                        data-custom-package-id="{{ custom_package.id }}"
+                        data-cp-title="{{ custom_package.title }}"
+                        data-cp-location="{{ custom_package.location }}, {{ custom_package.country }}"
+                        {% if custom_package.main_image %}
+                        data-cp-image="{{ custom_package.main_image.url }}"
+                        {% endif %}>
                         Message traveler
                     </button>
                 {% elif custom_package.status == "claimed" and custom_package.claimed_by_id != user.id %}
@@ -368,7 +374,15 @@
             const data = await res.json();
             if (data && data.room && data.room.id) {
                 const roomId = data.room.id;
-                window.location.href = "{% url 'agent_chat' %}" + '?room_id=' + encodeURIComponent(roomId);
+                const cpTitle = btn.dataset.cpTitle || '';
+                const cpLocation = btn.dataset.cpLocation || '';
+                const cpImage = btn.dataset.cpImage || '';
+                const params = new URLSearchParams({ room_id: roomId });
+                if (pkgId) params.set('cp_id', pkgId);
+                if (cpTitle) params.set('cp_title', cpTitle);
+                if (cpLocation) params.set('cp_location', cpLocation);
+                if (cpImage) params.set('cp_image', cpImage);
+                window.location.href = "{% url 'agent_chat' %}" + '?' + params.toString();
             } else {
                 btn.disabled = false;
             }

@@ -316,6 +316,7 @@ def agent_chat_view(request):
         'active_nav': 'chat',
         'ws_base': ws_base,
         'api_base': request.build_absolute_uri('/api/auth/').rstrip('/'),
+        'agent_cp_detail_url_template': reverse('agent_custom_package_detail', args=[0]),
     }
     return render(request, 'agent_chat.html', context)
 
@@ -1255,7 +1256,7 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
             return ChatMessage.objects.none()
         if user not in (room.traveler, room.agent):
             return ChatMessage.objects.none()
-        return ChatMessage.objects.filter(room=room).select_related("sender").order_by("-created_at")
+        return ChatMessage.objects.filter(room=room).select_related("sender", "custom_package").order_by("-created_at")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -1265,7 +1266,15 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         room_id = self.kwargs.get("room_id")
         room = ChatRoom.objects.get(pk=room_id)
-        msg = serializer.save(room=room, sender=self.request.user)
+        custom_package = None
+        cp_id = self.request.data.get("custom_package_id")
+        if cp_id and self.request.user.role == Roles.AGENT:
+            try:
+                pkg = CustomPackage.objects.get(pk=cp_id, user=room.traveler)
+                custom_package = pkg
+            except (CustomPackage.DoesNotExist, ValueError, TypeError):
+                pass
+        msg = serializer.save(room=room, sender=self.request.user, custom_package=custom_package)
         room.updated_at = msg.created_at
         room.save(update_fields=["updated_at"])
 

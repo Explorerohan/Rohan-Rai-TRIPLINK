@@ -575,24 +575,41 @@ def _user_avatar_url(user, request):
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):
-    """Serializer for chat messages."""
+    """Serializer for chat messages. Room and sender are set by the view on create."""
     sender_id = serializers.IntegerField(source="sender.id", read_only=True)
     sender_name = serializers.SerializerMethodField()
+    custom_package_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMessage
-        fields = ["id", "room", "sender_id", "sender_name", "text", "is_read", "created_at"]
-        read_only_fields = ["id", "sender_id", "sender_name", "is_read", "created_at"]
+        fields = ["id", "room", "sender_id", "sender_name", "text", "is_read", "created_at", "custom_package_detail"]
+        read_only_fields = ["id", "room", "sender_id", "sender_name", "is_read", "created_at", "custom_package_detail"]
 
     def get_sender_name(self, obj):
         return _user_display_name(obj.sender)
 
+    def get_custom_package_detail(self, obj):
+        pkg = getattr(obj, "custom_package", None)
+        if not pkg:
+            return None
+        request = self.context.get("request")
+        image_url = None
+        if pkg.main_image:
+            image_url = request.build_absolute_uri(pkg.main_image.url) if request else pkg.main_image.url
+        return {
+            "id": pkg.id,
+            "title": pkg.title,
+            "location": f"{pkg.location}, {pkg.country}",
+            "image_url": image_url,
+        }
+
     def create(self, validated_data):
         room = validated_data.pop("room", None)
         sender = validated_data.pop("sender", None)
+        custom_package = validated_data.pop("custom_package", None)
         if not room or not sender:
             raise serializers.ValidationError("room and sender required")
-        return ChatMessage.objects.create(room=room, sender=sender, **validated_data)
+        return ChatMessage.objects.create(room=room, sender=sender, custom_package=custom_package, **validated_data)
 
 
 class ChatRoomSerializer(serializers.ModelSerializer):

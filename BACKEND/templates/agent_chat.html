@@ -300,6 +300,7 @@
         font-size: 14px;
         line-height: 1.5;
         font-weight: 400;
+        white-space: pre-wrap;
     }
 
     .chat-msg-row.incoming .chat-msg-bubble {
@@ -323,6 +324,35 @@
     .chat-msg-row.outgoing .chat-msg-time {
         text-align: right;
         color: rgba(255, 255, 255, 0.75);
+    }
+
+    .chat-msg-pkg-card {
+        margin: -2px -2px 10px -2px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(0,0,0,0.06);
+    }
+    .chat-msg-row.outgoing .chat-msg-pkg-card {
+        background: rgba(0,0,0,0.15);
+    }
+    .chat-msg-pkg-image {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        display: block;
+        vertical-align: top;
+    }
+    .chat-msg-pkg-title {
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .chat-msg-row.outgoing .chat-msg-pkg-title {
+        color: #fff;
+    }
+    .chat-msg-pkg-text {
+        margin-top: 4px;
     }
 
     .chat-input-area {
@@ -377,6 +407,91 @@
         display: none;
     }
 
+    .chat-quick-replies {
+        padding: 12px 24px 0;
+        border-top: 1px solid #f1f5f9;
+        background: #fafbfc;
+        flex-shrink: 0;
+    }
+    .chat-quick-replies.hidden { display: none; }
+    .chat-quick-replies-package { display: none !important; }
+    .chat-quick-replies-package-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        color: #475569;
+    }
+    .chat-quick-replies-package-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        margin: -8px -10px 0 -10px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.15s;
+    }
+    .chat-quick-replies-package-link:hover {
+        background: #f1f5f9;
+    }
+    .chat-quick-replies-thumb {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        background: #e2e8f0;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .chat-quick-replies-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .chat-quick-replies-package-title {
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .chat-quick-replies-package-location {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 2px;
+    }
+    .chat-quick-replies.only-package .chat-quick-replies-title,
+    .chat-quick-replies.only-package .chat-quick-replies-list {
+        display: none;
+    }
+    .chat-quick-replies-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .chat-quick-replies-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .chat-quick-reply-btn {
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #334155;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .chat-quick-reply-btn:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
     @media (max-width: 768px) {
         .chat-page {
             margin: 0 -10px -20px -20px;
@@ -410,6 +525,11 @@
                     </div>
                 </div>
                 <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-quick-replies hidden" id="chatQuickReplies">
+                    <div class="chat-quick-replies-package" id="chatQuickRepliesPackage"></div>
+                    <div class="chat-quick-replies-title" id="chatQuickRepliesTitle">Send a quick message about this package</div>
+                    <div class="chat-quick-replies-list" id="chatQuickRepliesList"></div>
+                </div>
                 <div class="chat-input-area" id="chatInputArea">
                     <div class="chat-input-wrap">
                         <input type="text" class="chat-input-field" placeholder="Type a message..." id="chatInput" aria-label="Message">
@@ -430,10 +550,24 @@
     const WS_BASE = '{{ ws_base|escapejs }}';
     const API_BASE = '{{ api_base|escapejs }}';
 
-    // Optional room_id from query string for deep-linking from custom packages
+    // Optional room_id and custom package context from query string (from custom package "Message traveler")
     const urlParams = new URLSearchParams(window.location.search || '');
     const initialRoomIdParam = urlParams.get('room_id');
     const initialRoomId = initialRoomIdParam ? parseInt(initialRoomIdParam, 10) : null;
+    const initialCpId = urlParams.get('cp_id') || null;
+    const initialCpTitle = urlParams.get('cp_title') || '';
+    const initialCpLocation = urlParams.get('cp_location') || '';
+    const initialCpImage = urlParams.get('cp_image') || '';
+    const CP_DETAIL_URL_TEMPLATE = '{{ agent_cp_detail_url_template|escapejs }}';
+
+    const QUICK_REPLY_TEMPLATES = [
+        "I'd like to discuss more about the package you created.",
+        "Would you like to tell us more about your requirements?",
+        "We have some options that might match your package. Can we discuss?",
+        "I've reviewed your package and would love to help you plan this trip.",
+        "Do you have any questions about customizing this package further?",
+        "I can help you refine this package. When would you like to start?",
+    ];
 
     let rooms = [];
     let activeRoomId = null;
@@ -449,6 +583,10 @@
     const chatInput = document.getElementById('chatInput');
     const chatSend = document.getElementById('chatSend');
     const chatInputArea = document.getElementById('chatInputArea');
+    const chatQuickReplies = document.getElementById('chatQuickReplies');
+    const chatQuickRepliesPackage = document.getElementById('chatQuickRepliesPackage');
+    const chatQuickRepliesTitle = document.getElementById('chatQuickRepliesTitle');
+    const chatQuickRepliesList = document.getElementById('chatQuickRepliesList');
 
     function getCookie(name) {
         const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
@@ -541,6 +679,28 @@
         return div.innerHTML;
     }
 
+    function messageBodyHtml(data) {
+        const pkg = data.custom_package_detail || null;
+        let text = (data.text || '').trim();
+        if (pkg && /^Re: \[.+\]\s*[\r\n]+/.test(text)) {
+            text = text.replace(/^Re: \[.+\]\s*[\r\n]+/, '').trim();
+        }
+        let inner = '';
+        if (pkg && (pkg.image_url || pkg.title)) {
+            inner += '<div class="chat-msg-pkg-card">';
+            if (pkg.image_url) {
+                inner += '<img class="chat-msg-pkg-image" src="' + escapeHtml(pkg.image_url) + '" alt="">';
+            }
+            inner += '<div class="chat-msg-pkg-title">' + escapeHtml(pkg.title + (pkg.location ? ' – ' + pkg.location : '')) + '</div>';
+            inner += '</div>';
+        }
+        if (text) {
+            inner += '<div class="chat-msg-pkg-text">' + escapeHtml(text) + '</div>';
+        }
+        if (!inner) inner = '<div class="chat-msg-pkg-text">' + escapeHtml(data.text || '') + '</div>';
+        return inner;
+    }
+
     function connectWebSocket(roomId) {
         if (ws) {
             ws.close();
@@ -573,7 +733,7 @@
         }
         const html = `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${msgId}">
             <div class="chat-msg-wrap">
-                <div class="chat-msg-bubble">${escapeHtml(data.text)}</div>
+                <div class="chat-msg-bubble">${messageBodyHtml(data)}</div>
                 <div class="chat-msg-time">${formatTime(data.created_at || new Date().toISOString())}</div>
             </div>
         </div>`;
@@ -621,7 +781,7 @@
                     const isOutgoing = room ? (m.sender_id !== room.other_user_id) : false;
                     html += `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${m.id}">
                         <div class="chat-msg-wrap">
-                            <div class="chat-msg-bubble">${escapeHtml(m.text)}</div>
+                            <div class="chat-msg-bubble">${messageBodyHtml(m)}</div>
                             <div class="chat-msg-time">${formatTime(m.created_at)}</div>
                         </div>
                     </div>`;
@@ -723,6 +883,94 @@
         }
     }
 
+    function buildPackagePrefix() {
+        if (!initialCpTitle) return '';
+        const loc = initialCpLocation ? ' – ' + initialCpLocation : '';
+        return 'Re: [' + initialCpTitle + loc + ']\n\n';
+    }
+
+    function getAbsoluteImageUrl(url) {
+        if (!url) return '';
+        if (/^https?:\/\//i.test(url)) return url;
+        const origin = window.location.origin || '';
+        return origin + (url.startsWith('/') ? '' : '/') + url;
+    }
+
+    function getPackageDetailUrl() {
+        if (!initialCpId) return '#';
+        return CP_DETAIL_URL_TEMPLATE.replace(/\/0\/?$/, '/' + initialCpId + '/');
+    }
+
+    function showQuickReplies() {
+        if (!chatQuickReplies || !initialCpTitle) return;
+        if (chatQuickRepliesPackage) {
+            const imgSrc = getAbsoluteImageUrl(initialCpImage);
+            const detailUrl = getPackageDetailUrl();
+            const parts = [];
+            parts.push('<a href=\"' + escapeHtml(detailUrl) + '\" class=\"chat-quick-replies-package-link\" target="_self" title="View custom package details">');
+            parts.push('<div class=\"chat-quick-replies-thumb\">');
+            if (imgSrc) {
+                parts.push('<img src=\"' + escapeHtml(imgSrc) + '\" alt=\"\">');
+            }
+            parts.push('</div>');
+            parts.push('<div>');
+            parts.push('<div class=\"chat-quick-replies-package-title\">' + escapeHtml(initialCpTitle) + '</div>');
+            if (initialCpLocation) {
+                parts.push('<div class=\"chat-quick-replies-package-location\">' + escapeHtml(initialCpLocation) + '</div>');
+            }
+            parts.push('</div>');
+            parts.push('</a>');
+            chatQuickRepliesPackage.innerHTML = parts.join('');
+        }
+        chatQuickRepliesTitle.textContent = 'Quick message to start the conversation';
+        chatQuickRepliesList.innerHTML = '';
+        QUICK_REPLY_TEMPLATES.forEach(function(text) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'chat-quick-reply-btn';
+            btn.textContent = text;
+            btn.addEventListener('click', function() { sendQuickMessage(text); });
+            chatQuickRepliesList.appendChild(btn);
+        });
+        chatQuickReplies.classList.remove('hidden');
+        chatQuickReplies.classList.remove('only-package');
+    }
+
+    function hideQuickReplies() {
+        if (chatQuickReplies) chatQuickReplies.classList.add('hidden');
+    }
+
+    function showOnlyPackageCard() {
+        if (chatQuickReplies) chatQuickReplies.classList.add('only-package');
+    }
+
+    function cleanPackageParamsFromUrl() {
+        const u = new URL(window.location.href);
+        u.searchParams.delete('cp_id');
+        u.searchParams.delete('cp_title');
+        u.searchParams.delete('cp_location');
+        window.history.replaceState({}, '', u.pathname + u.search);
+    }
+
+    async function sendQuickMessage(templateText) {
+        if (!activeRoomId) return;
+        const prefix = buildPackagePrefix();
+        const fullText = prefix + templateText;
+        const body = { text: fullText };
+        if (initialCpId) body.custom_package_id = parseInt(initialCpId, 10);
+        try {
+            const data = await apiFetch(`/chat/rooms/${activeRoomId}/messages/`, {
+                method: 'POST',
+                body: JSON.stringify(body),
+            });
+            appendMessage(data, false);
+            hideQuickReplies();
+            cleanPackageParamsFromUrl();
+        } catch (err) {
+            console.error('Quick message failed', err);
+        }
+    }
+
     async function loadRooms(silent = false) {
         if (!silent) chatEntries.innerHTML = '<div class="chat-loading">Loading...</div>';
         try {
@@ -752,7 +1000,9 @@
     loadRooms().then(() => {
         // Auto-select room if provided in query string and exists
         if (initialRoomId && rooms.some(r => r.id === initialRoomId)) {
-            selectRoom(initialRoomId);
+            selectRoom(initialRoomId).then(function() {
+                if (initialCpTitle) showQuickReplies();
+            });
         }
         startRoomsPoll();
     });
