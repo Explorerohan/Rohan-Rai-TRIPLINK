@@ -64,6 +64,7 @@
         font-size: 15px;
         font-weight: 500;
         border-left: 3px solid transparent;
+        position: relative;
     }
 
     .nav-item:hover {
@@ -96,6 +97,23 @@
         background: #fee2e2;
         color: #c82333;
         border-left-color: #dc3545;
+    }
+
+    .nav-item .nav-badge {
+        position: absolute;
+        right: 16px;
+        top: 10px;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: #dc2626;
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
     }
 
     .main-content {
@@ -182,6 +200,7 @@
             <a href="{% url 'agent_chat' %}" class="nav-item{% if active_nav == 'chat' %} active{% endif %}">
                 <i>💬</i>
                 <span>Chat</span>
+                <span class="nav-badge" id="agentChatUnreadBadge"></span>
             </a>
             <a href="{% url 'agent_profile' %}" class="nav-item{% if active_nav == 'profile' %} active{% endif %}">
                 <i>👤</i>
@@ -206,5 +225,34 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+(function() {
+    function updateAgentChatBadge() {
+        fetch('/api/auth/chat/unread-count/', {
+            credentials: 'same-origin',
+        }).then(function(res) {
+            if (!res.ok) return null;
+            return res.json();
+        }).then(function(data) {
+            if (!data) return;
+            var badge = document.getElementById('agentChatUnreadBadge');
+            if (!badge) return;
+            var conv = typeof data.conversations === 'number' ? data.conversations : (typeof data.count === 'number' ? data.count : 0);
+            if (conv > 0) {
+                badge.textContent = conv > 99 ? '99+' : conv;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.textContent = '';
+                badge.style.display = 'none';
+            }
+        }).catch(function(_) {});
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateAgentChatBadge();
+        setInterval(updateAgentChatBadge, 3000);
+    });
+})();
+</script>
 {% block agent_extra_js %}{% endblock agent_extra_js %}
 {% endblock extra_js %}
