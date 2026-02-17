@@ -41,6 +41,16 @@ const formatDateLabel = (iso) => {
   return d.toLocaleDateString();
 };
 
+/** For messages with custom_package_detail: strip "Re: [Title - Location]\n\n" from text. */
+const getMessageBody = (msg) => {
+  const pkg = msg?.custom_package_detail || null;
+  let text = (msg?.text || "").trim();
+  if (pkg && /^Re: \[.+\]\s*[\r\n]+/.test(text)) {
+    text = text.replace(/^Re: \[.+\]\s*[\r\n]+/, "").trim();
+  }
+  return { pkg, text: text || msg?.text || "" };
+};
+
 const ChatDetailScreen = ({
   roomId,
   contactName = "Chat",
@@ -253,19 +263,35 @@ const ChatDetailScreen = ({
                       </View>
                     </View>
                   ) : (
-                    <View key={msg.id} style={styles.msgRowLeft}>
-                      <Image
-                        source={{ uri: contactAvatar || DEFAULT_AVATAR }}
-                        style={styles.senderAvatar}
-                      />
-                      <View style={styles.msgBubbleLeft}>
-                        <Text style={styles.msgText}>{msg.text}</Text>
-                        <View style={styles.msgMetaLeft}>
-                          <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
-                          <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                    (() => {
+                      const { pkg, text } = getMessageBody(msg);
+                      const hasPkg = !!(pkg && (pkg.image_url || pkg.title));
+                      return (
+                        <View key={msg.id} style={styles.msgRowLeft}>
+                          <Image
+                            source={{ uri: contactAvatar || DEFAULT_AVATAR }}
+                            style={styles.senderAvatar}
+                          />
+                          <View style={[styles.msgBubbleLeft, hasPkg && styles.msgBubbleLeftWithPkg]}>
+                            {hasPkg && (
+                              <View style={styles.msgPkgCard}>
+                                {pkg.image_url ? (
+                                  <Image source={{ uri: pkg.image_url }} style={styles.msgPkgImage} resizeMode="cover" />
+                                ) : null}
+                                <Text style={styles.msgPkgTitle} numberOfLines={2}>
+                                  {pkg.title}{pkg.location ? ` – ${pkg.location}` : ""}
+                                </Text>
+                              </View>
+                            )}
+                            <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{text}</Text>
+                            <View style={styles.msgMetaLeft}>
+                              <Text style={[styles.msgTime, hasPkg && styles.msgTimeInPkg]}>{formatTime(msg.created_at)}</Text>
+                              <Ionicons name="checkmark-done" size={16} color={hasPkg ? "#a7f3d0" : "#22c55e"} />
+                            </View>
+                          </View>
                         </View>
-                      </View>
-                    </View>
+                      );
+                    })()
                   )
                 )}
               </React.Fragment>
@@ -413,6 +439,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#64748b",
   },
+  msgTimeInPkg: {
+    color: "rgba(255,255,255,0.85)",
+  },
   msgRowLeft: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -435,6 +464,32 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 4,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+  },
+  msgBubbleLeftWithPkg: {
+    backgroundColor: "#2A733E",
+    borderColor: "#2A733E",
+    overflow: "hidden",
+  },
+  msgPkgCard: {
+    marginHorizontal: -14,
+    marginTop: -10,
+    marginBottom: 8,
+  },
+  msgPkgImage: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#1e3a2a",
+  },
+  msgPkgTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#ffffff",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingTop: 6,
+  },
+  msgTextAfterPkg: {
+    color: "#ffffff",
   },
   msgMetaLeft: {
     flexDirection: "row",
