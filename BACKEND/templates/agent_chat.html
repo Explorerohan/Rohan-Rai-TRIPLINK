@@ -222,6 +222,22 @@
         font-weight: 600;
         margin-right: 12px;
         flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .chat-conv-header-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .chat-conv-header-avatar-initials {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
     }
 
     .chat-conv-header-info {
@@ -600,7 +616,15 @@
 
         convPlaceholder.style.display = 'none';
         convActive.style.display = 'flex';
-        document.getElementById('headerAvatar').textContent = initials(room.other_user_name);
+
+        const headerAvatarEl = document.getElementById('headerAvatar');
+        const initialsText = initials(room.other_user_name);
+        const avatarUrl = (room.other_user_avatar || '').trim();
+        if (avatarUrl) {
+            headerAvatarEl.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="chat-conv-header-avatar-initials" style="display:none">${initialsText}</span>`;
+        } else {
+            headerAvatarEl.innerHTML = `<span class="chat-conv-header-avatar-initials">${initialsText}</span>`;
+        }
         document.getElementById('headerName').textContent = room.other_user_name || 'Unknown';
         document.getElementById('headerStatus').textContent = 'Online';
 
