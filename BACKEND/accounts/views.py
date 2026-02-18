@@ -1153,6 +1153,7 @@ class BookingListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsTraveler]
 
     def get_queryset(self):
+        _mark_overdue_packages_completed()
         return Booking.objects.filter(user=self.request.user).select_related('package').order_by('-created_at')
 
     def get_serializer_context(self):

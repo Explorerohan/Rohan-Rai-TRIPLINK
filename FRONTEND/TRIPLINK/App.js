@@ -444,6 +444,7 @@ export default function App() {
           key={profileRefreshKey}
           session={session}
           initialProfile={userProfile}
+          initialBookings={cachedBookings}
           onUpdateCachedProfile={setUserProfile}
           unreadCount={unreadCount}
           onBack={() => setScreen("home")}
@@ -452,6 +453,7 @@ export default function App() {
           onMessagesPress={() => setScreen("messages")}
           onLogout={handleLogout}
           onPlusPress={() => setScreen("customPackages")}
+          onUpdateCachedBookings={setCachedBookings}
         />
       )}
       {screen === "customPackages" && (

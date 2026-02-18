@@ -294,12 +294,15 @@ class BookingSerializer(serializers.ModelSerializer):
     package_location = serializers.CharField(source='package.location', read_only=True)
     package_country = serializers.CharField(source='package.country', read_only=True)
     trip_start_date = serializers.DateField(source='package.trip_start_date', read_only=True)
+    trip_end_date = serializers.DateField(source='package.trip_end_date', read_only=True)
+    package_status = serializers.CharField(source='package.status', read_only=True)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'user', 'package_id', 'package_title', 'status', 'created_at',
-            'package_image_url', 'package_location', 'package_country', 'trip_start_date',
+            'package_image_url', 'package_location', 'package_country',
+            'trip_start_date', 'trip_end_date', 'package_status',
         ]
         read_only_fields = ['id', 'user', 'created_at']
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getProfile } from "../../utils/api";
+import { getProfile, getMyBookings } from "../../utils/api";
 
 const NAV_ICON_SIZE = 22;
 
@@ -37,7 +37,9 @@ const menuItems = [
 const ProfileScreen = ({
   session,
   initialProfile = null,
+  initialBookings = null,
   onUpdateCachedProfile = () => {},
+  onUpdateCachedBookings = () => {},
   onBack = () => {},
   onEdit = () => {},
   onLogout = () => {},
@@ -49,6 +51,7 @@ const ProfileScreen = ({
   const hasInitial = initialProfile != null;
   const [profile, setProfile] = useState(() => initialProfile);
   const [loading, setLoading] = useState(!hasInitial);
+  const [bookings, setBookings] = useState(() => Array.isArray(initialBookings) ? initialBookings : []);
 
   useEffect(() => {
     if (initialProfile != null && profile == null) {
@@ -58,8 +61,33 @@ const ProfileScreen = ({
   }, [initialProfile]);
 
   useEffect(() => {
+    if (Array.isArray(initialBookings)) {
+      setBookings(initialBookings);
+    }
+  }, [initialBookings]);
+
+  useEffect(() => {
     fetchProfile();
   }, [session]);
+
+  useEffect(() => {
+    if (!session?.access) return;
+    getMyBookings(session.access)
+      .then((res) => {
+        const list = res?.data ?? [];
+        const arr = Array.isArray(list) ? list : [];
+        setBookings(arr);
+        onUpdateCachedBookings?.(arr);
+      })
+      .catch(() => {});
+  }, [session?.access]);
+
+  const { pastTripsCount, upcomingTripsCount } = useMemo(() => {
+    const confirmed = (bookings || []).filter((b) => b.status === "confirmed");
+    const past = confirmed.filter((b) => (b.package_status || "").toLowerCase() === "completed");
+    const upcoming = confirmed.filter((b) => (b.package_status || "").toLowerCase() === "active");
+    return { pastTripsCount: past.length, upcomingTripsCount: upcoming.length };
+  }, [bookings]);
 
   const fetchProfile = async () => {
     if (!session?.access) {
@@ -151,12 +179,12 @@ const ProfileScreen = ({
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Past Trips</Text>
-            <Text style={styles.statValue}>238</Text>
+            <Text style={styles.statValue}>{pastTripsCount}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Upcoming Trips</Text>
-            <Text style={styles.statValue}>473</Text>
+            <Text style={styles.statValue}>{upcomingTripsCount}</Text>
           </View>
         </View>
 
