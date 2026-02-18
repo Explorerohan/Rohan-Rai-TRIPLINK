@@ -8,7 +8,7 @@ import { ForgotPasswordScreen } from "./src/screens/forgotPassword";
 import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
-import ProfileScreen, { EditProfileScreen } from "./src/screens/profile";
+import ProfileScreen, { EditProfileScreen, ProfileDetailsScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
@@ -449,11 +449,18 @@ export default function App() {
           unreadCount={unreadCount}
           onBack={() => setScreen("home")}
           onEdit={() => setScreen("editProfile")}
+          onProfileDetailsPress={() => setScreen("profileDetails")}
           onCalendarPress={() => setScreen("schedule")}
           onMessagesPress={() => setScreen("messages")}
           onLogout={handleLogout}
           onPlusPress={() => setScreen("customPackages")}
           onUpdateCachedBookings={setCachedBookings}
+        />
+      )}
+      {screen === "profileDetails" && (
+        <ProfileDetailsScreen
+          profile={userProfile}
+          onBack={() => setScreen("profile")}
         />
       )}
       {screen === "customPackages" && (

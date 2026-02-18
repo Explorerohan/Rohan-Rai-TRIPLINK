@@ -42,6 +42,7 @@ const ProfileScreen = ({
   onUpdateCachedBookings = () => {},
   onBack = () => {},
   onEdit = () => {},
+  onProfileDetailsPress = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
   onMessagesPress = () => {},
@@ -198,7 +199,7 @@ const ProfileScreen = ({
                 index === menuItems.length - 1 && styles.menuItemLast,
               ]}
               activeOpacity={0.7}
-              onPress={item.id === "logout" ? onLogout : undefined}
+              onPress={item.id === "logout" ? onLogout : item.id === "profile" ? onProfileDetailsPress : undefined}
             >
               <View style={styles.menuItemLeft}>
                 <Ionicons
@@ -352,35 +353,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: "#6b7076",
-  },
-  detailsCard: {
-    backgroundColor: "#ffffff",
-    marginHorizontal: 18,
-    marginBottom: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e3e6ea",
-    padding: 18,
-  },
-  detailItem: {
-    marginBottom: 16,
-  },
-  detailItemLast: {
-    marginBottom: 0,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: "#6b7076",
-    fontWeight: "600",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  detailValue: {
-    fontSize: 15,
-    color: "#1f1f1f",
-    fontWeight: "500",
-    lineHeight: 22,
   },
   statsCard: {
     flexDirection: "row",
