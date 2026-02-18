@@ -136,7 +136,7 @@ class CustomPackageSerializer(serializers.ModelSerializer):
     features = PackageFeatureSerializer(many=True, read_only=True)
     main_image_url = serializers.SerializerMethodField()
     duration_display = serializers.ReadOnlyField()
-    status = serializers.CharField(read_only=True)
+    status = serializers.CharField(required=False)
     claimed_by_name = serializers.SerializerMethodField()
     claimed_by_id = serializers.IntegerField(source="claimed_by.id", read_only=True)
     feature_ids = serializers.PrimaryKeyRelatedField(
@@ -173,8 +173,21 @@ class CustomPackageSerializer(serializers.ModelSerializer):
             instance.features.set(feature_ids)
         return instance
 
+    def validate_status(self, value):
+        """Traveler may only set status to 'cancelled'. Other transitions are server/agent-only."""
+        if value is None:
+            return value
+        v = (value or "").strip().lower()
+        if v and v != CustomPackage.CustomPackageStatus.CANCELLED:
+            raise serializers.ValidationError("You can only cancel this package. Use status: cancelled.")
+        return v or None
+
     def update(self, instance, validated_data):
         feature_ids = validated_data.pop('feature_ids', None)
+        new_status = validated_data.pop('status', None)
+        if new_status == CustomPackage.CustomPackageStatus.CANCELLED:
+            instance.status = CustomPackage.CustomPackageStatus.CANCELLED
+            instance.save(update_fields=["status", "updated_at"])
         super().update(instance, validated_data)
         if feature_ids is not None:
             instance.features.set(feature_ids)

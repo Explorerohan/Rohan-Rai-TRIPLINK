@@ -372,6 +372,16 @@ export default function App() {
             setSelectedCustomPackageId(null);
             setScreen(customPackageDetailReturnScreen);
           }}
+          onCancelSuccess={(updatedPkg) => {
+            setCachedCustomPackages((prev) =>
+              prev ? prev.map((p) => (p.id === updatedPkg?.id ? { ...p, ...updatedPkg } : p)) : prev
+            );
+          }}
+          onDeleteSuccess={(deletedId) => {
+            setCachedCustomPackages((prev) => (prev ? prev.filter((p) => p.id !== deletedId) : prev));
+            setSelectedCustomPackageId(null);
+            setScreen(customPackageDetailReturnScreen);
+          }}
         />
       )}
       {screen === "schedule" && (

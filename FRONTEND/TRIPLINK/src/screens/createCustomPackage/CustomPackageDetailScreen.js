@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -12,7 +13,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getCustomPackageById } from "../../utils/api";
+import { getCustomPackageById, updateCustomPackage, deleteCustomPackage } from "../../utils/api";
 
 const PLACEHOLDER_IMAGE =
   "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80";
@@ -28,12 +29,13 @@ const formatTripDate = (dateStr) => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
-const CustomPackageDetailScreen = ({ packageId, session, onBack }) => {
+const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess, onDeleteSuccess }) => {
   const { width: windowWidth } = useWindowDimensions();
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (!packageId || !session?.access) {
@@ -108,6 +110,66 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack }) => {
   for (let i = 0; i < featuresList.length; i += COLS) {
     facilityRows.push(featuresList.slice(i, i + COLS));
   }
+
+  const canCancel = pkg.status === "open" || pkg.status === "claimed";
+
+  const handleCancelPackage = () => {
+    Alert.alert(
+      "Cancel package",
+      "Are you sure you want to cancel this trip request? You can still delete it later if needed.",
+      [
+        { text: "Keep it", style: "cancel" },
+        {
+          text: "Cancel package",
+          style: "destructive",
+          onPress: async () => {
+            if (!session?.access || !pkg?.id) return;
+            setActionLoading(true);
+            try {
+              const res = await updateCustomPackage(pkg.id, { status: "cancelled" }, session.access);
+              const updated = res?.data ?? null;
+              if (updated) {
+                setPkg(updated);
+                onCancelSuccess?.(updated);
+              }
+              Alert.alert("Done", "Your package has been cancelled.");
+            } catch (err) {
+              Alert.alert("Error", err?.message || "Could not cancel package.");
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeletePackage = () => {
+    Alert.alert(
+      "Delete package",
+      "Permanently delete this custom package? This cannot be undone.",
+      [
+        { text: "Keep it", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (!session?.access || !pkg?.id) return;
+            setActionLoading(true);
+            try {
+              await deleteCustomPackage(pkg.id, session.access);
+              onDeleteSuccess?.(pkg.id);
+              Alert.alert("Deleted", "Your package has been removed.", [{ text: "OK" }]);
+            } catch (err) {
+              Alert.alert("Error", err?.message || "Could not delete package.");
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -231,8 +293,8 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack }) => {
           {/* Status & Claimed by - custom package only */}
           <View style={styles.customMetaRow}>
             {pkg.status ? (
-              <View style={[styles.statusPill, pkg.status === "claimed" && styles.statusPillClaimed]}>
-                <Text style={[styles.statusPillText, pkg.status === "claimed" && styles.statusPillTextClaimed]}>
+              <View style={[styles.statusPill, pkg.status === "claimed" && styles.statusPillClaimed, pkg.status === "cancelled" && styles.statusPillCancelled]}>
+                <Text style={[styles.statusPillText, pkg.status === "claimed" && styles.statusPillTextClaimed, pkg.status === "cancelled" && styles.statusPillTextCancelled]}>
                   {String(pkg.status).charAt(0).toUpperCase() + String(pkg.status).slice(1)}
                 </Text>
               </View>
@@ -243,6 +305,30 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack }) => {
                 <Text style={styles.claimedByText}>Handled by {pkg.claimed_by_name}</Text>
               </View>
             ) : null}
+          </View>
+
+          {/* Cancel / Delete actions */}
+          <View style={styles.actionsSection}>
+            {canCancel && (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.actionBtnCancel]}
+                onPress={handleCancelPackage}
+                disabled={actionLoading}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="close-circle-outline" size={20} color="#b91c1c" />
+                <Text style={styles.actionBtnCancelText}>Cancel package</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.actionBtnDelete]}
+              onPress={handleDeletePackage}
+              disabled={actionLoading}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="trash-outline" size={20} color="#64748b" />
+              <Text style={styles.actionBtnDeleteText}>Delete package</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -515,6 +601,13 @@ const styles = StyleSheet.create({
   statusPillTextClaimed: {
     color: "#166534",
   },
+  statusPillCancelled: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+  },
+  statusPillTextCancelled: {
+    color: "#b91c1c",
+  },
   claimedByRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -524,6 +617,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#1f6b2a",
+  },
+  actionsSection: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 140,
+  },
+  actionBtnCancel: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+  },
+  actionBtnCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#b91c1c",
+  },
+  actionBtnDelete: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
+  },
+  actionBtnDeleteText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
   },
   // Bottom Bar - same as DetailsScreen
   bottomBar: {
