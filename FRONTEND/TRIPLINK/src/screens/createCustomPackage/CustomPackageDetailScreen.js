@@ -66,10 +66,12 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f2f3f5" />
-        <View style={styles.heroCard}>
-          <View style={[styles.heroImage, styles.heroPlaceholder]} />
-          {renderBackButton()}
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <View style={styles.heroWrap}>
+          <View style={styles.heroCard}>
+            <View style={[styles.heroImage, styles.heroPlaceholder]} />
+            {renderBackButton()}
+          </View>
         </View>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#1f6b2a" />
@@ -82,10 +84,12 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
   if (error || !pkg) {
     return (
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f2f3f5" />
-        <View style={styles.heroCard}>
-          <View style={[styles.heroImage, styles.heroPlaceholder]} />
-          {renderBackButton()}
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <View style={styles.heroWrap}>
+          <View style={styles.heroCard}>
+            <View style={[styles.heroImage, styles.heroPlaceholder]} />
+            {renderBackButton()}
+          </View>
         </View>
         <View style={styles.errorCard}>
           <Ionicons name="alert-circle-outline" size={48} color="#94a3b8" />
@@ -186,36 +190,26 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f2f3f5" />
+      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Hero Image - same as package details */}
-        <View style={styles.heroCard}>
-          <Image
-            source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-          {renderBackButton()}
+        {/* Hero image */}
+        <View style={styles.heroWrap}>
+          <View style={styles.heroCard}>
+            <Image
+              source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+            {renderBackButton()}
+          </View>
         </View>
 
         <View style={styles.body}>
-          {/* Title & Map Link - same layout as DetailsScreen */}
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>{pkg.title}</Text>
-            <TouchableOpacity activeOpacity={0.8}>
-              <Text style={styles.mapLink}>Show map</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Location */}
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={16} color="#6f747a" />
-            <Text style={styles.locationText}>
-              {pkg.location}, {pkg.country}
-            </Text>
-          </View>
-
-          {/* Duration row - similar to rating row in Details */}
+          <Text style={styles.heroTitle}>{pkg.title}</Text>
+          <Text style={styles.heroLocation}>
+            {pkg.location}, {pkg.country}
+          </Text>
+          {/* Duration row */}
           {pkg.duration_display ? (
             <View style={styles.ratingRow}>
               <Ionicons name="time-outline" size={16} color="#1f6b2a" />
@@ -369,24 +363,23 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#f2f3f5",
+    backgroundColor: "#f8fafc",
   },
   scroll: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 130,
+  },
+  heroWrap: {
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 130,
   },
   heroCard: {
     position: "relative",
-    height: 300,
-    borderRadius: 22,
+    height: 320,
+    borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: "#ffffff",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 10,
+    backgroundColor: "#e2e8f0",
   },
   heroImage: {
     width: "100%",
@@ -438,36 +431,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   body: {
-    paddingHorizontal: 10,
-    paddingTop: 16,
-    paddingBottom: 12,
+    marginTop: -20,
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 18,
+    paddingTop: 22,
+    paddingBottom: 24,
+    minHeight: 400,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 23,
+  heroTitle: {
+    fontSize: 22,
     fontWeight: "800",
     color: "#1f1f1f",
-    flex: 1,
+    marginBottom: 4,
   },
-  mapLink: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1f6b2a",
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 10,
-  },
-  locationText: {
+  heroLocation: {
     fontSize: 14,
-    color: "#6f747a",
+    color: "#64748b",
+    marginBottom: 12,
   },
   ratingRow: {
     flexDirection: "row",

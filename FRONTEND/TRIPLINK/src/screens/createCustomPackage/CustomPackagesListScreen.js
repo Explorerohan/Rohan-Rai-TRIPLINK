@@ -139,12 +139,7 @@ const CustomPackagesListScreen = ({
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1f6b2a"]} tintColor="#1f6b2a" />
           }
         >
-          <View style={styles.introCard}>
-            <Text style={styles.sectionTitle}>Your custom trips</Text>
-            <Text style={styles.sectionSubtitle}>
-              See all trip requests you&apos;ve created and check their latest status.
-            </Text>
-          </View>
+          <Text style={styles.sectionHeading}>All custom packages</Text>
 
           {loading ? (
             <ActivityIndicator size="large" color="#1f6b2a" style={styles.loader} />
@@ -181,37 +176,39 @@ const CustomPackagesListScreen = ({
                         style={styles.cardImage}
                         resizeMode="cover"
                       />
-                      {statusCfg && (
-                        <View style={[styles.statusPill, statusCfg.containerStyle]}>
-                          <Text style={[styles.statusPillText, statusCfg.textStyle]}>
-                            {statusCfg.label}
-                          </Text>
-                        </View>
-                      )}
                     </View>
                     <View style={styles.cardBody}>
-                      <View style={styles.cardTitleRow}>
-                        <Text style={styles.cardTitle} numberOfLines={1}>
-                          {pkg.title}
-                        </Text>
-                      </View>
+                      <Text style={styles.cardTitle} numberOfLines={2}>
+                        {pkg.title}
+                      </Text>
                       <Text style={styles.cardLocation} numberOfLines={1}>
                         {pkg.location}, {pkg.country}
                       </Text>
-                      <View style={styles.cardMetaRow}>
-                        <View style={styles.cardMetaLeft}>
-                          <Text style={styles.cardPriceLabel}>From</Text>
-                          <Text style={styles.cardPrice}>{formatPrice(pkg.price_per_person)}</Text>
-                        </View>
-                        <View style={styles.cardMetaRight}>
-                          {pkg.duration_display ? (
-                            <Text style={styles.cardDuration}>{pkg.duration_display}</Text>
-                          ) : hasDates && tripSummary ? (
-                            <Text style={styles.cardDates} numberOfLines={1}>
-                              {tripSummary}
+                      <View style={styles.cardMetaBlock}>
+                        {(tripSummary || pkg.trip_start_date || pkg.trip_end_date) && (
+                          <View style={styles.cardMetaRow}>
+                            <Ionicons name="calendar-outline" size={12} color="#94a3b8" />
+                            <Text style={styles.cardMetaText} numberOfLines={1}>
+                              {tripSummary || (pkg.trip_start_date ? formatTripDate(pkg.trip_start_date) : formatTripDate(pkg.trip_end_date))}
                             </Text>
-                          ) : null}
-                        </View>
+                          </View>
+                        )}
+                        {pkg.duration_display ? (
+                          <View style={styles.cardMetaRow}>
+                            <Ionicons name="time-outline" size={12} color="#94a3b8" />
+                            <Text style={styles.cardMetaText}>{pkg.duration_display}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <View style={styles.cardFooter}>
+                        {statusCfg ? (
+                          <View style={[styles.statusPill, statusCfg.containerStyle]}>
+                            <Text style={[styles.statusPillText, statusCfg.textStyle]}>
+                              {statusCfg.label}
+                            </Text>
+                          </View>
+                        ) : null}
+                        <Text style={styles.priceText}>{formatPrice(pkg.price_per_person)}</Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -322,25 +319,11 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 110,
   },
-  introCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: "#e3e6ea",
-    marginBottom: 18,
-  },
-  sectionTitle: {
+  sectionHeading: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#1f1f1f",
-    marginBottom: 6,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: "#6b7076",
-    lineHeight: 19,
+    marginBottom: 16,
   },
   loader: {
     marginVertical: 32,
@@ -364,111 +347,94 @@ const styles = StyleSheet.create({
   },
   list: {
     marginBottom: 24,
-    gap: 16,
+    gap: 12,
   },
   card: {
-    borderRadius: 18,
+    flexDirection: "row",
+    borderRadius: 12,
     overflow: "hidden",
     backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e3e6ea",
+    padding: 10,
     shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
   },
   cardImageWrap: {
-    position: "relative",
+    width: 160,
+    height: 132,
+    marginRight: 8,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 10,
+    overflow: "hidden",
   },
   cardImage: {
     width: "100%",
-    height: 160,
+    height: "100%",
     backgroundColor: "#e2e8f0",
   },
   cardBody: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  cardTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flex: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
     justifyContent: "space-between",
+    minHeight: 132,
   },
   cardTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#1f1f1f",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1a1a1a",
+    lineHeight: 22,
+    letterSpacing: 0.2,
   },
   cardLocation: {
     fontSize: 13,
     color: "#64748b",
-    marginTop: 6,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  cardMetaBlock: {
+    marginTop: 8,
+    gap: 4,
   },
   cardMetaRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
+    gap: 5,
+  },
+  cardMetaText: {
+    fontSize: 12,
+    color: "#94a3b8",
+    flex: 1,
+    fontWeight: "500",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     marginTop: 10,
+    gap: 8,
   },
-  cardMetaLeft: {
-    flexDirection: "column",
-  },
-  cardMetaRight: {
-    alignItems: "flex-end",
-    maxWidth: "55%",
-  },
-  cardPriceLabel: {
-    fontSize: 11,
-    color: "#9ca3af",
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  cardPrice: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#1f6b2a",
-  },
-  cardDuration: {
-    fontSize: 13,
-    color: "#4b5563",
-    fontWeight: "600",
-  },
-  cardDates: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-  statusPill: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-  },
+  statusPill: {},
   statusPillText: {
     fontSize: 11,
+    fontWeight: "600",
+  },
+  priceText: {
+    fontSize: 14,
     fontWeight: "700",
+    color: "#1f6b2a",
   },
-  statusPillOpen: {
-    backgroundColor: "#f1f5f9",
-    borderColor: "#e2e8f0",
-  },
+  statusPillOpen: {},
   statusPillTextOpen: {
-    color: "#1f2937",
+    color: "#64748b",
   },
-  statusPillClaimed: {
-    backgroundColor: "#f0fdf4",
-    borderColor: "#bbf7d0",
-  },
+  statusPillClaimed: {},
   statusPillTextClaimed: {
-    color: "#166534",
+    color: "#1f6b2a",
   },
-  statusPillCancelled: {
-    backgroundColor: "#fef2f2",
-    borderColor: "#fecaca",
-  },
+  statusPillCancelled: {},
   statusPillTextCancelled: {
     color: "#b91c1c",
   },
@@ -482,8 +448,6 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     backgroundColor: "#ffffff",
     borderRadius: 26,
-    borderWidth: 1,
-    borderColor: "#e3e6ea",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
