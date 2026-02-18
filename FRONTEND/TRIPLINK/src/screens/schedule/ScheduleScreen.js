@@ -343,26 +343,31 @@ const ScheduleScreen = ({
                   activeOpacity={0.85}
                   onPress={() => onTripPress?.(pkg)}
                 >
-                  <Image
-                    source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
-                    style={styles.cardImage}
-                  />
-                  <View style={styles.cardBody}>
-                    <View style={styles.cardDateRow}>
-                      <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
-                      <Text style={styles.cardDate}>{dateStr}</Text>
+                  <View style={styles.cardRow}>
+                    <View style={styles.cardImageWrap}>
+                      <Image
+                        source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
+                        style={styles.cardImage}
+                        resizeMode="cover"
+                      />
                     </View>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {pkg.title}
-                    </Text>
-                    <View style={styles.cardLocationRow}>
-                      <Ionicons name="location-outline" size={14} color="#94a3b8" />
-                      <Text style={styles.cardLocation} numberOfLines={1}>
-                        {locationStr}
+                    <View style={styles.cardBody}>
+                      <View style={styles.cardDateRow}>
+                        <Ionicons name="calendar-outline" size={13} color="#94a3b8" />
+                        <Text style={styles.cardDate}>{dateStr}</Text>
+                      </View>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {pkg.title}
                       </Text>
+                      <View style={styles.cardLocationRow}>
+                        <Ionicons name="location-outline" size={13} color="#94a3b8" />
+                        <Text style={styles.cardLocation} numberOfLines={1}>
+                          {locationStr}
+                        </Text>
+                      </View>
                     </View>
+                    <Ionicons name="chevron-forward" size={22} color="#94a3b8" style={styles.cardArrow} />
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#94a3b8" style={styles.cardArrow} />
                 </TouchableOpacity>
               );
             })
@@ -398,27 +403,33 @@ const ScheduleScreen = ({
               return (
                 <View key={item.id} style={styles.card}>
                   <TouchableOpacity
-                    style={styles.cardMain}
+                    style={styles.cardRow}
                     activeOpacity={0.85}
                     onPress={() => onScheduleItemPress?.(item)}
                   >
-                    <Image source={{ uri: item.image }} style={styles.cardImage} />
+                    <View style={styles.cardImageWrap}>
+                      <Image
+                        source={{ uri: item.image }}
+                        style={styles.cardImage}
+                        resizeMode="cover"
+                      />
+                    </View>
                     <View style={styles.cardBody}>
                       <View style={styles.cardDateRow}>
-                        <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
+                        <Ionicons name="calendar-outline" size={13} color="#94a3b8" />
                         <Text style={styles.cardDate}>{item.date}</Text>
                       </View>
                       <Text style={styles.cardTitle} numberOfLines={1}>
                         {item.title}
                       </Text>
                       <View style={styles.cardLocationRow}>
-                        <Ionicons name="location-outline" size={14} color="#94a3b8" />
+                        <Ionicons name="location-outline" size={13} color="#94a3b8" />
                         <Text style={styles.cardLocation} numberOfLines={1}>
                           {item.location}
                         </Text>
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#94a3b8" style={styles.cardArrow} />
+                    <Ionicons name="chevron-forward" size={22} color="#94a3b8" style={styles.cardArrow} />
                   </TouchableOpacity>
                   {canCancel && (
                     <TouchableOpacity
@@ -635,29 +646,33 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
   },
-  cardMain: {
+  cardRow: {
     flexDirection: "row",
     alignItems: "center",
   },
-  cardImage: {
-    width: 72,
-    height: 72,
+  cardImageWrap: {
+    width: 76,
+    height: 76,
     borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#f1f5f9",
+    marginRight: 12,
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
     backgroundColor: "#f1f5f9",
   },
   cardBody: {
     flex: 1,
-    marginLeft: 14,
     minWidth: 0,
   },
   cardDateRow: {
@@ -668,10 +683,11 @@ const styles = StyleSheet.create({
   },
   cardDate: {
     fontSize: 12,
-    color: "#94a3b8",
+    color: "#64748b",
+    fontWeight: "500",
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#1e293b",
     marginBottom: 4,
@@ -687,7 +703,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardArrow: {
-    marginLeft: 8,
+    marginLeft: 6,
   },
   cancelBookingBtn: {
     marginTop: 10,
