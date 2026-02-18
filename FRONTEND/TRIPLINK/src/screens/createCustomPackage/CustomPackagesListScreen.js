@@ -19,6 +19,13 @@ const PLACEHOLDER_IMAGE =
 
 const NAV_ICON_SIZE = 22;
 
+const formatTripDate = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
 const navItems = [
   { key: "home", label: "Home", icon: "home-outline", active: false },
   { key: "calendar", label: "Calendar", icon: "calendar-outline", active: false },
@@ -86,15 +93,41 @@ const CustomPackagesListScreen = ({
     return "—";
   };
 
+  const getStatusConfig = (status) => {
+    if (!status) return null;
+    const value = String(status).toLowerCase();
+    if (value === "claimed") {
+      return {
+        label: "Claimed",
+        containerStyle: styles.statusPillClaimed,
+        textStyle: styles.statusPillTextClaimed,
+      };
+    }
+    if (value === "cancelled") {
+      return {
+        label: "Cancelled",
+        containerStyle: styles.statusPillCancelled,
+        textStyle: styles.statusPillTextCancelled,
+      };
+    }
+    return {
+      label: "Open",
+      containerStyle: styles.statusPillOpen,
+      textStyle: styles.statusPillTextOpen,
+    };
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.8}>
-          <Ionicons name="chevron-back" size={24} color="#1e293b" />
+        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.85}>
+          <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Custom packages</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity onPress={onCreatePress} style={styles.headerAction} activeOpacity={0.85}>
+          <Ionicons name="add" size={22} color="#1f6b2a" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.contentContainer}>
@@ -106,7 +139,12 @@ const CustomPackagesListScreen = ({
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1f6b2a"]} tintColor="#1f6b2a" />
           }
         >
-          <Text style={styles.sectionTitle}>Your custom packages</Text>
+          <View style={styles.introCard}>
+            <Text style={styles.sectionTitle}>Your custom trips</Text>
+            <Text style={styles.sectionSubtitle}>
+              See all trip requests you&apos;ve created and check their latest status.
+            </Text>
+          </View>
 
           {loading ? (
             <ActivityIndicator size="large" color="#1f6b2a" style={styles.loader} />
@@ -114,42 +152,73 @@ const CustomPackagesListScreen = ({
             <View style={styles.empty}>
               <Ionicons name="briefcase-outline" size={48} color="#cbd5e1" />
               <Text style={styles.emptyText}>You haven't created any custom packages yet.</Text>
-              <Text style={styles.emptySubtext}>Tap the button below to create one.</Text>
+              <Text style={styles.emptySubtext}>Tap the + button above to create one.</Text>
             </View>
           ) : (
             <View style={styles.list}>
-              {list.map((pkg) => (
-                <TouchableOpacity
-                  key={pkg.id}
-                  style={styles.card}
-                  activeOpacity={0.85}
-                  onPress={() => onPackagePress?.(pkg.id)}
-                >
-                  <Image
-                    source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.cardBody}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{pkg.title}</Text>
-                    <Text style={styles.cardLocation} numberOfLines={1}>
-                      {pkg.location}, {pkg.country}
-                    </Text>
-                    <Text style={styles.cardPrice}>{formatPrice(pkg.price_per_person)}</Text>
-                    {pkg.duration_display ? (
-                      <Text style={styles.cardDuration}>{pkg.duration_display}</Text>
-                    ) : null}
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {list.map((pkg) => {
+                const statusCfg = getStatusConfig(pkg.status);
+                const hasDates = pkg.trip_start_date || pkg.trip_end_date;
+                let tripSummary = null;
+                if (pkg.trip_start_date && pkg.trip_end_date) {
+                  tripSummary = `${formatTripDate(pkg.trip_start_date)} – ${formatTripDate(pkg.trip_end_date)}`;
+                } else if (pkg.trip_start_date) {
+                  tripSummary = `From ${formatTripDate(pkg.trip_start_date)}`;
+                } else if (pkg.trip_end_date) {
+                  tripSummary = `To ${formatTripDate(pkg.trip_end_date)}`;
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={pkg.id}
+                    style={styles.card}
+                    activeOpacity={0.9}
+                    onPress={() => onPackagePress?.(pkg.id)}
+                  >
+                    <View style={styles.cardImageWrap}>
+                      <Image
+                        source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
+                        style={styles.cardImage}
+                        resizeMode="cover"
+                      />
+                      {statusCfg && (
+                        <View style={[styles.statusPill, statusCfg.containerStyle]}>
+                          <Text style={[styles.statusPillText, statusCfg.textStyle]}>
+                            {statusCfg.label}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.cardBody}>
+                      <View style={styles.cardTitleRow}>
+                        <Text style={styles.cardTitle} numberOfLines={1}>
+                          {pkg.title}
+                        </Text>
+                      </View>
+                      <Text style={styles.cardLocation} numberOfLines={1}>
+                        {pkg.location}, {pkg.country}
+                      </Text>
+                      <View style={styles.cardMetaRow}>
+                        <View style={styles.cardMetaLeft}>
+                          <Text style={styles.cardPriceLabel}>From</Text>
+                          <Text style={styles.cardPrice}>{formatPrice(pkg.price_per_person)}</Text>
+                        </View>
+                        <View style={styles.cardMetaRight}>
+                          {pkg.duration_display ? (
+                            <Text style={styles.cardDuration}>{pkg.duration_display}</Text>
+                          ) : hasDates && tripSummary ? (
+                            <Text style={styles.cardDates} numberOfLines={1}>
+                              {tripSummary}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
-
-          <TouchableOpacity style={styles.createButton} onPress={onCreatePress} activeOpacity={0.85}>
-            <Ionicons name="add-circle-outline" size={24} color="#fff" />
-            <Text style={styles.createButtonText}>Create your custom package</Text>
-          </TouchableOpacity>
-          <View style={styles.bottomPad} />
         </ScrollView>
 
         <View style={styles.navBar}>
@@ -205,27 +274,42 @@ const CustomPackagesListScreen = ({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8fafc",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: "#f1f5f9",
   },
   backBtn: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f3f5f7",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#1f1f1f",
   },
   headerRight: {
     width: 32,
+  },
+  headerAction: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f0f9f4",
+    alignItems: "center",
+    justifyContent: "center",
   },
   contentContainer: {
     flex: 1,
@@ -234,15 +318,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 18,
+    paddingTop: 18,
     paddingBottom: 110,
+  },
+  introCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: "#e3e6ea",
+    marginBottom: 18,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 16,
+    fontWeight: "800",
+    color: "#1f1f1f",
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: "#6b7076",
+    lineHeight: 19,
   },
   loader: {
     marginVertical: 32,
@@ -266,60 +364,113 @@ const styles = StyleSheet.create({
   },
   list: {
     marginBottom: 24,
-    gap: 12,
+    gap: 16,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 18,
     overflow: "hidden",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#e3e6ea",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  cardImageWrap: {
+    position: "relative",
   },
   cardImage: {
     width: "100%",
-    height: 120,
+    height: 160,
     backgroundColor: "#e2e8f0",
   },
   cardBody: {
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#1f1f1f",
   },
   cardLocation: {
     fontSize: 13,
     color: "#64748b",
-    marginTop: 4,
-  },
-  cardPrice: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1f6b2a",
     marginTop: 6,
   },
-  cardDuration: {
-    fontSize: 12,
-    color: "#94a3b8",
-    marginTop: 2,
-  },
-  createButton: {
+  cardMetaRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1f6b2a",
-    borderRadius: 12,
-    paddingVertical: 16,
-    gap: 8,
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    marginTop: 10,
   },
-  createButtonText: {
+  cardMetaLeft: {
+    flexDirection: "column",
+  },
+  cardMetaRight: {
+    alignItems: "flex-end",
+    maxWidth: "55%",
+  },
+  cardPriceLabel: {
+    fontSize: 11,
+    color: "#9ca3af",
+    fontWeight: "500",
+    marginBottom: 2,
+  },
+  cardPrice: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
+    fontWeight: "800",
+    color: "#1f6b2a",
   },
-  bottomPad: {
-    height: 24,
+  cardDuration: {
+    fontSize: 13,
+    color: "#4b5563",
+    fontWeight: "600",
+  },
+  cardDates: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  statusPill: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  statusPillOpen: {
+    backgroundColor: "#f1f5f9",
+    borderColor: "#e2e8f0",
+  },
+  statusPillTextOpen: {
+    color: "#1f2937",
+  },
+  statusPillClaimed: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
+  statusPillTextClaimed: {
+    color: "#166534",
+  },
+  statusPillCancelled: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+  },
+  statusPillTextCancelled: {
+    color: "#b91c1c",
   },
   navBar: {
     position: "absolute",
