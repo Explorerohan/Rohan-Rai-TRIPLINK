@@ -1135,6 +1135,18 @@ class BookingListCreateView(generics.ListCreateAPIView):
         return context
 
 
+class BookingDetailView(generics.RetrieveUpdateAPIView):
+    """
+    Retrieve a single booking or cancel it (set status=cancelled).
+    Travelers can only cancel their own bookings, with a 2-day cutoff enforced by the serializer.
+    """
+    serializer_class = BookingSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+
+    def get_queryset(self):
+        return Booking.objects.filter(user=self.request.user).select_related('package')
+
+
 # Custom Package API (traveler-created packages; only visible to the creating user)
 class CustomPackageListCreateView(generics.ListCreateAPIView):
     """List current user's custom packages and create a new one. Travelers only."""

@@ -111,7 +111,20 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
     facilityRows.push(featuresList.slice(i, i + COLS));
   }
 
-  const canCancel = pkg.status === "open" || pkg.status === "claimed";
+  const canCancelBase = pkg.status === "open" || pkg.status === "claimed";
+
+  const canCancelByDate = () => {
+    if (!pkg.trip_start_date) return false;
+    const start = new Date(pkg.trip_start_date);
+    const today = new Date();
+    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffMs = startMidnight.getTime() - todayMidnight.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays >= 2;
+  };
+
+  const canCancel = canCancelBase && canCancelByDate();
 
   const handleCancelPackage = () => {
     Alert.alert(
@@ -330,6 +343,11 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
               <Text style={styles.actionBtnDeleteText}>Delete package</Text>
             </TouchableOpacity>
           </View>
+          {!canCancel && canCancelBase && (
+            <Text style={styles.cancelInfoText}>
+              You can only cancel this request up to 2 days before the trip start date.
+            </Text>
+          )}
         </View>
       </ScrollView>
 
@@ -653,6 +671,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#64748b",
+  },
+  cancelInfoText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#9ca3af",
   },
   // Bottom Bar - same as DetailsScreen
   bottomBar: {

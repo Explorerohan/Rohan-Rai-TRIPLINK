@@ -8,9 +8,10 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getMyBookings, getPackages } from "../../utils/api";
+import { getMyBookings, getPackages, cancelBooking } from "../../utils/api";
 
 const DAYS_HEADER = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -86,7 +87,14 @@ const mapBookingsToScheduleItems = (list) => {
       date: dateStr,
       image: b.package_image_url || PLACEHOLDER_IMAGE,
       booking: b,
-      packageData: { id: b.package_id, title: b.package_title, location: b.package_location, country: b.package_country, main_image_url: b.package_image_url },
+      tripStartDateRaw: b.trip_start_date || null,
+      packageData: {
+        id: b.package_id,
+        title: b.package_title,
+        location: b.package_location,
+        country: b.package_country,
+        main_image_url: b.package_image_url,
+      },
     };
   });
 };
@@ -111,6 +119,7 @@ const ScheduleScreen = ({
   const [scheduleLoading, setScheduleLoading] = useState(!hasInitialBookings);
   const [packagesOnDate, setPackagesOnDate] = useState([]);
   const [loadingPackagesOnDate, setLoadingPackagesOnDate] = useState(false);
+  const [cancellingId, setCancellingId] = useState(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -195,6 +204,54 @@ const ScheduleScreen = ({
   const displayMonthLabel = isSelectedInViewMonth
     ? formatDayMonth(selectedDate)
     : formatMonthYear(viewDate);
+
+  const canCancelBookingByDate = (tripStartDateRaw) => {
+    if (!tripStartDateRaw) return false;
+    const start = new Date(tripStartDateRaw);
+    const today = new Date();
+    // Compare on date basis (ignoring time-of-day)
+    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffMs = startMidnight.getTime() - todayMidnight.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays >= 2;
+  };
+
+  const handleCancelBooking = (item) => {
+    const booking = item?.booking;
+    if (!booking || !session?.access) return;
+    if (!canCancelBookingByDate(item.tripStartDateRaw)) {
+      Alert.alert("Cannot cancel", "You can only cancel a booking at least 2 days before the trip start date.");
+      return;
+    }
+    Alert.alert(
+      "Cancel booking",
+      "Are you sure you want to cancel this booking?",
+      [
+        { text: "Keep booking", style: "cancel" },
+        {
+          text: "Cancel booking",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setCancellingId(item.id);
+              await cancelBooking(booking.id, session.access);
+              // Refresh bookings from server so schedule & cache stay in sync
+              const res = await getMyBookings(session.access);
+              const list = res?.data ?? [];
+              const items = Array.isArray(list) && list.length > 0 ? mapBookingsToScheduleItems(list) : [];
+              setScheduleItems(items);
+              onUpdateCachedBookings(Array.isArray(list) ? list : []);
+            } catch (err) {
+              Alert.alert("Error", err?.message || "Could not cancel booking.");
+            } finally {
+              setCancellingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -335,32 +392,50 @@ const ScheduleScreen = ({
               </Text>
             </View>
           ) : (
-            scheduleItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() => onScheduleItemPress?.(item)}
-              >
-                <Image source={{ uri: item.image }} style={styles.cardImage} />
-                <View style={styles.cardBody}>
-                  <View style={styles.cardDateRow}>
-                    <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
-                    <Text style={styles.cardDate}>{item.date}</Text>
-                  </View>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <View style={styles.cardLocationRow}>
-                    <Ionicons name="location-outline" size={14} color="#94a3b8" />
-                    <Text style={styles.cardLocation} numberOfLines={1}>
-                      {item.location}
-                    </Text>
-                  </View>
+            scheduleItems.map((item) => {
+              const canCancel = item.booking?.status === "confirmed" && canCancelBookingByDate(item.tripStartDateRaw);
+              const isCancelling = cancellingId === item.id;
+              return (
+                <View key={item.id} style={styles.card}>
+                  <TouchableOpacity
+                    style={styles.cardMain}
+                    activeOpacity={0.85}
+                    onPress={() => onScheduleItemPress?.(item)}
+                  >
+                    <Image source={{ uri: item.image }} style={styles.cardImage} />
+                    <View style={styles.cardBody}>
+                      <View style={styles.cardDateRow}>
+                        <Ionicons name="calendar-outline" size={14} color="#94a3b8" />
+                        <Text style={styles.cardDate}>{item.date}</Text>
+                      </View>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <View style={styles.cardLocationRow}>
+                        <Ionicons name="location-outline" size={14} color="#94a3b8" />
+                        <Text style={styles.cardLocation} numberOfLines={1}>
+                          {item.location}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#94a3b8" style={styles.cardArrow} />
+                  </TouchableOpacity>
+                  {canCancel && (
+                    <TouchableOpacity
+                      style={[styles.cancelBookingBtn, isCancelling && styles.cancelBookingBtnDisabled]}
+                      onPress={() => handleCancelBooking(item)}
+                      disabled={isCancelling}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="close-circle-outline" size={16} color="#b91c1c" />
+                      <Text style={styles.cancelBookingText}>
+                        {isCancelling ? "Cancelling…" : "Cancel booking"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#94a3b8" style={styles.cardArrow} />
-              </TouchableOpacity>
-            ))
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -558,8 +633,6 @@ const styles = StyleSheet.create({
     color: "#1f6b2a",
   },
   card: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 12,
@@ -571,6 +644,10 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: "#f1f5f9",
+  },
+  cardMain: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   cardImage: {
     width: 72,
@@ -611,6 +688,28 @@ const styles = StyleSheet.create({
   },
   cardArrow: {
     marginLeft: 8,
+  },
+  cancelBookingBtn: {
+    marginTop: 10,
+    marginRight: 4,
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  cancelBookingBtnDisabled: {
+    opacity: 0.7,
+  },
+  cancelBookingText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#b91c1c",
   },
   scheduleEmpty: {
     paddingVertical: 32,

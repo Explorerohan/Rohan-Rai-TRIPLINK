@@ -1,3 +1,4 @@
+from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -186,6 +187,14 @@ class CustomPackageSerializer(serializers.ModelSerializer):
         feature_ids = validated_data.pop('feature_ids', None)
         new_status = validated_data.pop('status', None)
         if new_status == CustomPackage.CustomPackageStatus.CANCELLED:
+            # Enforce: traveler can only cancel at least 2 days before trip start.
+            start = instance.trip_start_date
+            if start:
+                days_diff = (start - date.today()).days
+                if days_diff < 2:
+                    raise serializers.ValidationError({
+                        "status": "You can only cancel this custom package at least 2 days before the trip start date."
+                    })
             instance.status = CustomPackage.CustomPackageStatus.CANCELLED
             instance.save(update_fields=["status", "updated_at"])
         super().update(instance, validated_data)
@@ -292,7 +301,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'user', 'package_id', 'package_title', 'status', 'created_at',
             'package_image_url', 'package_location', 'package_country', 'trip_start_date',
         ]
-        read_only_fields = ['id', 'user', 'status', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
 
     def get_package_image_url(self, obj):
         pkg = obj.package
@@ -308,12 +317,49 @@ class BookingSerializer(serializers.ModelSerializer):
         package = validated_data.pop('package')
         if Booking.objects.filter(user=user, package=package, status=BookingStatus.CONFIRMED).exists():
             raise serializers.ValidationError({'package_id': 'You have already booked this package.'})
+        # Always create as confirmed; ignore any incoming status.
         validated_data['user'] = user
         validated_data['package'] = package
+        validated_data['status'] = BookingStatus.CONFIRMED
         booking = super().create(validated_data)
         package.participants_count = (package.participants_count or 0) + 1
         package.save(update_fields=['participants_count'])
         return booking
+
+    def validate_status(self, value):
+        """
+        Travelers can only transition a booking to 'cancelled' via the API.
+        Other status transitions are handled by the server/agent.
+        """
+        if value is None:
+            return value
+        v = (value or "").strip().lower()
+        if v and v != BookingStatus.CANCELLED:
+            raise serializers.ValidationError("You can only cancel a booking (status: cancelled).")
+        return v or None
+
+    def update(self, instance, validated_data):
+        """
+        Support traveler cancellation with a 2-day cutoff before trip_start_date.
+        Other updates are not supported.
+        """
+        new_status = validated_data.get('status')
+        if new_status != BookingStatus.CANCELLED:
+            raise serializers.ValidationError({
+                "status": "Only cancellation is supported for bookings."
+            })
+
+        start = instance.package.trip_start_date
+        if start:
+            days_diff = (start - date.today()).days
+            if days_diff < 2:
+                raise serializers.ValidationError({
+                    "status": "You can only cancel a booking at least 2 days before the trip start date."
+                })
+
+        instance.status = BookingStatus.CANCELLED
+        instance.save(update_fields=["status"])
+        return instance
 
 
 class AgentReviewSerializer(serializers.ModelSerializer):

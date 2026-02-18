@@ -260,6 +260,21 @@ export const getMyBookings = async (accessToken) => {
 };
 
 /**
+ * Cancel a booking (traveler only). Sets status to \"cancelled\".
+ * Backend enforces that this is only allowed up to 2 days before trip_start_date.
+ * @param {number|string} bookingId - Booking id
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const cancelBooking = async (bookingId, accessToken) => {
+  const id = typeof bookingId === "string" ? bookingId : String(bookingId);
+  return apiRequest(`/api/auth/bookings/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "cancelled" }),
+  }, accessToken);
+};
+
+/**
  * Get reviews for an agent
  * @param {number|string} agentId - Agent (user) ID
  * @returns {Promise<object>}
