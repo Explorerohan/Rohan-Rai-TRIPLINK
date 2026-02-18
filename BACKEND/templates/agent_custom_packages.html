@@ -240,6 +240,135 @@
         margin: 0 auto;
         line-height: 1.5;
     }
+
+    .empty-state-text a {
+        color: #1f6b2a;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .empty-state-text a:hover {
+        text-decoration: underline;
+    }
+
+    .filters-bar {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 28px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .filters-bar h2 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filters-bar h2::before {
+        content: "";
+        display: inline-block;
+        width: 4px;
+        height: 18px;
+        background: #1f6b2a;
+        border-radius: 2px;
+    }
+
+    .filters-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .filter-group label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .filter-group select,
+    .filter-group input[type="date"],
+    .filter-group input[type="number"] {
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #1e293b;
+        background: #fff;
+        min-width: 140px;
+    }
+
+    .filter-group input[type="number"] {
+        min-width: 120px;
+    }
+
+    .filter-group select:focus,
+    .filter-group input:focus {
+        outline: none;
+        border-color: #1f6b2a;
+        box-shadow: 0 0 0 2px rgba(31, 107, 42, 0.15);
+    }
+
+    .filters-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .btn-apply-filters {
+        padding: 10px 20px;
+        background: #1f6b2a;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-apply-filters:hover {
+        background: #166534;
+    }
+
+    .btn-clear-filters {
+        padding: 10px 16px;
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        cursor: pointer;
+    }
+
+    .btn-clear-filters:hover {
+        background: #f8fafc;
+        color: #1e293b;
+    }
+
+    .filter-results-count {
+        font-size: 13px;
+        color: #64748b;
+        margin-left: auto;
+    }
+
+    .filter-results-count strong {
+        color: #1e293b;
+    }
 </style>
 {% endblock agent_extra_css %}
 
@@ -248,6 +377,45 @@
     <div class="page-head">
         <h1>Custom packages</h1>
         <p>Custom packages created by travelers.</p>
+    </div>
+
+    <div class="filters-bar">
+        <h2>Filter packages</h2>
+        <form method="get" action="{% url 'agent_custom_packages' %}" id="custom-packages-filter-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="filter-status">Status</label>
+                    <select name="status" id="filter-status">
+                        <option value="">All</option>
+                        <option value="open" {% if filter_status == 'open' %}selected{% endif %}>Open (free to claim)</option>
+                        <option value="claimed" {% if filter_status == 'claimed' %}selected{% endif %}>Claimed</option>
+                        <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-date-from">Date from</label>
+                    <input type="date" name="date_from" id="filter-date-from" value="{{ filter_date_from }}">
+                </div>
+                <div class="filter-group">
+                    <label for="filter-date-to">Date to</label>
+                    <input type="date" name="date_to" id="filter-date-to" value="{{ filter_date_to }}">
+                </div>
+                <div class="filter-group">
+                    <label for="filter-budget-min">Budget min (Rs.)</label>
+                    <input type="number" name="budget_min" id="filter-budget-min" value="{{ filter_budget_min }}" placeholder="Min" min="0" step="100">
+                </div>
+                <div class="filter-group">
+                    <label for="filter-budget-max">Budget max (Rs.)</label>
+                    <input type="number" name="budget_max" id="filter-budget-max" value="{{ filter_budget_max }}" placeholder="Max" min="0" step="100">
+                </div>
+                <div class="filters-actions">
+                    <button type="submit" class="btn-apply-filters">Apply filters</button>
+                    <a href="{% url 'agent_custom_packages' %}" class="btn-clear-filters">Clear all</a>
+                    <span class="filter-results-count"><strong>{{ custom_packages|length }}</strong> package{{ custom_packages|length|pluralize }}</span>
+                </div>
+            </div>
+        </form>
     </div>
 
     {% if custom_packages %}
@@ -299,7 +467,13 @@
     {% else %}
         <div class="empty-state">
             <div class="empty-state-icon">✨</div>
-            <p class="empty-state-text">No custom packages available at the moment.</p>
+            <p class="empty-state-text">
+                {% if filter_status or filter_date_from or filter_date_to or filter_budget_min or filter_budget_max %}
+                    No packages match your filters. Try adjusting or <a href="{% url 'agent_custom_packages' %}">clear all filters</a>.
+                {% else %}
+                    No custom packages available at the moment.
+                {% endif %}
+            </p>
         </div>
     {% endif %}
 </div>

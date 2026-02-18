@@ -32,6 +32,7 @@ const CustomPackagesListScreen = ({
   onUpdateCachedCustomPackages,
   onBack,
   onCreatePress,
+  onPackagePress,
   onHomePress,
   onCalendarPress,
   onMessagesPress = () => {},
@@ -118,7 +119,12 @@ const CustomPackagesListScreen = ({
           ) : (
             <View style={styles.list}>
               {list.map((pkg) => (
-                <View key={pkg.id} style={styles.card}>
+                <TouchableOpacity
+                  key={pkg.id}
+                  style={styles.card}
+                  activeOpacity={0.85}
+                  onPress={() => onPackagePress?.(pkg.id)}
+                >
                   <Image
                     source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
                     style={styles.cardImage}
@@ -134,7 +140,7 @@ const CustomPackagesListScreen = ({
                       <Text style={styles.cardDuration}>{pkg.duration_display}</Text>
                     ) : null}
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           )}

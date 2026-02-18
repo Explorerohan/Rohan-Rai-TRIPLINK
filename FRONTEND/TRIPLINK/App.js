@@ -31,6 +31,7 @@ export default function App() {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedCustomPackageId, setSelectedCustomPackageId] = useState(null);
+  const [customPackageDetailReturnScreen, setCustomPackageDetailReturnScreen] = useState("customPackages");
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [packagesRefreshKey, setPackagesRefreshKey] = useState(0);
   // Cached user data loaded at login so screens don't show loading on every switch
@@ -357,6 +358,7 @@ export default function App() {
           onBack={() => setScreen("messages")}
           onMarkRoomRead={refreshUnreadCount}
           onPackagePress={(packageId) => {
+            setCustomPackageDetailReturnScreen("chatDetail");
             setSelectedCustomPackageId(packageId);
             setScreen("customPackageDetail");
           }}
@@ -368,7 +370,7 @@ export default function App() {
           session={session}
           onBack={() => {
             setSelectedCustomPackageId(null);
-            setScreen("chatDetail");
+            setScreen(customPackageDetailReturnScreen);
           }}
         />
       )}
@@ -450,6 +452,11 @@ export default function App() {
           unreadCount={unreadCount}
           onBack={() => setScreen("home")}
           onCreatePress={() => setScreen("createCustomPackage")}
+          onPackagePress={(packageId) => {
+            setCustomPackageDetailReturnScreen("customPackages");
+            setSelectedCustomPackageId(packageId);
+            setScreen("customPackageDetail");
+          }}
           onHomePress={() => setScreen("home")}
           onCalendarPress={() => setScreen("schedule")}
           onMessagesPress={() => setScreen("messages")}

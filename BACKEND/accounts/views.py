@@ -703,9 +703,58 @@ def agent_custom_packages_view(request):
         messages.error(request, 'Access denied. Agent access required.')
         return redirect('login')
 
-    custom_packages = CustomPackage.objects.filter(user__role=Roles.TRAVELER).prefetch_related(
-        'features'
-    ).order_by('-created_at')
+    qs = CustomPackage.objects.filter(user__role=Roles.TRAVELER).prefetch_related('features')
+
+    # Filters from GET
+    status_filter = request.GET.get('status', '').strip().lower()
+    date_from_str = request.GET.get('date_from', '').strip()
+    date_to_str = request.GET.get('date_to', '').strip()
+    budget_min_str = request.GET.get('budget_min', '').strip()
+    budget_max_str = request.GET.get('budget_max', '').strip()
+
+    if status_filter and status_filter in ('open', 'claimed', 'completed', 'cancelled'):
+        qs = qs.filter(status=status_filter)
+
+    if date_from_str or date_to_str:
+        date_from = None
+        date_to = None
+        if date_from_str:
+            try:
+                date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        if date_to_str:
+            try:
+                date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        if date_from is not None and date_to is not None:
+            qs = qs.filter(
+                Q(trip_start_date__gte=date_from, trip_start_date__lte=date_to) |
+                Q(trip_start_date__isnull=True)
+            )
+        elif date_from is not None:
+            qs = qs.filter(Q(trip_start_date__gte=date_from) | Q(trip_start_date__isnull=True))
+        elif date_to is not None:
+            qs = qs.filter(Q(trip_start_date__lte=date_to) | Q(trip_start_date__isnull=True))
+
+    if budget_min_str:
+        try:
+            budget_min = float(budget_min_str)
+            if budget_min >= 0:
+                qs = qs.filter(price_per_person__gte=budget_min)
+        except (ValueError, TypeError):
+            pass
+
+    if budget_max_str:
+        try:
+            budget_max = float(budget_max_str)
+            if budget_max >= 0:
+                qs = qs.filter(price_per_person__lte=budget_max)
+        except (ValueError, TypeError):
+            pass
+
+    custom_packages = qs.order_by('-created_at')
 
     try:
         agent_profile = AgentProfile.objects.get(user=request.user)
@@ -718,6 +767,11 @@ def agent_custom_packages_view(request):
         'display_name': display_name,
         'custom_packages': custom_packages,
         'active_nav': 'custom_package',
+        'filter_status': status_filter,
+        'filter_date_from': date_from_str,
+        'filter_date_to': date_to_str,
+        'filter_budget_min': budget_min_str,
+        'filter_budget_max': budget_max_str,
     }
     return render(request, 'agent_custom_packages.html', context)
 
