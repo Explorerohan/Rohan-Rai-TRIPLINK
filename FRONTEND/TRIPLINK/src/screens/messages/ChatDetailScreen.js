@@ -41,11 +41,11 @@ const formatDateLabel = (iso) => {
   return d.toLocaleDateString();
 };
 
-/** For messages with custom_package_detail: strip "Re: [Title - Location]\n\n" from text. */
+/** Strip "Re: [Title - Location]\n\n" from text (e.g. agent reply about a custom package). Works even when the package was deleted. */
 const getMessageBody = (msg) => {
   const pkg = msg?.custom_package_detail || null;
   let text = (msg?.text || "").trim();
-  if (pkg && /^Re: \[.+\]\s*[\r\n]+/.test(text)) {
+  if (/^Re: \[.+\]\s*[\r\n]+/.test(text)) {
     text = text.replace(/^Re: \[.+\]\s*[\r\n]+/, "").trim();
   }
   return { pkg, text: text || msg?.text || "" };
