@@ -1047,12 +1047,22 @@ def agent_package_detail_view(request, package_id):
 
 
 # API Views for Packages
+def _mark_overdue_packages_completed():
+    """Set status to COMPLETED for packages whose trip_end_date has passed. Called before listing/detail so home only shows active."""
+    Package.objects.filter(
+        status=PackageStatus.ACTIVE,
+        trip_end_date__isnull=False,
+        trip_end_date__lt=date.today(),
+    ).update(status=PackageStatus.COMPLETED)
+
+
 class PackageListView(generics.ListAPIView):
-    """API view to list all active packages"""
+    """API view to list all active packages. Packages with trip_end_date in the past are auto-marked completed and excluded."""
     serializer_class = PackageSerializer
     permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
+        _mark_overdue_packages_completed()
         queryset = Package.objects.filter(status=PackageStatus.ACTIVE).order_by('-created_at')
         # Optional filters
         location = self.request.query_params.get('location', None)
@@ -1084,11 +1094,22 @@ class PackageListView(generics.ListAPIView):
 
 
 class PackageDetailView(generics.RetrieveAPIView):
-    """API view to get package details with reviews and participants"""
+    """API view to get package details with reviews and participants. Marks package completed if trip_end_date has passed."""
     serializer_class = PackageDetailSerializer
     permission_classes = [permissions.AllowAny]
     queryset = Package.objects.all()  # Allow viewing completed packages too for detail
     lookup_field = 'id'
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if (
+            instance.status == PackageStatus.ACTIVE
+            and instance.trip_end_date
+            and instance.trip_end_date < date.today()
+        ):
+            instance.status = PackageStatus.COMPLETED
+            instance.save(update_fields=["status", "updated_at"])
+        return super().retrieve(request, *args, **kwargs)
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -1113,6 +1134,11 @@ class AgentReviewListCreateView(generics.ListCreateAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+    def create(self, request, *args, **kwargs):
+        # Ensure overdue packages are marked completed before validating review eligibility
+        _mark_overdue_packages_completed()
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         agent_id = self.kwargs.get('agent_id')
