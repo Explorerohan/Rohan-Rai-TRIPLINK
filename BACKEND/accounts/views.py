@@ -1,10 +1,12 @@
 import time
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Count, Sum, Avg
+from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from rest_framework import generics, permissions, response, status
@@ -128,27 +130,365 @@ def login_view(request):
     
     return render(request, 'login.html')
 
+def _shift_month(month_start, delta):
+    """Shift a first-of-month date by delta months."""
+    month_index = (month_start.year * 12 + month_start.month - 1) + delta
+    year = month_index // 12
+    month = month_index % 12 + 1
+    return month_start.replace(year=year, month=month, day=1)
 
+
+def _safe_pct(numerator, denominator):
+    if not denominator:
+        return 0.0
+    return round((numerator / denominator) * 100, 1)
+
+
+def _pct_change(current, previous):
+    if previous == 0:
+        return 100.0 if current > 0 else 0.0
+    return round(((current - previous) / previous) * 100, 1)
+
+
+def _month_key(value):
+    if not value:
+        return ""
+    if hasattr(value, "date"):
+        value = value.date()
+    return value.strftime("%Y-%m")
 
 
 def admin_dashboard_view(request):
-    """Admin dashboard with overview stats"""
+    """Admin dashboard with actionable platform metrics and visual data."""
     if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
         messages.error(request, 'Access denied. Admin access required.')
         return redirect('login')
-    stats = {
-        'total_users': User.objects.count(),
-        'travelers': User.objects.filter(role=Roles.TRAVELER).count(),
-        'agents': User.objects.filter(role=Roles.AGENT).count(),
-        'packages': Package.objects.count(),
-        'bookings': Booking.objects.count(),
+
+    now = timezone.now()
+    today = timezone.localdate()
+    current_month_start = today.replace(day=1)
+    previous_month_start = _shift_month(current_month_start, -1)
+    next_month_start = _shift_month(current_month_start, 1)
+    month_starts = [_shift_month(current_month_start, offset) for offset in range(-5, 1)]
+    month_labels = [m.strftime("%b %Y") for m in month_starts]
+    month_keys = [m.strftime("%Y-%m") for m in month_starts]
+    start_window = month_starts[0]
+
+    total_users = User.objects.count()
+    total_admins = User.objects.filter(role=Roles.ADMIN).count()
+    total_travelers = User.objects.filter(role=Roles.TRAVELER).count()
+    total_agents = User.objects.filter(role=Roles.AGENT).count()
+
+    verified_agents = AgentProfile.objects.filter(user__role=Roles.AGENT, is_verified=True).count()
+    avg_agent_rating = AgentProfile.objects.filter(user__role=Roles.AGENT).aggregate(avg=Avg("rating"))["avg"] or 0
+
+    total_packages = Package.objects.count()
+    active_packages = Package.objects.filter(status=PackageStatus.ACTIVE).count()
+    completed_packages = Package.objects.filter(status=PackageStatus.COMPLETED).count()
+    draft_packages = Package.objects.filter(status=PackageStatus.DRAFT).count()
+
+    total_bookings = Booking.objects.count()
+    confirmed_bookings = Booking.objects.filter(status=BookingStatus.CONFIRMED).count()
+    cancelled_bookings = Booking.objects.filter(status=BookingStatus.CANCELLED).count()
+
+    total_custom_packages = CustomPackage.objects.count()
+    custom_open = CustomPackage.objects.filter(status=CustomPackage.CustomPackageStatus.OPEN).count()
+    custom_claimed = CustomPackage.objects.filter(status=CustomPackage.CustomPackageStatus.CLAIMED).count()
+    custom_completed = CustomPackage.objects.filter(status=CustomPackage.CustomPackageStatus.COMPLETED).count()
+    custom_cancelled = CustomPackage.objects.filter(status=CustomPackage.CustomPackageStatus.CANCELLED).count()
+
+    total_chat_rooms = ChatRoom.objects.count()
+    total_messages = ChatMessage.objects.count()
+    messages_last_30_days = ChatMessage.objects.filter(created_at__gte=now - timedelta(days=30)).count()
+
+    estimated_revenue = (
+        Booking.objects.filter(status=BookingStatus.CONFIRMED)
+        .aggregate(total=Sum("package__price_per_person"))
+        .get("total")
+        or 0
+    )
+
+    travelers_this_month = User.objects.filter(
+        role=Roles.TRAVELER,
+        date_joined__gte=current_month_start,
+        date_joined__lt=next_month_start,
+    ).count()
+    travelers_last_month = User.objects.filter(
+        role=Roles.TRAVELER,
+        date_joined__gte=previous_month_start,
+        date_joined__lt=current_month_start,
+    ).count()
+    bookings_this_month = Booking.objects.filter(
+        created_at__gte=current_month_start,
+        created_at__lt=next_month_start,
+    ).count()
+    bookings_last_month = Booking.objects.filter(
+        created_at__gte=previous_month_start,
+        created_at__lt=current_month_start,
+    ).count()
+    packages_this_month = Package.objects.filter(
+        created_at__gte=current_month_start,
+        created_at__lt=next_month_start,
+    ).count()
+    packages_last_month = Package.objects.filter(
+        created_at__gte=previous_month_start,
+        created_at__lt=current_month_start,
+    ).count()
+
+    traveler_growth_qs = (
+        User.objects.filter(role=Roles.TRAVELER, date_joined__date__gte=start_window)
+        .annotate(month=TruncMonth("date_joined"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+    booking_growth_qs = (
+        Booking.objects.filter(created_at__date__gte=start_window)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+    package_growth_qs = (
+        Package.objects.filter(created_at__date__gte=start_window)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+    custom_growth_qs = (
+        CustomPackage.objects.filter(created_at__date__gte=start_window)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+
+    traveler_growth_map = {_month_key(item["month"]): item["count"] for item in traveler_growth_qs}
+    booking_growth_map = {_month_key(item["month"]): item["count"] for item in booking_growth_qs}
+    package_growth_map = {_month_key(item["month"]): item["count"] for item in package_growth_qs}
+    custom_growth_map = {_month_key(item["month"]): item["count"] for item in custom_growth_qs}
+
+    monthly_trends = {
+        "labels": month_labels,
+        "travelers": [traveler_growth_map.get(key, 0) for key in month_keys],
+        "bookings": [booking_growth_map.get(key, 0) for key in month_keys],
+        "packages": [package_growth_map.get(key, 0) for key in month_keys],
+        "custom_requests": [custom_growth_map.get(key, 0) for key in month_keys],
     }
+
+    top_agents_qs = (
+        User.objects.filter(role=Roles.AGENT)
+        .select_related("agent_profile")
+        .annotate(
+            confirmed_bookings=Count(
+                "packages__bookings",
+                filter=Q(packages__bookings__status=BookingStatus.CONFIRMED),
+                distinct=True,
+            ),
+            active_packages=Count(
+                "packages",
+                filter=Q(packages__status=PackageStatus.ACTIVE),
+                distinct=True,
+            ),
+            estimated_revenue=Sum(
+                "packages__price_per_person",
+                filter=Q(packages__bookings__status=BookingStatus.CONFIRMED),
+            ),
+        )
+        .order_by("-confirmed_bookings", "-estimated_revenue", "email")[:5]
+    )
+    top_agents = []
+    for agent in top_agents_qs:
+        try:
+            profile = agent.agent_profile
+            display_name = profile.full_name
+            rating = float(profile.rating)
+        except AgentProfile.DoesNotExist:
+            display_name = agent.email.split("@")[0]
+            rating = 0.0
+        top_agents.append(
+            {
+                "name": display_name,
+                "email": agent.email,
+                "confirmed_bookings": agent.confirmed_bookings or 0,
+                "active_packages": agent.active_packages or 0,
+                "estimated_revenue": agent.estimated_revenue or 0,
+                "rating": rating,
+            }
+        )
+
+    top_destinations_rows = list(
+        Booking.objects.filter(status=BookingStatus.CONFIRMED)
+        .values("package__country")
+        .annotate(bookings=Count("id"))
+        .order_by("-bookings", "package__country")[:6]
+    )
+    max_destination_bookings = max((row["bookings"] for row in top_destinations_rows), default=0)
+    top_destinations = [
+        {
+            "country": row["package__country"] or "Unknown",
+            "bookings": row["bookings"],
+            "percent_of_top": _safe_pct(row["bookings"], max_destination_bookings),
+        }
+        for row in top_destinations_rows
+    ]
+
+    recent_signups_qs = (
+        User.objects.exclude(role=Roles.ADMIN)
+        .order_by("-date_joined")[:8]
+    )
+    recent_signups = [
+        {
+            "email": user.email,
+            "role": user.get_role_display(),
+            "joined_at": user.date_joined,
+        }
+        for user in recent_signups_qs
+    ]
+
+    package_status = [
+        {
+            "label": "Active",
+            "count": active_packages,
+            "percent": _safe_pct(active_packages, total_packages),
+            "css_class": "status-active",
+        },
+        {
+            "label": "Completed",
+            "count": completed_packages,
+            "percent": _safe_pct(completed_packages, total_packages),
+            "css_class": "status-completed",
+        },
+        {
+            "label": "Draft",
+            "count": draft_packages,
+            "percent": _safe_pct(draft_packages, total_packages),
+            "css_class": "status-draft",
+        },
+    ]
+
+    custom_status = [
+        {
+            "label": "Open",
+            "count": custom_open,
+            "percent": _safe_pct(custom_open, total_custom_packages),
+            "css_class": "status-open",
+        },
+        {
+            "label": "Claimed",
+            "count": custom_claimed,
+            "percent": _safe_pct(custom_claimed, total_custom_packages),
+            "css_class": "status-claimed",
+        },
+        {
+            "label": "Completed",
+            "count": custom_completed,
+            "percent": _safe_pct(custom_completed, total_custom_packages),
+            "css_class": "status-finished",
+        },
+        {
+            "label": "Cancelled",
+            "count": custom_cancelled,
+            "percent": _safe_pct(custom_cancelled, total_custom_packages),
+            "css_class": "status-cancelled",
+        },
+    ]
+
+    booking_status = [
+        {
+            "label": "Confirmed",
+            "count": confirmed_bookings,
+            "percent": _safe_pct(confirmed_bookings, total_bookings),
+            "css_class": "status-confirmed",
+        },
+        {
+            "label": "Cancelled",
+            "count": cancelled_bookings,
+            "percent": _safe_pct(cancelled_bookings, total_bookings),
+            "css_class": "status-cancelled",
+        },
+    ]
+
+    booking_confirmed_pct = _safe_pct(confirmed_bookings, total_bookings)
+    if total_bookings:
+        booking_donut = (
+            f"conic-gradient(#166534 0% {booking_confirmed_pct}%, "
+            f"#dc2626 {booking_confirmed_pct}% 100%)"
+        )
+    else:
+        booking_donut = "conic-gradient(#cbd5e1 0% 100%)"
+
+    insights = []
+    booking_growth_delta = _pct_change(bookings_this_month, bookings_last_month)
+    if booking_growth_delta > 0:
+        insights.append(f"Bookings are up {booking_growth_delta}% versus last month.")
+    elif booking_growth_delta < 0:
+        insights.append(f"Bookings are down {abs(booking_growth_delta)}% versus last month.")
+    else:
+        insights.append("Bookings are flat compared to last month.")
+
+    if top_destinations:
+        insights.append(
+            f"Highest demand destination is {top_destinations[0]['country']} with {top_destinations[0]['bookings']} confirmed bookings."
+        )
+
+    verification_rate = _safe_pct(verified_agents, total_agents)
+    if verification_rate < 60:
+        insights.append(
+            f"Only {verification_rate}% of agents are verified. Increasing verification can improve traveler trust."
+        )
+    else:
+        insights.append(f"Agent verification is healthy at {verification_rate}%.")
+
     context = {
-        'user': request.user,
-        'stats': stats,
-        'active_nav': 'dashboard',
+        "user": request.user,
+        "stats": {
+            "total_users": total_users,
+            "total_admins": total_admins,
+            "travelers": total_travelers,
+            "agents": total_agents,
+            "verified_agents": verified_agents,
+            "packages": total_packages,
+            "bookings": total_bookings,
+            "confirmed_bookings": confirmed_bookings,
+            "cancelled_bookings": cancelled_bookings,
+            "custom_packages": total_custom_packages,
+            "custom_open": custom_open,
+            "custom_claimed": custom_claimed,
+            "custom_completed": custom_completed,
+            "custom_cancelled": custom_cancelled,
+            "chat_rooms": total_chat_rooms,
+            "messages": total_messages,
+            "messages_last_30_days": messages_last_30_days,
+            "estimated_revenue": estimated_revenue,
+            "avg_agent_rating": round(float(avg_agent_rating), 1) if avg_agent_rating else 0.0,
+            "booking_conversion_rate": _safe_pct(confirmed_bookings, total_travelers),
+            "booking_cancellation_rate": _safe_pct(cancelled_bookings, total_bookings),
+            "agent_verification_rate": verification_rate,
+            "custom_resolution_rate": _safe_pct(custom_completed, total_custom_packages),
+            "avg_bookings_per_agent": round(confirmed_bookings / total_agents, 1) if total_agents else 0.0,
+        },
+        "momentum": {
+            "travelers_this_month": travelers_this_month,
+            "travelers_change_pct": _pct_change(travelers_this_month, travelers_last_month),
+            "bookings_this_month": bookings_this_month,
+            "bookings_change_pct": booking_growth_delta,
+            "packages_this_month": packages_this_month,
+            "packages_change_pct": _pct_change(packages_this_month, packages_last_month),
+        },
+        "monthly_trends": monthly_trends,
+        "top_agents": top_agents,
+        "top_destinations": top_destinations,
+        "recent_signups": recent_signups,
+        "package_status": package_status,
+        "custom_status": custom_status,
+        "booking_status": booking_status,
+        "booking_donut": booking_donut,
+        "insights": insights,
+        "active_nav": "dashboard",
     }
-    return render(request, 'admin_dashboard.html', context)
+    return render(request, "admin_dashboard.html", context)
 
 
 def admin_users_view(request):

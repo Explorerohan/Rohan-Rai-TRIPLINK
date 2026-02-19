@@ -5,103 +5,812 @@
 
 {% block admin_extra_css %}
 <style>
-    .page-header {
-        margin-bottom: 32px;
+    :root {
+        --bg-panel: #ffffff;
+        --line: #e2e8f0;
+        --text-main: #0f172a;
+        --text-sub: #475569;
+        --good: #166534;
+        --warn: #b45309;
+        --bad: #b91c1c;
+        --brand: #1d4ed8;
+        --teal: #0f766e;
+        --violet: #7c3aed;
     }
-    .page-header h1 {
+
+    .dashboard-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .dashboard-head h1 {
         font-size: 28px;
-        font-weight: 700;
-        color: #1e293b;
+        color: var(--text-main);
+        line-height: 1.2;
         margin-bottom: 6px;
     }
-    .page-header p {
-        font-size: 15px;
-        color: #64748b;
+
+    .dashboard-head p {
+        color: var(--text-sub);
+        font-size: 14px;
     }
-    .stats-grid {
+
+    .head-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .head-badge {
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 7px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #334155;
+        white-space: nowrap;
+    }
+
+    .kpi-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 20px;
-        margin-bottom: 32px;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
     }
-    .stat-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 24px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        transition: box-shadow 0.2s;
+
+    .kpi-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
     }
-    .stat-card:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+
+    .kpi-label {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
     }
-    .stat-card .stat-value {
+
+    .kpi-value {
+        color: var(--text-main);
         font-size: 28px;
         font-weight: 700;
-        color: #1e293b;
-        line-height: 1.2;
+        margin-top: 4px;
+        line-height: 1.1;
     }
-    .stat-card .stat-label {
+
+    .kpi-meta {
+        margin-top: 8px;
+        color: #475569;
         font-size: 13px;
+    }
+
+    .delta {
+        font-weight: 700;
+        margin-left: 6px;
+    }
+
+    .delta.up {
+        color: var(--good);
+    }
+
+    .delta.down {
+        color: var(--bad);
+    }
+
+    .delta.flat {
         color: #64748b;
-        margin-top: 6px;
-        font-weight: 500;
     }
-    .stat-card.accent .stat-value {
-        color: #1f6b2a;
+
+    .layout-two {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 14px;
+        margin-top: 14px;
     }
-    .welcome-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 32px 40px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+    .layout-three {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 14px;
     }
-    .welcome-card h2 {
-        font-size: 20px;
-        font-weight: 600;
-        color: #1e293b;
+
+    .panel {
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+
+    .panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .panel-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .panel-sub {
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
         margin-bottom: 8px;
     }
-    .welcome-card p {
-        font-size: 15px;
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #475569;
+        font-weight: 600;
+    }
+
+    .legend-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .growth-chart {
+        height: 250px;
+        border: 1px solid #edf2f7;
+        border-radius: 12px;
+        padding: 12px 8px 8px;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+        align-items: end;
+        background-image: linear-gradient(to top, #f8fafc 1px, transparent 1px);
+        background-size: 100% 20%;
+        background-position: 0 100%;
+    }
+
+    .month-group {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .month-bars {
+        height: 200px;
+        width: 100%;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .month-bar {
+        flex: 1;
+        max-width: 18px;
+        border-radius: 6px 6px 0 0;
+        min-height: 2px;
+        transition: opacity 0.2s ease;
+    }
+
+    .month-bar:hover {
+        opacity: 0.8;
+    }
+
+    .month-label {
+        margin-top: 8px;
+        font-size: 11px;
         color: #64748b;
-        line-height: 1.6;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        font-size: 13px;
+        height: 250px;
+        border: 1px dashed var(--line);
+        border-radius: 12px;
+    }
+
+    .donut-wrap {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .donut {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .donut::after {
+        content: "";
+        width: 110px;
+        height: 110px;
+        background: #ffffff;
+        border-radius: 50%;
+        position: absolute;
+    }
+
+    .donut-center {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+    }
+
+    .donut-center strong {
+        display: block;
+        font-size: 22px;
+        line-height: 1.1;
+        color: var(--text-main);
+    }
+
+    .donut-center span {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .status-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .status-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .status-topline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: #334155;
+        margin-bottom: 4px;
+    }
+
+    .status-track {
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .status-fill {
+        height: 100%;
+        border-radius: 999px;
+    }
+
+    .status-active { background: #0f766e; }
+    .status-completed { background: #1d4ed8; }
+    .status-draft { background: #b45309; }
+    .status-open { background: #c2410c; }
+    .status-claimed { background: #1d4ed8; }
+    .status-finished { background: #166534; }
+    .status-cancelled { background: #dc2626; }
+    .status-confirmed { background: #166534; }
+
+    .destination-item {
+        margin-bottom: 10px;
+    }
+
+    .destination-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: #334155;
+        margin-bottom: 4px;
+    }
+
+    .destination-track {
+        height: 9px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .destination-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1d4ed8, #2563eb);
+        border-radius: 999px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 620px;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #edf2f7;
+        text-align: left;
+        font-size: 13px;
+    }
+
+    .data-table th {
+        color: #64748b;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        font-size: 11px;
+    }
+
+    .pill {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .pill.traveler {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .pill.agent {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .mini-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .mini-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #edf2f7;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #f8fafc;
+    }
+
+    .mini-item strong {
+        color: #0f172a;
+        font-size: 13px;
+    }
+
+    .mini-item span {
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .insight-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .insight {
+        border-left: 3px solid #1d4ed8;
+        background: #eff6ff;
+        padding: 10px 12px;
+        font-size: 13px;
+        color: #1e3a8a;
+        border-radius: 8px;
+    }
+
+    .no-data {
+        color: #64748b;
+        font-size: 13px;
+        padding: 8px 0;
+    }
+
+    @media (max-width: 1200px) {
+        .layout-two,
+        .layout-three {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-head {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .kpi-grid {
+            grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+        }
+        .growth-chart {
+            grid-template-columns: repeat(6, minmax(45px, 1fr));
+            gap: 5px;
+        }
     }
 </style>
 {% endblock admin_extra_css %}
 
 {% block main_content %}
-<div class="page-header">
-    <h1>Dashboard</h1>
-    <p>Welcome back, {{ user.email }}. Here's an overview of your platform.</p>
-</div>
-
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-value">{{ stats.total_users }}</div>
-        <div class="stat-label">Total Users</div>
+<div class="dashboard-head">
+    <div>
+        <h1>Platform Intelligence Dashboard</h1>
+        <p>Operational view for planning growth, quality, and fulfillment across TRIPLINK.</p>
     </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ stats.travelers }}</div>
-        <div class="stat-label">Travelers</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ stats.agents }}</div>
-        <div class="stat-label">Agents</div>
-    </div>
-    <div class="stat-card accent">
-        <div class="stat-value">{{ stats.packages }}</div>
-        <div class="stat-label">Packages</div>
-    </div>
-    <div class="stat-card accent">
-        <div class="stat-value">{{ stats.bookings }}</div>
-        <div class="stat-label">Bookings</div>
+    <div class="head-badges">
+        <div class="head-badge">Booking Conversion {{ stats.booking_conversion_rate|floatformat:1 }}%</div>
+        <div class="head-badge">Agent Verification {{ stats.agent_verification_rate|floatformat:1 }}%</div>
+        <div class="head-badge">Custom Resolution {{ stats.custom_resolution_rate|floatformat:1 }}%</div>
     </div>
 </div>
 
-<div class="welcome-card">
-    <h2>Manage Your Platform</h2>
-    <p>Use the sidebar to navigate between Users, Packages, Bookings, and Reviews. More sections will be available as we expand the admin panel.</p>
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-label">Total Users</div>
+        <div class="kpi-value">{{ stats.total_users }}</div>
+        <div class="kpi-meta">{{ stats.travelers }} travelers, {{ stats.agents }} agents, {{ stats.total_admins }} admins</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Verified Agents</div>
+        <div class="kpi-value">{{ stats.verified_agents }}</div>
+        <div class="kpi-meta">{{ stats.agent_verification_rate|floatformat:1 }}% of all agents</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Total Packages</div>
+        <div class="kpi-value">{{ stats.packages }}</div>
+        <div class="kpi-meta">
+            {{ momentum.packages_this_month }} added this month
+            {% if momentum.packages_change_pct > 0 %}
+                <span class="delta up">+{{ momentum.packages_change_pct|floatformat:1 }}%</span>
+            {% elif momentum.packages_change_pct < 0 %}
+                <span class="delta down">{{ momentum.packages_change_pct|floatformat:1 }}%</span>
+            {% else %}
+                <span class="delta flat">{{ momentum.packages_change_pct|floatformat:1 }}%</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Total Bookings</div>
+        <div class="kpi-value">{{ stats.bookings }}</div>
+        <div class="kpi-meta">
+            {{ momentum.bookings_this_month }} this month
+            {% if momentum.bookings_change_pct > 0 %}
+                <span class="delta up">+{{ momentum.bookings_change_pct|floatformat:1 }}%</span>
+            {% elif momentum.bookings_change_pct < 0 %}
+                <span class="delta down">{{ momentum.bookings_change_pct|floatformat:1 }}%</span>
+            {% else %}
+                <span class="delta flat">{{ momentum.bookings_change_pct|floatformat:1 }}%</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Confirmed Bookings</div>
+        <div class="kpi-value">{{ stats.confirmed_bookings }}</div>
+        <div class="kpi-meta">{{ stats.booking_conversion_rate|floatformat:1 }}% vs total travelers</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Estimated Revenue</div>
+        <div class="kpi-value">Rs {{ stats.estimated_revenue|floatformat:0 }}</div>
+        <div class="kpi-meta">Avg bookings per agent: {{ stats.avg_bookings_per_agent|floatformat:1 }}</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Custom Requests</div>
+        <div class="kpi-value">{{ stats.custom_packages }}</div>
+        <div class="kpi-meta">{{ stats.custom_open }} open, {{ stats.custom_claimed }} claimed</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">Platform Engagement</div>
+        <div class="kpi-value">{{ stats.messages_last_30_days }}</div>
+        <div class="kpi-meta">messages in last 30 days, rating {{ stats.avg_agent_rating|floatformat:1 }}/5</div>
+    </div>
 </div>
+
+<div class="layout-two">
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <div class="panel-title">6-Month Growth Trends</div>
+                <div class="panel-sub">Travelers, bookings, packages, and custom requests</div>
+            </div>
+        </div>
+        <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#0f766e;"></span>Travelers</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#1d4ed8;"></span>Bookings</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#b45309;"></span>Packages</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#7c3aed;"></span>Custom Requests</div>
+        </div>
+        <div id="growth-chart" class="growth-chart"></div>
+        <div id="growth-empty" class="empty-state" style="display:none;">No trend data available yet.</div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <div class="panel-title">Booking Health</div>
+                <div class="panel-sub">Confirmation vs cancellation quality</div>
+            </div>
+        </div>
+        <div class="donut-wrap">
+            <div class="donut" style="background: {{ booking_donut }};">
+                <div class="donut-center">
+                    <strong>{{ stats.confirmed_bookings }}</strong>
+                    <span>Confirmed</span>
+                </div>
+            </div>
+        </div>
+        <div class="status-list">
+            {% for row in booking_status %}
+            <div class="status-row">
+                <div>
+                    <div class="status-topline">
+                        <span>{{ row.label }}</span>
+                        <span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="status-track">
+                        <div class="status-fill {{ row.css_class }}" style="width: {{ row.percent }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+<div class="layout-three">
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <div class="panel-title">Package Status</div>
+                <div class="panel-sub">Supply readiness across lifecycle</div>
+            </div>
+        </div>
+        <div class="status-list">
+            {% for row in package_status %}
+            <div class="status-row">
+                <div>
+                    <div class="status-topline">
+                        <span>{{ row.label }}</span>
+                        <span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="status-track">
+                        <div class="status-fill {{ row.css_class }}" style="width: {{ row.percent }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <div class="panel-title">Custom Request Pipeline</div>
+                <div class="panel-sub">Traveler requests from open to completion</div>
+            </div>
+        </div>
+        <div class="status-list">
+            {% for row in custom_status %}
+            <div class="status-row">
+                <div>
+                    <div class="status-topline">
+                        <span>{{ row.label }}</span>
+                        <span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="status-track">
+                        <div class="status-fill {{ row.css_class }}" style="width: {{ row.percent }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <div class="panel-title">Top Destinations</div>
+                <div class="panel-sub">By confirmed booking demand</div>
+            </div>
+        </div>
+        {% if top_destinations %}
+            {% for item in top_destinations %}
+            <div class="destination-item">
+                <div class="destination-top">
+                    <span>{{ item.country }}</span>
+                    <span>{{ item.bookings }} bookings</span>
+                </div>
+                <div class="destination-track">
+                    <div class="destination-fill" style="width: {{ item.percent_of_top }}%;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-data">No confirmed destination demand yet.</div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="layout-two">
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <div class="panel-title">Top Performing Agents</div>
+                <div class="panel-sub">Ranked by confirmed bookings and revenue contribution</div>
+            </div>
+        </div>
+        {% if top_agents %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Confirmed Bookings</th>
+                        <th>Active Packages</th>
+                        <th>Estimated Revenue</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for agent in top_agents %}
+                    <tr>
+                        <td>
+                            <strong>{{ agent.name }}</strong><br>
+                            <span style="color:#64748b;">{{ agent.email }}</span>
+                        </td>
+                        <td>{{ agent.confirmed_bookings }}</td>
+                        <td>{{ agent.active_packages }}</td>
+                        <td>Rs {{ agent.estimated_revenue|floatformat:0 }}</td>
+                        <td>{{ agent.rating|floatformat:1 }}/5</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">No agent performance data yet.</div>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <div class="panel-title">Recent Signups</div>
+                <div class="panel-sub">Latest non-admin users added to the system</div>
+            </div>
+        </div>
+        {% if recent_signups %}
+        <div class="mini-list">
+            {% for item in recent_signups %}
+            <div class="mini-item">
+                <div>
+                    <strong>{{ item.email }}</strong><br>
+                    <span>{{ item.joined_at|date:"d M Y, h:i A" }}</span>
+                </div>
+                <div>
+                    {% if item.role == 'Traveler' %}
+                        <span class="pill traveler">{{ item.role }}</span>
+                    {% else %}
+                        <span class="pill agent">{{ item.role }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-data">No recent signups found.</div>
+        {% endif %}
+
+        <div class="panel-head" style="margin-top:16px; margin-bottom:8px;">
+            <div>
+                <div class="panel-title">Planning Insights</div>
+                <div class="panel-sub">Immediate signals to guide next decisions</div>
+            </div>
+        </div>
+        <div class="insight-list">
+            {% for insight in insights %}
+            <div class="insight">{{ insight }}</div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+{{ monthly_trends|json_script:"monthly-trends-data" }}
 {% endblock main_content %}
+
+{% block admin_extra_js %}
+<script>
+    (function renderGrowthChart() {
+        const payloadEl = document.getElementById("monthly-trends-data");
+        const chartEl = document.getElementById("growth-chart");
+        const emptyEl = document.getElementById("growth-empty");
+        if (!payloadEl || !chartEl || !emptyEl) return;
+
+        const data = JSON.parse(payloadEl.textContent || "{}");
+        const labels = Array.isArray(data.labels) ? data.labels : [];
+        const series = [
+            { key: "travelers", color: "#0f766e" },
+            { key: "bookings", color: "#1d4ed8" },
+            { key: "packages", color: "#b45309" },
+            { key: "custom_requests", color: "#7c3aed" },
+        ];
+
+        if (!labels.length) {
+            chartEl.style.display = "none";
+            emptyEl.style.display = "flex";
+            return;
+        }
+
+        const allValues = [];
+        for (const item of series) {
+            const values = Array.isArray(data[item.key]) ? data[item.key] : [];
+            for (const value of values) {
+                allValues.push(Number(value) || 0);
+            }
+        }
+        const maxValue = Math.max(1, ...allValues);
+
+        chartEl.innerHTML = "";
+        labels.forEach((label, index) => {
+            const monthGroup = document.createElement("div");
+            monthGroup.className = "month-group";
+
+            const barsWrap = document.createElement("div");
+            barsWrap.className = "month-bars";
+
+            for (const item of series) {
+                const values = Array.isArray(data[item.key]) ? data[item.key] : [];
+                const rawValue = Number(values[index]) || 0;
+                const height = (rawValue / maxValue) * 100;
+
+                const bar = document.createElement("div");
+                bar.className = "month-bar";
+                bar.style.height = `${Math.max(2, height)}%`;
+                bar.style.backgroundColor = item.color;
+                bar.title = `${label}: ${rawValue}`;
+                barsWrap.appendChild(bar);
+            }
+
+            const monthLabel = document.createElement("div");
+            monthLabel.className = "month-label";
+            monthLabel.textContent = label;
+
+            monthGroup.appendChild(barsWrap);
+            monthGroup.appendChild(monthLabel);
+            chartEl.appendChild(monthGroup);
+        });
+    })();
+</script>
+{% endblock admin_extra_js %}
