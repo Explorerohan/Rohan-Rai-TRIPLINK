@@ -6,6 +6,7 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -28,7 +29,6 @@ const navItems = [
 const menuItems = [
   { id: "profile", label: "Profile", icon: "person-outline" },
   { id: "bookmarked", label: "Bookmarked", icon: "bookmark-outline" },
-  { id: "previousTrips", label: "Previous Trips", icon: "airplane-outline" },
   { id: "settings", label: "Settings", icon: "settings-outline" },
   { id: "leaderboard", label: "LeaderBoard", icon: "trophy-outline" },
   { id: "logout", label: "Logout", icon: "log-out-outline" },
@@ -53,6 +53,7 @@ const ProfileScreen = ({
   const [profile, setProfile] = useState(() => initialProfile);
   const [loading, setLoading] = useState(!hasInitial);
   const [bookings, setBookings] = useState(() => Array.isArray(initialBookings) ? initialBookings : []);
+  const [languageNepali, setLanguageNepali] = useState(false); // false = English, true = Nepali
 
   useEffect(() => {
     if (initialProfile != null && profile == null) {
@@ -192,34 +193,49 @@ const ProfileScreen = ({
         {/* Navigation List */}
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.menuItem,
-                index === menuItems.length - 1 && styles.menuItemLast,
-              ]}
-              activeOpacity={0.7}
-              onPress={item.id === "logout" ? onLogout : item.id === "profile" ? onProfileDetailsPress : undefined}
-            >
-              <View style={styles.menuItemLeft}>
-                <Ionicons
-                  name={item.icon}
-                  size={23}
-                  color={item.id === "logout" ? "#ef4444" : "#1f1f1f"}
-                />
-                <Text
-                  style={[
-                    styles.menuItemText,
-                    item.id === "logout" && styles.menuItemTextLogout,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </View>
-              {item.id !== "logout" && (
-                <Ionicons name="chevron-forward" size={21} color="#9aa0a6" />
+            <React.Fragment key={item.id}>
+              {index === 2 && (
+                <View style={styles.menuItem}>
+                  <View style={styles.menuItemLeft}>
+                    <Ionicons name="language-outline" size={23} color="#1f1f1f" />
+                    <Text style={styles.menuItemText}>Language</Text>
+                  </View>
+                  <View style={styles.languageToggleWrap}>
+                    <Text style={styles.languageLabel}>{languageNepali ? "नेपाली" : "English"}</Text>
+                    <Switch
+                      value={languageNepali}
+                      onValueChange={setLanguageNepali}
+                      trackColor={{ false: "#e3e6ea", true: "#a8d4b0" }}
+                      thumbColor={languageNepali ? "#1f6b2a" : "#f4f3f4"}
+                    />
+                  </View>
+                </View>
               )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
+                activeOpacity={0.7}
+                onPress={item.id === "logout" ? onLogout : item.id === "profile" ? onProfileDetailsPress : undefined}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons
+                    name={item.icon}
+                    size={23}
+                    color={item.id === "logout" ? "#ef4444" : "#1f1f1f"}
+                  />
+                  <Text
+                    style={[
+                      styles.menuItemText,
+                      item.id === "logout" && styles.menuItemTextLogout,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </View>
+                {item.id !== "logout" && (
+                  <Ionicons name="chevron-forward" size={21} color="#9aa0a6" />
+                )}
+              </TouchableOpacity>
+            </React.Fragment>
           ))}
         </View>
       </ScrollView>
@@ -418,6 +434,16 @@ const styles = StyleSheet.create({
   },
   menuItemTextLogout: {
     color: "#ef4444",
+  },
+  languageToggleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  languageLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6b7076",
   },
   navBar: {
     position: "absolute",
