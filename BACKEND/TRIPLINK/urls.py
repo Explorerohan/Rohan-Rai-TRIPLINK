@@ -19,7 +19,7 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from accounts.views import (
-    login_view, logout_view, admin_dashboard_view, agent_dashboard_view,
+    login_view, logout_view, admin_dashboard_view, admin_users_view, agent_dashboard_view,
     admin_forgot_password_view, agent_forgot_password_view,
     admin_verify_otp_view, agent_verify_otp_view,
     admin_reset_password_view, agent_reset_password_view,
@@ -37,6 +37,7 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('dashboard/admin/', admin_dashboard_view, name='admin_dashboard'),
+    path('users/admin/', admin_users_view, name='admin_users'),
     path('dashboard/agent/', agent_dashboard_view, name='agent_dashboard'),
     path('profile/agent/', agent_profile_view, name='agent_profile'),
     # Package management URLs

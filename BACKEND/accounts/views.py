@@ -151,6 +151,39 @@ def admin_dashboard_view(request):
     return render(request, 'admin_dashboard.html', context)
 
 
+def admin_users_view(request):
+    """Admin view to list all travelers and agents"""
+    if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
+        messages.error(request, 'Access denied. Admin access required.')
+        return redirect('login')
+
+    traveler_users = User.objects.filter(role=Roles.TRAVELER).order_by('-date_joined')
+    travelers = []
+    for u in traveler_users:
+        try:
+            profile = u.user_profile
+        except UserProfile.DoesNotExist:
+            profile = None
+        travelers.append({'user': u, 'profile': profile})
+
+    agent_users = User.objects.filter(role=Roles.AGENT).order_by('-date_joined')
+    agents = []
+    for u in agent_users:
+        try:
+            profile = u.agent_profile
+        except AgentProfile.DoesNotExist:
+            profile = None
+        agents.append({'user': u, 'profile': profile})
+
+    context = {
+        'user': request.user,
+        'travelers': travelers,
+        'agents': agents,
+        'active_nav': 'users',
+    }
+    return render(request, 'admin_users.html', context)
+
+
 def agent_dashboard_view(request):
     """Placeholder agent dashboard view"""
     if not request.user.is_authenticated or request.user.role != Roles.AGENT:
