@@ -132,11 +132,23 @@ def login_view(request):
 
 
 def admin_dashboard_view(request):
-    """Placeholder admin dashboard view"""
+    """Admin dashboard with overview stats"""
     if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
         messages.error(request, 'Access denied. Admin access required.')
         return redirect('login')
-    return render(request, 'admin_dashboard.html', {'user': request.user})
+    stats = {
+        'total_users': User.objects.count(),
+        'travelers': User.objects.filter(role=Roles.TRAVELER).count(),
+        'agents': User.objects.filter(role=Roles.AGENT).count(),
+        'packages': Package.objects.count(),
+        'bookings': Booking.objects.count(),
+    }
+    context = {
+        'user': request.user,
+        'stats': stats,
+        'active_nav': 'dashboard',
+    }
+    return render(request, 'admin_dashboard.html', context)
 
 
 def agent_dashboard_view(request):
