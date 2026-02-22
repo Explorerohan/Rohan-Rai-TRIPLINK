@@ -1,8 +1,11 @@
 from django.contrib import admin
+from django.contrib import messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.urls import reverse
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile, Package, PackageFeature, CustomPackage, Booking, AgentReview
+from .models import User, UserProfile, AgentProfile, Package, PackageFeature, CustomPackage, Booking, AgentReview, Roles
+from .emailjs_utils import send_agent_credentials_email
 
 
 @admin.register(User)
@@ -33,6 +36,36 @@ class UserAdmin(DjangoUserAdmin):
             },
         ),
     )
+
+    def save_model(self, request, obj, form, change):
+        is_new_agent = not change and obj.role == Roles.AGENT
+        raw_password = form.cleaned_data.get("password1") if is_new_agent else None
+
+        super().save_model(request, obj, form, change)
+
+        if not is_new_agent or not raw_password:
+            return
+
+        try:
+            login_url = request.build_absolute_uri(reverse("login"))
+            agent_name = obj.email.split("@")[0].replace(".", " ").replace("_", " ").title()
+            send_agent_credentials_email(
+                email=obj.email,
+                password=raw_password,
+                login_url=login_url,
+                agent_name=agent_name,
+            )
+            self.message_user(
+                request,
+                f"Agent account created. Credentials email sent to {obj.email}.",
+                level=messages.SUCCESS,
+            )
+        except Exception as exc:
+            self.message_user(
+                request,
+                f"Agent account created, but credentials email could not be sent: {exc}",
+                level=messages.WARNING,
+            )
 
 
 @admin.register(UserProfile)

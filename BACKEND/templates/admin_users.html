@@ -7,6 +7,7 @@
 <style>
     .users-page { max-width: 1100px; margin: 0 auto; }
     .page-head { margin-bottom: 28px; }
+    .page-head-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .page-head h1 { font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
     .page-head p { font-size: 15px; color: #64748b; }
     .section-head {
@@ -48,10 +49,227 @@
     .role-agent { background: #dbeafe; color: #1e40af; }
     .empty-state { text-align: center; padding: 40px 20px; color: #64748b; }
     .empty-state-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.7; }
+    .agent-create-card {
+        border: 1px solid #dbe6df;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+        border-radius: 16px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+        margin-bottom: 28px;
+    }
+    .agent-create-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px;
+        border-bottom: 1px solid #eef2f7;
+    }
+    .agent-create-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+    .agent-create-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: #ecfdf3;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex: 0 0 auto;
+    }
+    .agent-create-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 2px;
+    }
+    .agent-create-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin: 0;
+    }
+    .agent-create-toggle {
+        border: 1px solid #cfe0d4;
+        background: #ffffff;
+        color: #166534;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .agent-create-toggle:hover {
+        background: #f0fdf4;
+        border-color: #b7d8c1;
+    }
+    .agent-create-toggle .plus {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: #166534;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        line-height: 1;
+        transition: transform 0.2s ease;
+    }
+    .agent-create-card.is-open .agent-create-toggle .plus {
+        transform: rotate(45deg);
+    }
+    .agent-create-body {
+        display: none;
+        padding: 18px;
+        background:
+            radial-gradient(circle at 100% 0%, rgba(34,197,94,0.06), transparent 45%),
+            #ffffff;
+    }
+    .agent-create-card.is-open .agent-create-body {
+        display: block;
+    }
+    .agent-create-lead {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .agent-create-lead p {
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+    .agent-create-note {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .agent-create-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 16px;
+    }
+    .agent-create-grid .full-row { grid-column: 1 / -1; }
+    .field-group {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 12px;
+    }
+    .field-group.full-row {
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+    .field-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 6px;
+    }
+    .field-input {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 14px;
+        color: #0f172a;
+        background: #fff;
+    }
+    .field-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    .form-help {
+        color: #64748b;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    .agent-create-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 4px;
+    }
+    .agent-create-actions .hint {
+        color: #64748b;
+        font-size: 12px;
+    }
+    .btn-create-agent {
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #1f6b2a 0%, #15803d 100%);
+        color: #fff;
+        font-weight: 600;
+        padding: 11px 16px;
+        cursor: pointer;
+        box-shadow: 0 6px 14px rgba(21, 128, 61, 0.18);
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .btn-create-agent:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(21, 128, 61, 0.22);
+    }
+    .btn-create-agent:active {
+        transform: translateY(0);
+    }
+    .page-head-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .page-action-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        border-radius: 12px;
+        padding: 9px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+    .page-action-chip .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+    }
     @media (max-width: 768px) {
+        .page-head-top { align-items: flex-start; flex-direction: column; }
+        .agent-create-header { align-items: flex-start; flex-direction: column; }
+        .agent-create-toggle { width: 100%; justify-content: center; }
+        .agent-create-lead { flex-direction: column; }
+        .agent-create-note { white-space: normal; }
         .users-table th, .users-table td { padding: 12px 14px; font-size: 13px; }
         .users-table th:nth-child(4), .users-table td:nth-child(4),
         .users-table th:nth-child(5), .users-table td:nth-child(5) { display: none; }
+        .agent-create-grid { grid-template-columns: 1fr; }
+        .agent-create-actions { flex-direction: column; align-items: stretch; }
     }
 </style>
 {% endblock admin_extra_css %}
@@ -59,8 +277,78 @@
 {% block main_content %}
 <div class="users-page">
     <div class="page-head">
-        <h1>Users</h1>
-        <p>Manage travelers and agents on your platform.</p>
+        <div class="page-head-top">
+            <div>
+                <h1>Users</h1>
+                <p>Manage travelers and agents on your platform.</p>
+            </div>
+            <div class="page-head-actions">
+                <div class="page-action-chip"><span class="dot"></span> Agent onboarding email enabled</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="agent-create-card{% if create_agent_form.email %} is-open{% endif %}" id="agent-create-card">
+        <div class="agent-create-header">
+            <div class="agent-create-meta">
+                <div class="agent-create-icon" aria-hidden="true">+</div>
+                <div>
+                    <h2 class="agent-create-title">Create Agent Account</h2>
+                    <p class="agent-create-subtitle">Add an agent and send login credentials directly from this page.</p>
+                </div>
+            </div>
+            <button type="button" class="agent-create-toggle" id="agent-create-toggle" aria-expanded="{% if create_agent_form.email %}true{% else %}false{% endif %}" aria-controls="agent-create-body">
+                <span class="plus" aria-hidden="true">+</span>
+                <span id="agent-create-toggle-label">{% if create_agent_form.email %}Close Form{% else %}Add Agent{% endif %}</span>
+            </button>
+        </div>
+        <div class="agent-create-body" id="agent-create-body">
+            <div class="agent-create-lead">
+                <p>Use this form to provision a new agent account. The temporary password entered here will be included in the onboarding email automatically.</p>
+                <div class="agent-create-note">Recommended: ask the agent to change password on first login</div>
+            </div>
+            <form method="post" action="{% url 'admin_users' %}">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="create_agent">
+                <div class="agent-create-grid">
+                    <div class="field-group">
+                        <label class="field-label" for="agent-email">Agent Email *</label>
+                        <input class="field-input" type="email" id="agent-email" name="email" value="{{ create_agent_form.email|default:'' }}" placeholder="agent@example.com" required>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="agent-phone">Phone Number</label>
+                        <input class="field-input" type="text" id="agent-phone" name="phone_number" value="{{ create_agent_form.phone_number|default:'' }}" placeholder="+977...">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="agent-first-name">First Name</label>
+                        <input class="field-input" type="text" id="agent-first-name" name="first_name" value="{{ create_agent_form.first_name|default:'' }}" placeholder="Rohan">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="agent-last-name">Last Name</label>
+                        <input class="field-input" type="text" id="agent-last-name" name="last_name" value="{{ create_agent_form.last_name|default:'' }}" placeholder="Rai">
+                    </div>
+                    <div class="field-group full-row">
+                        <label class="field-label" for="agent-location">Location</label>
+                        <input class="field-input" type="text" id="agent-location" name="location" value="{{ create_agent_form.location|default:'' }}" placeholder="Kathmandu, Nepal">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="agent-password">Temporary Password *</label>
+                        <input class="field-input" type="password" id="agent-password" name="password" minlength="8" required>
+                        <div class="form-help">Minimum 8 characters. This will be sent to the agent email.</div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="agent-confirm-password">Confirm Password *</label>
+                        <input class="field-input" type="password" id="agent-confirm-password" name="confirm_password" minlength="8" required>
+                    </div>
+                    <div class="full-row">
+                        <div class="agent-create-actions">
+                            <div class="hint">After creation, the account appears immediately in the Agents table below.</div>
+                            <button type="submit" class="btn-create-agent">Create Agent and Send Email</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="users-card">
@@ -182,3 +470,20 @@
     </div>
 </div>
 {% endblock main_content %}
+
+{% block admin_extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var card = document.getElementById('agent-create-card');
+    var toggle = document.getElementById('agent-create-toggle');
+    var label = document.getElementById('agent-create-toggle-label');
+    if (!card || !toggle || !label) return;
+
+    toggle.addEventListener('click', function () {
+        var isOpen = card.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        label.textContent = isOpen ? 'Close Form' : 'Add Agent';
+    });
+});
+</script>
+{% endblock admin_extra_js %}

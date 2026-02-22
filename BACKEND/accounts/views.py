@@ -2,6 +2,7 @@ import time
 from datetime import datetime, date, timedelta
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg
 from django.db.models.functions import TruncMonth
 from django.shortcuts import render, redirect
@@ -14,7 +15,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .emailjs_utils import generate_otp, send_otp_email
+from .emailjs_utils import generate_otp, send_otp_email, send_agent_credentials_email
 from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, AgentReview, ChatRoom, ChatMessage
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
@@ -497,6 +498,73 @@ def admin_users_view(request):
         messages.error(request, 'Access denied. Admin access required.')
         return redirect('login')
 
+    create_agent_form = {
+        'email': '',
+        'first_name': '',
+        'last_name': '',
+        'phone_number': '',
+        'location': '',
+    }
+
+    if request.method == 'POST' and request.POST.get('form_type') == 'create_agent':
+        email = (request.POST.get('email') or '').strip()
+        password = request.POST.get('password') or ''
+        confirm_password = request.POST.get('confirm_password') or ''
+        first_name = (request.POST.get('first_name') or '').strip()
+        last_name = (request.POST.get('last_name') or '').strip()
+        phone_number = (request.POST.get('phone_number') or '').strip()
+        location = (request.POST.get('location') or '').strip()
+
+        create_agent_form.update({
+            'email': email,
+            'first_name': first_name,
+            'last_name': last_name,
+            'phone_number': phone_number,
+            'location': location,
+        })
+
+        if not email or not password or not confirm_password:
+            messages.error(request, 'Email, password, and confirm password are required.')
+        elif password != confirm_password:
+            messages.error(request, 'Password and confirm password do not match.')
+        elif len(password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long.')
+        elif User.objects.filter(email__iexact=email).exists():
+            messages.error(request, 'A user with this email already exists.')
+        else:
+            try:
+                with transaction.atomic():
+                    new_agent = User.objects.create_user(
+                        email=email,
+                        password=password,
+                        role=Roles.AGENT,
+                    )
+                    AgentProfile.objects.update_or_create(
+                        user=new_agent,
+                        defaults={
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'phone_number': phone_number,
+                            'location': location,
+                        },
+                    )
+
+                agent_name = f"{first_name} {last_name}".strip() or email.split('@')[0]
+                try:
+                    send_agent_credentials_email(
+                        email=new_agent.email,
+                        password=password,
+                        login_url=request.build_absolute_uri(reverse('login')),
+                        agent_name=agent_name,
+                    )
+                    messages.success(request, f'Agent created successfully and credentials email sent to {new_agent.email}.')
+                except Exception as exc:
+                    messages.warning(request, f'Agent created successfully, but email could not be sent: {exc}')
+
+                return redirect('admin_users')
+            except Exception as exc:
+                messages.error(request, f'Could not create agent: {exc}')
+
     traveler_users = User.objects.filter(role=Roles.TRAVELER).order_by('-date_joined')
     travelers = []
     for u in traveler_users:
@@ -519,6 +587,7 @@ def admin_users_view(request):
         'user': request.user,
         'travelers': travelers,
         'agents': agents,
+        'create_agent_form': create_agent_form,
         'active_nav': 'users',
     }
     return render(request, 'admin_users.html', context)
