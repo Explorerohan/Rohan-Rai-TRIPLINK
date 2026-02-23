@@ -14,7 +14,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { createBooking, getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
+import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
 
 const SESSION_STORAGE_KEY = "@triplink_session";
 
@@ -192,28 +192,18 @@ export default function App() {
     setScreen("details");
   };
 
-  const handleBookTrip = async (trip) => {
-    if (!session?.access) {
-      alert("Please log in to book this package.");
+  const handleBookTrip = useCallback((bookingResult = null) => {
+    if (bookingResult?.requiresLogin) {
       setScreen("login");
       return;
     }
-    const packageId = trip?.packageData?.id ?? trip?.id;
-    if (!packageId) {
-      alert("Invalid package.");
+    if (!bookingResult?.booking) {
       return;
     }
-    try {
-      await createBooking(packageId, session.access);
-      alert("Your package has been booked.");
-      setPackagesRefreshKey((k) => k + 1);
-      setSelectedTrip((prev) => (prev ? { ...prev, user_has_booked: true } : prev));
-      // Stay on details screen; button will show "Already booked"
-    } catch (err) {
-      const message = err?.message || "Booking failed. Please try again.";
-      alert(message);
-    }
-  };
+    setPackagesRefreshKey((k) => k + 1);
+    setSelectedTrip((prev) => (prev ? { ...prev, user_has_booked: true } : prev));
+    setCachedBookings((prev) => [bookingResult.booking, ...(Array.isArray(prev) ? prev : [])]);
+  }, []);
 
   const handleLogout = async () => {
     // Call logout endpoint if session exists

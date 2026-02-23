@@ -1,10 +1,21 @@
+import base64
+import hashlib
+import hmac
+import json
 import time
+import uuid
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, date, timedelta
+from urllib.error import URLError, HTTPError
+from urllib.parse import urlencode
+from urllib.request import urlopen
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg
 from django.db.models.functions import TruncMonth
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -16,7 +27,24 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .emailjs_utils import generate_otp, send_otp_email, send_agent_credentials_email
-from .models import Roles, UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, AgentReview, ChatRoom, ChatMessage
+from .models import (
+    Roles,
+    UserProfile,
+    AgentProfile,
+    Package,
+    PackageFeature,
+    PackageStatus,
+    CustomPackage,
+    Booking,
+    BookingStatus,
+    PaymentMethod,
+    PaymentStatus,
+    EsewaPaymentSession,
+    EsewaPaymentSessionStatus,
+    AgentReview,
+    ChatRoom,
+    ChatMessage,
+)
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
@@ -36,6 +64,107 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+
+def _money(value):
+    return Decimal(str(value or "0")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def _money_str(value):
+    return format(_money(value), ".2f")
+
+
+def _esewa_product_code():
+    return getattr(settings, "ESEWA_PRODUCT_CODE", "EPAYTEST")
+
+
+def _esewa_secret_key():
+    # eSewa UAT default key from official docs/examples; override in env/settings for production.
+    return getattr(settings, "ESEWA_SECRET_KEY", "8gBm/:&EnhH.1/q")
+
+
+def _esewa_form_url():
+    return getattr(settings, "ESEWA_FORM_URL", "https://rc-epay.esewa.com.np/api/epay/main/v2/form")
+
+
+def _esewa_status_url():
+    return getattr(settings, "ESEWA_STATUS_URL", "https://rc.esewa.com.np/api/epay/transaction/status/")
+
+
+def _esewa_signature(total_amount, transaction_uuid, product_code):
+    message = f"total_amount={_money_str(total_amount)},transaction_uuid={transaction_uuid},product_code={product_code}"
+    digest = hmac.new(
+        _esewa_secret_key().encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    return base64.b64encode(digest).decode("utf-8")
+
+
+def _build_esewa_form_fields(request, payment_session):
+    success_url = request.build_absolute_uri(reverse("esewa_payment_success_callback"))
+    failure_url = request.build_absolute_uri(reverse("esewa_payment_failure_callback"))
+    total_amount = _money(payment_session.total_amount)
+    product_code = payment_session.product_code or _esewa_product_code()
+    signature = _esewa_signature(total_amount, payment_session.transaction_uuid, product_code)
+    return {
+        "amount": _money_str(total_amount),
+        "tax_amount": "0.00",
+        "total_amount": _money_str(total_amount),
+        "transaction_uuid": payment_session.transaction_uuid,
+        "product_code": product_code,
+        "product_service_charge": "0.00",
+        "product_delivery_charge": "0.00",
+        "success_url": success_url,
+        "failure_url": failure_url,
+        "signed_field_names": "total_amount,transaction_uuid,product_code",
+        "signature": signature,
+    }
+
+
+def _verify_esewa_transaction(payment_session):
+    query = urlencode(
+        {
+            "product_code": payment_session.product_code or _esewa_product_code(),
+            "total_amount": _money_str(payment_session.total_amount),
+            "transaction_uuid": payment_session.transaction_uuid,
+        }
+    )
+    url = f"{_esewa_status_url()}?{query}"
+    try:
+        with urlopen(url, timeout=15) as res:
+            raw = res.read().decode("utf-8")
+    except (HTTPError, URLError, TimeoutError) as exc:
+        raise RuntimeError(f"Unable to verify eSewa payment right now: {exc}") from exc
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Invalid response received from eSewa verification API.") from exc
+
+    return payload
+
+
+def _booking_payment_summary_html(title, message, color="#1f6b2a"):
+    safe_title = str(title)
+    safe_message = str(message)
+    return f"""
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{safe_title}</title>
+      </head>
+      <body style="margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#1f2937;">
+        <div style="max-width:560px;margin:40px auto;padding:24px;background:#fff;border-radius:14px;border:1px solid #e5e7eb;">
+          <h2 style="margin:0 0 12px;color:{color};">{safe_title}</h2>
+          <p style="margin:0 0 8px;line-height:1.5;">{safe_message}</p>
+          <p style="margin:0;color:#6b7280;line-height:1.5;">Return to the TRIPLINK app and tap Verify Payment.</p>
+        </div>
+      </body>
+    </html>
+    """
 
 
 class RegisterView(generics.CreateAPIView):
@@ -1653,6 +1782,303 @@ class BookingDetailView(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user).select_related('package')
+
+
+class EsewaPaymentInitiateView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+
+    def post(self, request, *args, **kwargs):
+        package_id = request.data.get("package_id")
+        traveler_count_raw = request.data.get("traveler_count", 1)
+
+        try:
+            traveler_count = int(traveler_count_raw)
+        except (TypeError, ValueError):
+            return response.Response(
+                {"traveler_count": "Traveler count must be a valid number."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if traveler_count < 1:
+            return response.Response(
+                {"traveler_count": "Traveler count must be at least 1."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            package = Package.objects.get(pk=package_id, status=PackageStatus.ACTIVE)
+        except Package.DoesNotExist:
+            return response.Response(
+                {"package_id": "Package not found or not available for booking."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if Booking.objects.filter(user=request.user, package=package, status=BookingStatus.CONFIRMED).exists():
+            return response.Response(
+                {"detail": "You have already booked this package."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        price_per_person = _money(package.price_per_person)
+        total_amount = _money(price_per_person * traveler_count)
+        payment_session = EsewaPaymentSession.objects.create(
+            user=request.user,
+            package=package,
+            transaction_uuid=str(uuid.uuid4()),
+            traveler_count=traveler_count,
+            price_per_person_snapshot=price_per_person,
+            total_amount=total_amount,
+            product_code=_esewa_product_code(),
+            status=EsewaPaymentSessionStatus.INITIATED,
+        )
+
+        checkout_url = request.build_absolute_uri(
+            reverse("esewa_payment_checkout", kwargs={"transaction_uuid": payment_session.transaction_uuid})
+        )
+        esewa_fields = _build_esewa_form_fields(request, payment_session)
+
+        return response.Response(
+            {
+                "payment_method": "esewa",
+                "status": payment_session.status,
+                "transaction_uuid": payment_session.transaction_uuid,
+                "traveler_count": traveler_count,
+                "price_per_person": _money_str(price_per_person),
+                "total_amount": _money_str(total_amount),
+                "checkout_url": checkout_url,
+                "esewa_form_url": _esewa_form_url(),
+                "esewa_fields": esewa_fields,
+                "package": {
+                    "id": package.id,
+                    "title": package.title,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class EsewaPaymentCheckoutView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, transaction_uuid, *args, **kwargs):
+        try:
+            payment_session = EsewaPaymentSession.objects.get(transaction_uuid=transaction_uuid)
+        except EsewaPaymentSession.DoesNotExist:
+            return HttpResponse(
+                _booking_payment_summary_html("Invalid Payment Session", "This eSewa payment session was not found.", "#b91c1c"),
+                status=404,
+            )
+
+        fields = _build_esewa_form_fields(request, payment_session)
+        inputs_html = "".join(
+            f'<input type="hidden" name="{k}" value="{str(v)}" />'
+            for k, v in fields.items()
+        )
+        html = f"""
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Redirecting to eSewa</title>
+          </head>
+          <body style="font-family:Arial,sans-serif;background:#f4f6f8;padding:32px;">
+            <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:24px;">
+              <h2 style="margin:0 0 8px;color:#166534;">Redirecting to eSewa</h2>
+              <p style="margin:0 0 16px;color:#4b5563;">If you are not redirected automatically, tap the button below.</p>
+              <form id="esewa-payment-form" method="POST" action="{_esewa_form_url()}">
+                {inputs_html}
+                <button type="submit" style="background:#166534;color:#fff;border:none;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer;">
+                  Continue to eSewa
+                </button>
+              </form>
+            </div>
+            <script>
+              setTimeout(function() {{
+                var form = document.getElementById('esewa-payment-form');
+                if (form) form.submit();
+              }}, 350);
+            </script>
+          </body>
+        </html>
+        """
+        return HttpResponse(html)
+
+
+class EsewaPaymentSuccessCallbackView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def _extract_payload(self, request):
+        data_param = request.GET.get("data") or request.POST.get("data")
+        if data_param:
+            try:
+                decoded = base64.b64decode(data_param).decode("utf-8")
+                payload = json.loads(decoded)
+                if isinstance(payload, dict):
+                    return payload
+            except Exception:
+                pass
+        payload = {}
+        for key in ("transaction_uuid", "status", "ref_id", "transaction_code", "total_amount"):
+            value = request.GET.get(key) or request.POST.get(key)
+            if value not in (None, ""):
+                payload[key] = value
+        return payload
+
+    def get(self, request, *args, **kwargs):
+        payload = self._extract_payload(request)
+        txn = payload.get("transaction_uuid")
+        if txn:
+            EsewaPaymentSession.objects.filter(transaction_uuid=txn).update(
+                status=EsewaPaymentSessionStatus.SUCCESS_REDIRECTED,
+                payment_reference=str(payload.get("ref_id") or payload.get("transaction_code") or ""),
+                esewa_status=str(payload.get("status") or ""),
+                verification_payload=payload,
+            )
+        return HttpResponse(
+            _booking_payment_summary_html("Payment Submitted", "eSewa redirected successfully after payment."),
+        )
+
+    post = get
+
+
+class EsewaPaymentFailureCallbackView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        txn = request.GET.get("transaction_uuid") or request.POST.get("transaction_uuid")
+        if txn:
+            EsewaPaymentSession.objects.filter(transaction_uuid=txn).update(
+                status=EsewaPaymentSessionStatus.FAILED_REDIRECTED,
+                esewa_status="FAILED",
+            )
+        return HttpResponse(
+            _booking_payment_summary_html("Payment Failed", "eSewa reported a failed or cancelled payment.", "#b91c1c"),
+        )
+
+    post = get
+
+
+class EsewaPaymentVerifyView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+
+    def post(self, request, *args, **kwargs):
+        transaction_uuid = (request.data.get("transaction_uuid") or "").strip()
+        if not transaction_uuid:
+            return response.Response(
+                {"transaction_uuid": "transaction_uuid is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            payment_session = EsewaPaymentSession.objects.select_related("package", "booking").get(
+                transaction_uuid=transaction_uuid,
+                user=request.user,
+            )
+        except EsewaPaymentSession.DoesNotExist:
+            return response.Response(
+                {"detail": "Payment session not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if payment_session.booking_id:
+            serialized = BookingSerializer(payment_session.booking, context={"request": request})
+            return response.Response(
+                {
+                    "verified": True,
+                    "already_verified": True,
+                    "esewa_status": payment_session.esewa_status or "COMPLETE",
+                    "transaction_uuid": payment_session.transaction_uuid,
+                    "booking": serialized.data,
+                }
+            )
+
+        try:
+            verification_payload = _verify_esewa_transaction(payment_session)
+        except RuntimeError as exc:
+            return response.Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        esewa_status_value = str(verification_payload.get("status") or "").upper()
+        ref_id = str(verification_payload.get("ref_id") or verification_payload.get("transaction_code") or "").strip()
+
+        payment_session.verification_payload = verification_payload if isinstance(verification_payload, dict) else {}
+        payment_session.esewa_status = esewa_status_value
+        payment_session.payment_reference = ref_id
+
+        if esewa_status_value != "COMPLETE":
+            payment_session.status = EsewaPaymentSessionStatus.VERIFY_FAILED
+            payment_session.save(update_fields=["verification_payload", "esewa_status", "payment_reference", "status", "updated_at"])
+            return response.Response(
+                {
+                    "verified": False,
+                    "transaction_uuid": payment_session.transaction_uuid,
+                    "esewa_status": esewa_status_value or "UNKNOWN",
+                    "detail": "Payment is not completed yet. Please complete the payment in eSewa and verify again.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            payment_session = EsewaPaymentSession.objects.select_for_update().select_related("package").get(
+                pk=payment_session.pk
+            )
+            if payment_session.booking_id:
+                booking = payment_session.booking
+            else:
+                if Booking.objects.filter(
+                    user=request.user,
+                    package=payment_session.package,
+                    status=BookingStatus.CONFIRMED,
+                ).exists():
+                    return response.Response(
+                        {"detail": "You have already booked this package."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                booking = Booking.objects.create(
+                    user=request.user,
+                    package=payment_session.package,
+                    status=BookingStatus.CONFIRMED,
+                    traveler_count=max(int(payment_session.traveler_count or 1), 1),
+                    price_per_person_snapshot=payment_session.price_per_person_snapshot,
+                    total_amount=payment_session.total_amount,
+                    payment_method=PaymentMethod.ESEWA,
+                    payment_status=PaymentStatus.PAID,
+                    payment_reference=ref_id,
+                    transaction_uuid=payment_session.transaction_uuid,
+                )
+
+                package = payment_session.package
+                package.participants_count = (package.participants_count or 0) + booking.traveler_count
+                package.save(update_fields=["participants_count"])
+
+                payment_session.booking = booking
+
+            payment_session.verification_payload = verification_payload if isinstance(verification_payload, dict) else {}
+            payment_session.esewa_status = esewa_status_value
+            payment_session.payment_reference = ref_id
+            payment_session.status = EsewaPaymentSessionStatus.VERIFIED
+            payment_session.save(
+                update_fields=[
+                    "booking",
+                    "verification_payload",
+                    "esewa_status",
+                    "payment_reference",
+                    "status",
+                    "updated_at",
+                ]
+            )
+
+        serialized = BookingSerializer(booking, context={"request": request})
+        return response.Response(
+            {
+                "verified": True,
+                "already_verified": False,
+                "esewa_status": esewa_status_value,
+                "transaction_uuid": payment_session.transaction_uuid,
+                "payment_reference": ref_id,
+                "booking": serialized.data,
+            }
+        )
 
 
 # Custom Package API (traveler-created packages; only visible to the creating user)

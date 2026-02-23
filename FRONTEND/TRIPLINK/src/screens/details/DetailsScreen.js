@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Image,
   SafeAreaView,
@@ -15,7 +15,8 @@ import {
   Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getPackageById, createAgentReview } from "../../utils/api";
+import { WebView } from "react-native-webview";
+import { getPackageById, createAgentReview, initiateEsewaPayment, verifyEsewaPayment } from "../../utils/api";
 
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -48,6 +49,34 @@ const formatPrice = (price) => {
   }
   
   return `Rs. ${numericValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+};
+
+const parsePriceValue = (price) => {
+  if (typeof price === "number") return Number.isFinite(price) ? price : 0;
+  if (typeof price === "string") {
+    const cleaned = price.replace(/[^0-9.]/g, "");
+    return parseFloat(cleaned) || 0;
+  }
+  return 0;
+};
+
+const buildEsewaPostSource = (paymentSession) => {
+  const uri = paymentSession?.esewa_form_url;
+  const fields = paymentSession?.esewa_fields;
+  if (!uri || !fields || typeof fields !== "object") return null;
+
+  const body = Object.entries(fields)
+    .map(([key, value]) => `${encodeURIComponent(String(key))}=${encodeURIComponent(String(value ?? ""))}`)
+    .join("&");
+
+  return {
+    uri,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  };
 };
 
 const formatTripDate = (dateStr) => {
@@ -236,6 +265,15 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
   });
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [bookingModalVisible, setBookingModalVisible] = useState(false);
+  const [bookingStep, setBookingStep] = useState("traveler_count");
+  const [travelerCountInput, setTravelerCountInput] = useState("1");
+  const [paymentSession, setPaymentSession] = useState(null);
+  const [initiatingPayment, setInitiatingPayment] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [esewaWebViewVisible, setEsewaWebViewVisible] = useState(false);
+  const [esewaWebViewLoading, setEsewaWebViewLoading] = useState(false);
+  const paymentCallbackHandledRef = useRef(false);
 
   useEffect(() => {
     if (cachedDetail && !packageDetail) {
@@ -305,6 +343,145 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     } finally {
       setSubmittingReview(false);
     }
+  };
+
+  const unitPrice = parsePriceValue(packageDetail?.price_per_person ?? trip.price);
+  const travelerCount = Math.max(parseInt(travelerCountInput, 10) || 1, 1);
+  const computedTotal = unitPrice * travelerCount;
+  const esewaPostSource = useMemo(
+    () => buildEsewaPostSource(paymentSession),
+    [paymentSession]
+  );
+
+  const resetBookingModal = () => {
+    setBookingStep("traveler_count");
+    setTravelerCountInput("1");
+    setPaymentSession(null);
+    setInitiatingPayment(false);
+    setVerifyingPayment(false);
+    setEsewaWebViewVisible(false);
+    setEsewaWebViewLoading(false);
+    paymentCallbackHandledRef.current = false;
+  };
+
+  const closeBookingModal = () => {
+    setBookingModalVisible(false);
+    resetBookingModal();
+  };
+
+  const handleBookNowPress = () => {
+    if (!session?.access) {
+      Alert.alert("Login Required", "Please log in to book this package.");
+      onBook({ requiresLogin: true });
+      return;
+    }
+    setBookingModalVisible(true);
+    setBookingStep("traveler_count");
+  };
+
+  const handleContinueToPayment = async () => {
+    if (!session?.access) {
+      Alert.alert("Login Required", "Please log in to continue.");
+      return;
+    }
+    if (!packageId) {
+      Alert.alert("Error", "Invalid package.");
+      return;
+    }
+
+    try {
+      setInitiatingPayment(true);
+      const { data } = await initiateEsewaPayment(packageId, travelerCount, session.access);
+      setPaymentSession(data || null);
+      paymentCallbackHandledRef.current = false;
+      setBookingStep("payment");
+    } catch (error) {
+      Alert.alert("Payment Setup Failed", error?.message || "Could not start eSewa payment.");
+    } finally {
+      setInitiatingPayment(false);
+    }
+  };
+
+  const verifyEsewaPaymentAndBook = async ({ silent = false } = {}) => {
+    const transactionUuid = paymentSession?.transaction_uuid;
+    if (!session?.access || !transactionUuid) {
+      if (!silent) Alert.alert("Error", "Payment session is missing. Please restart payment.");
+      return;
+    }
+
+    try {
+      setVerifyingPayment(true);
+      const { data } = await verifyEsewaPayment(transactionUuid, session.access);
+      const bookedTravelerCount = parseInt(data?.booking?.traveler_count, 10) || travelerCount;
+      setUserHasBooked(true);
+      setPackageDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              user_has_booked: true,
+              participants_count: (prev.participants_count || 0) + bookedTravelerCount,
+            }
+          : prev
+      );
+
+      try {
+        const refreshed = await getPackageById(packageId, session.access);
+        if (refreshed?.data) {
+          setPackageDetail(refreshed.data);
+          setUserHasBooked(refreshed.data.user_has_booked ?? true);
+          setUserHasReviewed(refreshed.data.user_has_reviewed ?? userHasReviewed);
+        }
+      } catch (_) {}
+
+      onBook(data || null);
+      closeBookingModal();
+      Alert.alert("Payment Successful", "Your payment is complete and the trip has been booked.");
+    } catch (error) {
+      if (!silent) {
+        Alert.alert("Verification Failed", error?.message || "Payment not verified yet. Please try again.");
+      } else {
+        Alert.alert(
+          "Payment Submitted",
+          "Payment callback was received, but verification is not complete yet. Tap 'Verify Payment & Book' once more."
+        );
+      }
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
+  const handleVerifyEsewaPayment = () => {
+    verifyEsewaPaymentAndBook();
+  };
+
+  const handleEsewaCallbackUrl = (url) => {
+    const currentUrl = String(url || "");
+    if (!currentUrl || paymentCallbackHandledRef.current) return false;
+
+    const isSuccess = currentUrl.includes("/api/auth/payments/esewa/callback/success/");
+    const isFailure = currentUrl.includes("/api/auth/payments/esewa/callback/failure/");
+    if (!isSuccess && !isFailure) return false;
+
+    paymentCallbackHandledRef.current = true;
+    setEsewaWebViewVisible(false);
+
+    if (isFailure) {
+      Alert.alert("Payment Failed", "eSewa payment was cancelled or failed.");
+      return true;
+    }
+
+    verifyEsewaPaymentAndBook({ silent: true });
+    return true;
+  };
+
+  const handleOpenEsewaCheckout = async () => {
+    if (!esewaPostSource) {
+      Alert.alert("Error", "Payment checkout link is missing.");
+      return;
+    }
+    paymentCallbackHandledRef.current = false;
+    setEsewaWebViewVisible(true);
+    setEsewaWebViewLoading(true);
   };
 
   const body = expanded
@@ -584,7 +761,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
             <Text style={styles.alreadyBookedText}>Already booked</Text>
           </View>
         ) : (
-          <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={() => onBook(trip)}>
+          <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={handleBookNowPress}>
             <Text style={styles.bookText}>Book Now</Text>
             <Ionicons name="arrow-forward" size={18} color="#ffffff" />
           </TouchableOpacity>
@@ -598,6 +775,192 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         onSubmit={handleSubmitReview}
         submitting={submittingReview}
       />
+
+      <Modal
+        visible={bookingModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeBookingModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.bookingModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Book Trip</Text>
+              <TouchableOpacity onPress={closeBookingModal} style={styles.modalClose}>
+                <Ionicons name="close" size={24} color="#6b7076" />
+              </TouchableOpacity>
+            </View>
+
+            {bookingStep === "traveler_count" ? (
+              <>
+                <Text style={styles.modalLabel}>Number of Travelers</Text>
+                <TextInput
+                  style={styles.travelerCountInput}
+                  keyboardType="number-pad"
+                  value={travelerCountInput}
+                  onChangeText={(text) => setTravelerCountInput(text.replace(/[^0-9]/g, "").slice(0, 3) || "1")}
+                  placeholder="Enter travelers"
+                  placeholderTextColor="#9aa0a6"
+                />
+
+                <View style={styles.paymentSummaryCard}>
+                  <View style={styles.paymentSummaryRow}>
+                    <Text style={styles.paymentSummaryLabel}>Price per traveler</Text>
+                    <Text style={styles.paymentSummaryValue}>{formatPrice(unitPrice)}</Text>
+                  </View>
+                  <View style={styles.paymentSummaryRow}>
+                    <Text style={styles.paymentSummaryLabel}>Travelers</Text>
+                    <Text style={styles.paymentSummaryValue}>{travelerCount}</Text>
+                  </View>
+                  <View style={[styles.paymentSummaryRow, styles.paymentSummaryRowTotal]}>
+                    <Text style={styles.paymentSummaryTotalLabel}>Total to Pay</Text>
+                    <Text style={styles.paymentSummaryTotalValue}>{formatPrice(computedTotal)}</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.submitButton, initiatingPayment && styles.submitButtonDisabled]}
+                  onPress={handleContinueToPayment}
+                  disabled={initiatingPayment}
+                  activeOpacity={0.85}
+                >
+                  {initiatingPayment ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>Continue to eSewa</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalLabel}>Payment Method</Text>
+                <View style={styles.esewaCard}>
+                  <View style={styles.esewaCardHeader}>
+                    <View style={styles.esewaBadge}>
+                      <Ionicons name="wallet-outline" size={18} color="#166534" />
+                      <Text style={styles.esewaBadgeText}>eSewa</Text>
+                    </View>
+                    <Text style={styles.esewaAmount}>{formatPrice(paymentSession?.total_amount || computedTotal)}</Text>
+                  </View>
+                  <Text style={styles.esewaMetaText}>
+                    Travelers: {paymentSession?.traveler_count || travelerCount} | Per person: {formatPrice(paymentSession?.price_per_person || unitPrice)}
+                  </Text>
+                  <Text style={styles.esewaMetaText}>
+                    Transaction: {paymentSession?.transaction_uuid || "-"}
+                  </Text>
+                </View>
+
+                <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={handleOpenEsewaCheckout}>
+                  <Text style={styles.bookText}>Open eSewa Payment</Text>
+                  <Ionicons name="open-outline" size={18} color="#ffffff" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.submitButton, verifyingPayment && styles.submitButtonDisabled, { marginTop: 12 }]}
+                  onPress={handleVerifyEsewaPayment}
+                  disabled={verifyingPayment}
+                  activeOpacity={0.85}
+                >
+                  {verifyingPayment ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>Verify Payment & Book</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.bookingBackLink}
+                  onPress={() => setBookingStep("traveler_count")}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.bookingBackLinkText}>Edit traveler count</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={esewaWebViewVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setEsewaWebViewVisible(false)}
+      >
+        <SafeAreaView style={styles.esewaWebViewSafe}>
+          <View style={styles.esewaWebViewHeader}>
+            <TouchableOpacity
+              style={styles.esewaWebViewCloseBtn}
+              onPress={() => setEsewaWebViewVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={22} color="#1f1f1f" />
+            </TouchableOpacity>
+            <View style={styles.esewaWebViewHeaderCenter}>
+              <Text style={styles.esewaWebViewTitle}>eSewa Payment</Text>
+              <Text style={styles.esewaWebViewSubtitle}>
+                Complete payment inside app
+              </Text>
+            </View>
+            <View style={{ width: 36 }} />
+          </View>
+
+          {esewaWebViewLoading ? (
+            <View style={styles.esewaWebViewLoadingBar}>
+              <ActivityIndicator size="small" color="#1f6b2a" />
+              <Text style={styles.esewaWebViewLoadingText}>Loading secure payment page...</Text>
+            </View>
+          ) : null}
+
+          {esewaPostSource ? (
+            <WebView
+              source={esewaPostSource}
+              style={styles.esewaWebView}
+              originWhitelist={["*"]}
+              javaScriptEnabled
+              domStorageEnabled
+              thirdPartyCookiesEnabled
+              startInLoadingState
+              onLoadStart={() => setEsewaWebViewLoading(true)}
+              onLoadEnd={() => setEsewaWebViewLoading(false)}
+              onLoadProgress={(event) => {
+                const progress = Number(event?.nativeEvent?.progress ?? 0);
+                const url = String(event?.nativeEvent?.url || "");
+                // eSewa sometimes keeps internal requests alive; hide the banner once the page is mostly rendered.
+                if (progress >= 0.5 || url.includes("esewa.com.np")) {
+                  setEsewaWebViewLoading(false);
+                }
+              }}
+              onError={(event) => {
+                setEsewaWebViewLoading(false);
+                const msg = event?.nativeEvent?.description || "Failed to load eSewa payment page.";
+                Alert.alert("Payment Page Error", msg);
+              }}
+              onHttpError={(event) => {
+                setEsewaWebViewLoading(false);
+                const statusCode = event?.nativeEvent?.statusCode;
+                Alert.alert("Payment Page Error", `eSewa page returned HTTP ${statusCode || "error"}.`);
+              }}
+              onNavigationStateChange={(navState) => {
+                const url = String(navState?.url || "");
+                if (url && !url.includes("/api/auth/payments/esewa/callback/")) {
+                  setEsewaWebViewLoading(false);
+                }
+                handleEsewaCallbackUrl(navState?.url);
+              }}
+              onShouldStartLoadWithRequest={(request) => {
+                const intercepted = handleEsewaCallbackUrl(request?.url);
+                return !intercepted;
+              }}
+            />
+          ) : (
+            <View style={styles.esewaWebViewFallback}>
+              <Ionicons name="alert-circle-outline" size={28} color="#b91c1c" />
+              <Text style={styles.esewaWebViewFallbackText}>Payment checkout URL is missing.</Text>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1145,6 +1508,13 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 40,
   },
+  bookingModalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 32,
+  },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1164,6 +1534,177 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#5f6369",
     marginBottom: 10,
+  },
+  travelerCountInput: {
+    backgroundColor: "#f6f7f9",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: "#1f1f1f",
+    borderWidth: 1,
+    borderColor: "#e1e5ea",
+    marginBottom: 14,
+  },
+  paymentSummaryCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 14,
+    marginBottom: 18,
+  },
+  paymentSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  paymentSummaryRowTotal: {
+    marginTop: 4,
+    marginBottom: 0,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  paymentSummaryLabel: {
+    fontSize: 14,
+    color: "#64748b",
+  },
+  paymentSummaryValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  paymentSummaryTotalLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1f1f1f",
+  },
+  paymentSummaryTotalValue: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#166534",
+  },
+  esewaCard: {
+    backgroundColor: "#f0fdf4",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    padding: 14,
+    marginBottom: 16,
+  },
+  esewaCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    gap: 8,
+  },
+  esewaBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#dcfce7",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  esewaBadgeText: {
+    color: "#166534",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  esewaAmount: {
+    color: "#166534",
+    fontWeight: "800",
+    fontSize: 16,
+  },
+  esewaMetaText: {
+    color: "#166534",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  bookingBackLink: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 14,
+  },
+  bookingBackLinkText: {
+    color: "#1f6b2a",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  esewaWebViewSafe: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  esewaWebViewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    backgroundColor: "#f8fafc",
+  },
+  esewaWebViewCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+  },
+  esewaWebViewHeaderCenter: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  esewaWebViewTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  esewaWebViewSubtitle: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 2,
+  },
+  esewaWebViewLoadingBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#f0fdf4",
+    borderBottomWidth: 1,
+    borderBottomColor: "#dcfce7",
+  },
+  esewaWebViewLoadingText: {
+    fontSize: 13,
+    color: "#166534",
+    fontWeight: "600",
+  },
+  esewaWebView: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  esewaWebViewFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  esewaWebViewFallbackText: {
+    fontSize: 15,
+    color: "#b91c1c",
+    textAlign: "center",
+    fontWeight: "600",
   },
   ratingSelector: {
     flexDirection: "row",

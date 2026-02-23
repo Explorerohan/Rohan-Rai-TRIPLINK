@@ -251,6 +251,42 @@ export const createBooking = async (packageId, accessToken) => {
 };
 
 /**
+ * Initiate eSewa payment session for a package booking
+ * @param {number|string} packageId
+ * @param {number} travelerCount
+ * @param {string} accessToken
+ * @returns {Promise<object>}
+ */
+export const initiateEsewaPayment = async (packageId, travelerCount, accessToken) => {
+  const id = typeof packageId === "string" ? parseInt(packageId, 10) : packageId;
+  return apiRequest(
+    "/api/auth/payments/esewa/initiate/",
+    {
+      method: "POST",
+      body: JSON.stringify({ package_id: id, traveler_count: travelerCount }),
+    },
+    accessToken
+  );
+};
+
+/**
+ * Verify eSewa payment and create booking on success
+ * @param {string} transactionUuid
+ * @param {string} accessToken
+ * @returns {Promise<object>}
+ */
+export const verifyEsewaPayment = async (transactionUuid, accessToken) => {
+  return apiRequest(
+    "/api/auth/payments/esewa/verify/",
+    {
+      method: "POST",
+      body: JSON.stringify({ transaction_uuid: transactionUuid }),
+    },
+    accessToken
+  );
+};
+
+/**
  * Get current user's bookings
  * @param {string} accessToken - JWT access token
  * @returns {Promise<object>}
@@ -510,4 +546,3 @@ export const sendChatMessage = async (roomId, payload, accessToken) => {
     body: JSON.stringify(payload),
   }, accessToken);
 };
-

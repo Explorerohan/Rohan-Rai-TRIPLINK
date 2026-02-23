@@ -291,6 +291,18 @@ class BookingStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
+class PaymentMethod(models.TextChoices):
+    ESEWA = "esewa", "eSewa"
+    DIRECT = "direct", "Direct"
+
+
+class PaymentStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    PAID = "paid", "Paid"
+    FAILED = "failed", "Failed"
+    REFUNDED = "refunded", "Refunded"
+
+
 class Booking(models.Model):
     """Booking: a traveler books a package"""
     user = models.ForeignKey(
@@ -309,6 +321,21 @@ class Booking(models.Model):
         choices=BookingStatus.choices,
         default=BookingStatus.CONFIRMED,
     )
+    traveler_count = models.PositiveIntegerField(default=1)
+    price_per_person_snapshot = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.DIRECT,
+    )
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PAID,
+    )
+    payment_reference = models.CharField(max_length=120, blank=True)
+    transaction_uuid = models.CharField(max_length=120, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -318,6 +345,58 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.user.email} – {self.package.title}"
+
+
+class EsewaPaymentSessionStatus(models.TextChoices):
+    INITIATED = "initiated", "Initiated"
+    SUCCESS_REDIRECTED = "success_redirected", "Success Redirected"
+    FAILED_REDIRECTED = "failed_redirected", "Failed Redirected"
+    VERIFIED = "verified", "Verified"
+    VERIFY_FAILED = "verify_failed", "Verify Failed"
+
+
+class EsewaPaymentSession(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="esewa_payment_sessions",
+        limit_choices_to={"role": Roles.TRAVELER},
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name="esewa_payment_sessions",
+    )
+    booking = models.OneToOneField(
+        Booking,
+        on_delete=models.SET_NULL,
+        related_name="esewa_payment_session",
+        null=True,
+        blank=True,
+    )
+    transaction_uuid = models.CharField(max_length=120, unique=True)
+    traveler_count = models.PositiveIntegerField(default=1)
+    price_per_person_snapshot = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    product_code = models.CharField(max_length=80, default="EPAYTEST")
+    status = models.CharField(
+        max_length=32,
+        choices=EsewaPaymentSessionStatus.choices,
+        default=EsewaPaymentSessionStatus.INITIATED,
+    )
+    payment_reference = models.CharField(max_length=120, blank=True)
+    esewa_status = models.CharField(max_length=40, blank=True)
+    verification_payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "eSewa Payment Session"
+        verbose_name_plural = "eSewa Payment Sessions"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.transaction_uuid} ({self.status})"
 
 
 class AgentReview(models.Model):

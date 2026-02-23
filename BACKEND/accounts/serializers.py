@@ -2,7 +2,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, AgentReview, ChatRoom, ChatMessage, Roles
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Roles
 
 User = get_user_model()
 
@@ -296,11 +296,14 @@ class BookingSerializer(serializers.ModelSerializer):
     trip_start_date = serializers.DateField(source='package.trip_start_date', read_only=True)
     trip_end_date = serializers.DateField(source='package.trip_end_date', read_only=True)
     package_status = serializers.CharField(source='package.status', read_only=True)
+    traveler_count = serializers.IntegerField(required=False, min_value=1)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'user', 'package_id', 'package_title', 'status', 'created_at',
+            'traveler_count', 'price_per_person_snapshot', 'total_amount',
+            'payment_method', 'payment_status', 'payment_reference', 'transaction_uuid',
             'package_image_url', 'package_location', 'package_country',
             'trip_start_date', 'trip_end_date', 'package_status',
         ]
@@ -318,14 +321,28 @@ class BookingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
         package = validated_data.pop('package')
+        traveler_count = int(validated_data.pop('traveler_count', 1) or 1)
+        validated_data.pop('payment_reference', None)
+        validated_data.pop('transaction_uuid', None)
+        validated_data.pop('payment_method', None)
+        validated_data.pop('payment_status', None)
+        validated_data.pop('price_per_person_snapshot', None)
+        validated_data.pop('total_amount', None)
         if Booking.objects.filter(user=user, package=package, status=BookingStatus.CONFIRMED).exists():
             raise serializers.ValidationError({'package_id': 'You have already booked this package.'})
         # Always create as confirmed; ignore any incoming status.
+        price_per_person = package.price_per_person or 0
+        total_amount = price_per_person * traveler_count
         validated_data['user'] = user
         validated_data['package'] = package
         validated_data['status'] = BookingStatus.CONFIRMED
+        validated_data['traveler_count'] = traveler_count
+        validated_data['price_per_person_snapshot'] = price_per_person
+        validated_data['total_amount'] = total_amount
+        validated_data['payment_method'] = PaymentMethod.DIRECT
+        validated_data['payment_status'] = PaymentStatus.PAID
         booking = super().create(validated_data)
-        package.participants_count = (package.participants_count or 0) + 1
+        package.participants_count = (package.participants_count or 0) + traveler_count
         package.save(update_fields=['participants_count'])
         return booking
 
@@ -351,6 +368,10 @@ class BookingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "status": "Only cancellation is supported for bookings."
             })
+        if instance.status == BookingStatus.CANCELLED:
+            raise serializers.ValidationError({
+                "status": "This booking is already cancelled."
+            })
 
         start = instance.package.trip_start_date
         if start:
@@ -362,6 +383,10 @@ class BookingSerializer(serializers.ModelSerializer):
 
         instance.status = BookingStatus.CANCELLED
         instance.save(update_fields=["status"])
+        package = instance.package
+        decrement_by = max(int(getattr(instance, "traveler_count", 1) or 1), 1)
+        package.participants_count = max((package.participants_count or 0) - decrement_by, 0)
+        package.save(update_fields=["participants_count"])
         return instance
 
 
