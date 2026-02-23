@@ -72,9 +72,6 @@ const buildEsewaPostSource = (paymentSession) => {
   return {
     uri,
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
     body,
   };
 };
@@ -436,22 +433,17 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       onBook(data || null);
       closeBookingModal();
       Alert.alert("Payment Successful", "Your payment is complete and the trip has been booked.");
+      return true;
     } catch (error) {
       if (!silent) {
         Alert.alert("Verification Failed", error?.message || "Payment not verified yet. Please try again.");
       } else {
-        Alert.alert(
-          "Payment Submitted",
-          "Payment callback was received, but verification is not complete yet. Tap 'Verify Payment & Book' once more."
-        );
+        // Silent mode is used for callback auto-verification. Caller may retry.
       }
+      return false;
     } finally {
       setVerifyingPayment(false);
     }
-  };
-
-  const handleVerifyEsewaPayment = () => {
-    verifyEsewaPaymentAndBook();
   };
 
   const handleEsewaCallbackUrl = (url) => {
@@ -470,7 +462,20 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       return true;
     }
 
-    verifyEsewaPaymentAndBook({ silent: true });
+    (async () => {
+      const retryDelaysMs = [0, 1200, 2500, 4000];
+      for (const delayMs of retryDelaysMs) {
+        if (delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        const ok = await verifyEsewaPaymentAndBook({ silent: true });
+        if (ok) return;
+      }
+      Alert.alert(
+        "Payment Submitted",
+        "Payment was submitted successfully. Verification is taking longer than expected. Please wait a few seconds and try booking status refresh."
+      );
+    })();
     return true;
   };
 
@@ -855,18 +860,20 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                   <Ionicons name="open-outline" size={18} color="#ffffff" />
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.submitButton, verifyingPayment && styles.submitButtonDisabled, { marginTop: 12 }]}
-                  onPress={handleVerifyEsewaPayment}
-                  disabled={verifyingPayment}
-                  activeOpacity={0.85}
-                >
+                <View style={styles.autoVerifyInfoCard}>
                   {verifyingPayment ? (
-                    <ActivityIndicator color="#fff" />
+                    <View style={styles.autoVerifyInfoRow}>
+                      <ActivityIndicator size="small" color="#1f6b2a" />
+                      <Text style={styles.autoVerifyInfoText}>
+                        Verifying payment and booking your trip...
+                      </Text>
+                    </View>
                   ) : (
-                    <Text style={styles.submitButtonText}>Verify Payment & Book</Text>
+                    <Text style={styles.autoVerifyInfoText}>
+                      After successful eSewa payment, your booking will be confirmed automatically.
+                    </Text>
                   )}
-                </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity
                   style={styles.bookingBackLink}
@@ -1634,6 +1641,27 @@ const styles = StyleSheet.create({
     color: "#1f6b2a",
     fontWeight: "700",
     fontSize: 14,
+  },
+  autoVerifyInfoCard: {
+    marginTop: 12,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  autoVerifyInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  autoVerifyInfoText: {
+    flex: 1,
+    color: "#475569",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "600",
   },
   esewaWebViewSafe: {
     flex: 1,
