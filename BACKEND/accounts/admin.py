@@ -78,8 +78,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(AgentProfile)
 class AgentProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'full_name', 'phone_number', 'location', 'rating', 'is_verified', 'created_at']
-    list_filter = ['is_verified', 'created_at']
+    list_display = ['user', 'full_name', 'phone_number', 'location', 'rating', 'created_at']
+    list_filter = ['created_at']
     search_fields = ['user__email', 'first_name', 'last_name', 'phone_number']
     readonly_fields = ['created_at', 'updated_at']
 

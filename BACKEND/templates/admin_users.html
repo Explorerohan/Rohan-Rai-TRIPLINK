@@ -673,7 +673,6 @@
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Location</th>
-                        <th>Verified</th>
                         <th>Joined</th>
                         <th class="col-actions">Actions</th>
                     </tr>
@@ -702,20 +701,13 @@
                         <td><span class="user-email">{{ item.user.email }}</span></td>
                         <td>{% if item.profile and item.profile.phone_number %}{{ item.profile.phone_number }}{% else %}—{% endif %}</td>
                         <td>{% if item.profile and item.profile.location %}{{ item.profile.location }}{% else %}—{% endif %}</td>
-                        <td>
-                            {% if item.profile and item.profile.is_verified %}
-                                <span class="role-badge role-traveler">Yes</span>
-                            {% else %}
-                                <span style="color: #94a3b8;">No</span>
-                            {% endif %}
-                        </td>
                         <td>{{ item.user.date_joined|date:"M d, Y" }}</td>
                         <td class="col-actions">
                             <button type="button" class="btn-view-details" data-detail-toggle="agent-details-{{ item.user.id }}" aria-expanded="false">View Details</button>
                         </td>
                     </tr>
                     <tr class="details-row" id="agent-details-{{ item.user.id }}">
-                        <td colspan="8">
+                        <td colspan="7">
                             <div class="details-panel">
                                 <div class="details-head">
                                     <h3 class="details-title">Agent Details</h3>
@@ -725,11 +717,6 @@
                                             <span class="muted-badge success">Active account</span>
                                         {% else %}
                                             <span class="muted-badge warn">Inactive account</span>
-                                        {% endif %}
-                                        {% if item.profile and item.profile.is_verified %}
-                                            <span class="muted-badge success">Verified</span>
-                                        {% else %}
-                                            <span class="muted-badge warn">Not verified</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -774,10 +761,6 @@
                                     <div class="details-item">
                                         <span class="label">Rating</span>
                                         <div class="value">{% if item.profile %}{{ item.profile.rating }} / 5{% else %}&mdash;{% endif %}</div>
-                                    </div>
-                                    <div class="details-item">
-                                        <span class="label">Verified</span>
-                                        <div class="value">{% if item.profile and item.profile.is_verified %}Yes{% else %}No{% endif %}</div>
                                     </div>
                                     <div class="details-item">
                                         <span class="label">Joined</span>

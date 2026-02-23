@@ -180,7 +180,6 @@ def admin_dashboard_view(request):
     total_travelers = User.objects.filter(role=Roles.TRAVELER).count()
     total_agents = User.objects.filter(role=Roles.AGENT).count()
 
-    verified_agents = AgentProfile.objects.filter(user__role=Roles.AGENT, is_verified=True).count()
     avg_agent_rating = AgentProfile.objects.filter(user__role=Roles.AGENT).aggregate(avg=Avg("rating"))["avg"] or 0
 
     total_packages = Package.objects.count()
@@ -434,14 +433,6 @@ def admin_dashboard_view(request):
             f"Highest demand destination is {top_destinations[0]['country']} with {top_destinations[0]['bookings']} confirmed bookings."
         )
 
-    verification_rate = _safe_pct(verified_agents, total_agents)
-    if verification_rate < 60:
-        insights.append(
-            f"Only {verification_rate}% of agents are verified. Increasing verification can improve traveler trust."
-        )
-    else:
-        insights.append(f"Agent verification is healthy at {verification_rate}%.")
-
     context = {
         "user": request.user,
         "stats": {
@@ -449,7 +440,6 @@ def admin_dashboard_view(request):
             "total_admins": total_admins,
             "travelers": total_travelers,
             "agents": total_agents,
-            "verified_agents": verified_agents,
             "packages": total_packages,
             "bookings": total_bookings,
             "confirmed_bookings": confirmed_bookings,
@@ -466,7 +456,6 @@ def admin_dashboard_view(request):
             "avg_agent_rating": round(float(avg_agent_rating), 1) if avg_agent_rating else 0.0,
             "booking_conversion_rate": _safe_pct(confirmed_bookings, total_travelers),
             "booking_cancellation_rate": _safe_pct(cancelled_bookings, total_bookings),
-            "agent_verification_rate": verification_rate,
             "custom_resolution_rate": _safe_pct(custom_completed, total_custom_packages),
             "avg_bookings_per_agent": round(confirmed_bookings / total_agents, 1) if total_agents else 0.0,
         },

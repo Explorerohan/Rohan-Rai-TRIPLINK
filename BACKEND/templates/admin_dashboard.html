@@ -472,7 +472,7 @@
     </div>
     <div class="head-badges">
         <div class="head-badge">Booking Conversion {{ stats.booking_conversion_rate|floatformat:1 }}%</div>
-        <div class="head-badge">Agent Verification {{ stats.agent_verification_rate|floatformat:1 }}%</div>
+        <div class="head-badge">Avg Agent Rating {{ stats.avg_agent_rating|floatformat:1 }}/5</div>
         <div class="head-badge">Custom Resolution {{ stats.custom_resolution_rate|floatformat:1 }}%</div>
     </div>
 </div>
@@ -484,9 +484,9 @@
         <div class="kpi-meta">{{ stats.travelers }} travelers, {{ stats.agents }} agents, {{ stats.total_admins }} admins</div>
     </div>
     <div class="kpi-card">
-        <div class="kpi-label">Verified Agents</div>
-        <div class="kpi-value">{{ stats.verified_agents }}</div>
-        <div class="kpi-meta">{{ stats.agent_verification_rate|floatformat:1 }}% of all agents</div>
+        <div class="kpi-label">Avg Bookings / Agent</div>
+        <div class="kpi-value">{{ stats.avg_bookings_per_agent|floatformat:1 }}</div>
+        <div class="kpi-meta">Confirmed bookings distributed across {{ stats.agents }} agents</div>
     </div>
     <div class="kpi-card">
         <div class="kpi-label">Total Packages</div>
