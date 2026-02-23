@@ -259,6 +259,121 @@
         border-radius: 999px;
         background: #22c55e;
     }
+    .col-actions {
+        width: 120px;
+        text-align: right;
+    }
+    .users-table td.col-actions {
+        white-space: nowrap;
+    }
+    .btn-view-details {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #0f172a;
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-view-details:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+    .details-row {
+        display: none;
+        background: #fbfdff;
+    }
+    .details-row.is-open {
+        display: table-row;
+    }
+    .details-row td {
+        padding: 0;
+        background: #fbfdff;
+    }
+    .details-panel {
+        border-top: 1px solid #e2e8f0;
+        padding: 16px 20px 18px;
+        background:
+            radial-gradient(circle at top right, rgba(37,99,235,0.04), transparent 35%),
+            #fbfdff;
+    }
+    .details-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .details-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+    .details-badges {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .muted-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+    .muted-badge.success {
+        background: #ecfdf3;
+        color: #166534;
+        border-color: #bbf7d0;
+    }
+    .muted-badge.warn {
+        background: #fff7ed;
+        color: #9a3412;
+        border-color: #fed7aa;
+    }
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .details-item {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px 12px;
+        min-width: 0;
+    }
+    .details-item.wide {
+        grid-column: span 2;
+    }
+    .details-item .label {
+        display: block;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 4px;
+    }
+    .details-item .value {
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+    .details-item .value.subtle {
+        color: #475569;
+        font-weight: 500;
+    }
     @media (max-width: 768px) {
         .page-head-top { align-items: flex-start; flex-direction: column; }
         .agent-create-header { align-items: flex-start; flex-direction: column; }
@@ -270,6 +385,9 @@
         .users-table th:nth-child(5), .users-table td:nth-child(5) { display: none; }
         .agent-create-grid { grid-template-columns: 1fr; }
         .agent-create-actions { flex-direction: column; align-items: stretch; }
+        .details-grid { grid-template-columns: 1fr; }
+        .details-item.wide { grid-column: span 1; }
+        .details-head { align-items: flex-start; flex-direction: column; }
     }
 </style>
 {% endblock admin_extra_css %}
@@ -366,6 +484,7 @@
                         <th>Phone</th>
                         <th>Location</th>
                         <th>Joined</th>
+                        <th class="col-actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -393,6 +512,99 @@
                         <td>{% if item.profile and item.profile.phone_number %}{{ item.profile.phone_number }}{% else %}—{% endif %}</td>
                         <td>{% if item.profile and item.profile.location %}{{ item.profile.location }}{% else %}—{% endif %}</td>
                         <td>{{ item.user.date_joined|date:"M d, Y" }}</td>
+                        <td class="col-actions">
+                            <button type="button" class="btn-view-details" data-detail-toggle="traveler-details-{{ item.user.id }}" aria-expanded="false">View Details</button>
+                        </td>
+                    </tr>
+                    <tr class="details-row" id="traveler-details-{{ item.user.id }}">
+                        <td colspan="7">
+                            <div class="details-panel">
+                                <div class="details-head">
+                                    <h3 class="details-title">Traveler Details</h3>
+                                    <div class="details-badges">
+                                        <span class="role-badge role-traveler">Traveler</span>
+                                        {% if item.user.is_active %}
+                                            <span class="muted-badge success">Active account</span>
+                                        {% else %}
+                                            <span class="muted-badge warn">Inactive account</span>
+                                        {% endif %}
+                                        {% if item.profile %}
+                                            <span class="muted-badge">Profile created {{ item.profile.created_at|date:"M d, Y" }}</span>
+                                        {% else %}
+                                            <span class="muted-badge warn">Profile missing</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="details-grid">
+                                    <div class="details-item">
+                                        <span class="label">User ID</span>
+                                        <div class="value">{{ item.user.id }}</div>
+                                    </div>
+                                    <div class="details-item wide">
+                                        <span class="label">Email</span>
+                                        <div class="value subtle">{{ item.user.email }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">First Name</span>
+                                        <div class="value">{% if item.profile and item.profile.first_name %}{{ item.profile.first_name }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Last Name</span>
+                                        <div class="value">{% if item.profile and item.profile.last_name %}{{ item.profile.last_name }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Phone</span>
+                                        <div class="value">{% if item.profile and item.profile.phone_number %}{{ item.profile.phone_number }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item wide">
+                                        <span class="label">Location</span>
+                                        <div class="value">{% if item.profile and item.profile.location %}{{ item.profile.location }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Joined</span>
+                                        <div class="value">{{ item.user.date_joined|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Last Login</span>
+                                        <div class="value">{% if item.user.last_login %}{{ item.user.last_login|date:"M d, Y H:i" }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Role</span>
+                                        <div class="value">{{ item.user.get_role_display }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Account Flags</span>
+                                        <div class="value">{% if item.user.is_staff %}Staff{% else %}Regular{% endif %}{% if item.user.is_superuser %} / Superuser{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Bookings</span>
+                                        <div class="value">{{ item.stats.bookings_count }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Custom Packages</span>
+                                        <div class="value">{{ item.stats.custom_packages_count }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Reviews Written</span>
+                                        <div class="value">{{ item.stats.reviews_written_count }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Chats</span>
+                                        <div class="value">{{ item.stats.chats_count }}</div>
+                                    </div>
+                                    {% if item.profile %}
+                                    <div class="details-item">
+                                        <span class="label">Profile Updated</span>
+                                        <div class="value">{{ item.profile.updated_at|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    <div class="details-item wide">
+                                        <span class="label">Profile Picture File</span>
+                                        <div class="value subtle">{% if item.profile.profile_picture %}{{ item.profile.profile_picture.name }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -422,6 +634,7 @@
                         <th>Location</th>
                         <th>Verified</th>
                         <th>Joined</th>
+                        <th class="col-actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -456,6 +669,112 @@
                             {% endif %}
                         </td>
                         <td>{{ item.user.date_joined|date:"M d, Y" }}</td>
+                        <td class="col-actions">
+                            <button type="button" class="btn-view-details" data-detail-toggle="agent-details-{{ item.user.id }}" aria-expanded="false">View Details</button>
+                        </td>
+                    </tr>
+                    <tr class="details-row" id="agent-details-{{ item.user.id }}">
+                        <td colspan="8">
+                            <div class="details-panel">
+                                <div class="details-head">
+                                    <h3 class="details-title">Agent Details</h3>
+                                    <div class="details-badges">
+                                        <span class="role-badge role-agent">Agent</span>
+                                        {% if item.user.is_active %}
+                                            <span class="muted-badge success">Active account</span>
+                                        {% else %}
+                                            <span class="muted-badge warn">Inactive account</span>
+                                        {% endif %}
+                                        {% if item.profile and item.profile.is_verified %}
+                                            <span class="muted-badge success">Verified</span>
+                                        {% else %}
+                                            <span class="muted-badge warn">Not verified</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="details-grid">
+                                    <div class="details-item">
+                                        <span class="label">User ID</span>
+                                        <div class="value">{{ item.user.id }}</div>
+                                    </div>
+                                    <div class="details-item wide">
+                                        <span class="label">Email</span>
+                                        <div class="value subtle">{{ item.user.email }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">First Name</span>
+                                        <div class="value">{% if item.profile and item.profile.first_name %}{{ item.profile.first_name }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Last Name</span>
+                                        <div class="value">{% if item.profile and item.profile.last_name %}{{ item.profile.last_name }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Phone</span>
+                                        <div class="value">{% if item.profile and item.profile.phone_number %}{{ item.profile.phone_number }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item wide">
+                                        <span class="label">Location</span>
+                                        <div class="value">{% if item.profile and item.profile.location %}{{ item.profile.location }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Rating</span>
+                                        <div class="value">{% if item.profile %}{{ item.profile.rating }} / 5{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Verified</span>
+                                        <div class="value">{% if item.profile and item.profile.is_verified %}Yes{% else %}No{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Joined</span>
+                                        <div class="value">{{ item.user.date_joined|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Last Login</span>
+                                        <div class="value">{% if item.user.last_login %}{{ item.user.last_login|date:"M d, Y H:i" }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Packages</span>
+                                        <div class="value">{{ item.stats.packages_count }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Reviews Received</span>
+                                        <div class="value">{{ item.stats.reviews_received_count }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Claimed Custom Packages</span>
+                                        <div class="value">{{ item.stats.claimed_custom_packages_count }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Chats</span>
+                                        <div class="value">{{ item.stats.chats_count }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Account Flags</span>
+                                        <div class="value">{% if item.user.is_staff %}Staff{% else %}Regular{% endif %}{% if item.user.is_superuser %} / Superuser{% endif %}</div>
+                                    </div>
+                                    {% if item.profile %}
+                                    <div class="details-item">
+                                        <span class="label">Profile Created</span>
+                                        <div class="value">{{ item.profile.created_at|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    <div class="details-item">
+                                        <span class="label">Profile Updated</span>
+                                        <div class="value">{{ item.profile.updated_at|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    <div class="details-item wide">
+                                        <span class="label">Profile Picture File</span>
+                                        <div class="value subtle">{% if item.profile.profile_picture %}{{ item.profile.profile_picture.name }}{% else %}&mdash;{% endif %}</div>
+                                    </div>
+                                    {% else %}
+                                    <div class="details-item wide">
+                                        <span class="label">Profile Status</span>
+                                        <div class="value subtle">No agent profile record found.</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -477,12 +796,31 @@ document.addEventListener('DOMContentLoaded', function () {
     var card = document.getElementById('agent-create-card');
     var toggle = document.getElementById('agent-create-toggle');
     var label = document.getElementById('agent-create-toggle-label');
-    if (!card || !toggle || !label) return;
+    if (card && toggle && label) {
+        toggle.addEventListener('click', function () {
+            var isOpen = card.classList.toggle('is-open');
+            toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            label.textContent = isOpen ? 'Close Form' : 'Add Agent';
+        });
+    }
 
-    toggle.addEventListener('click', function () {
-        var isOpen = card.classList.toggle('is-open');
-        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        label.textContent = isOpen ? 'Close Form' : 'Add Agent';
+    var detailButtons = document.querySelectorAll('[data-detail-toggle]');
+    detailButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            var targetId = button.getAttribute('data-detail-toggle');
+            if (!targetId) return;
+
+            var targetRow = document.getElementById(targetId);
+            if (!targetRow) return;
+
+            var isOpen = targetRow.classList.toggle('is-open');
+            button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            button.textContent = isOpen ? 'Hide Details' : 'View Details';
+
+            if (isOpen) {
+                targetRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        });
     });
 });
 </script>

@@ -565,23 +565,61 @@ def admin_users_view(request):
             except Exception as exc:
                 messages.error(request, f'Could not create agent: {exc}')
 
-    traveler_users = User.objects.filter(role=Roles.TRAVELER).order_by('-date_joined')
+    traveler_users = (
+        User.objects.filter(role=Roles.TRAVELER)
+        .select_related('user_profile')
+        .annotate(
+            bookings_count=Count('bookings', distinct=True),
+            custom_packages_count=Count('custom_packages', distinct=True),
+            reviews_written_count=Count('agent_reviews', distinct=True),
+            traveler_chats_count=Count('chat_rooms_as_traveler', distinct=True),
+        )
+        .order_by('-date_joined')
+    )
     travelers = []
     for u in traveler_users:
         try:
             profile = u.user_profile
         except UserProfile.DoesNotExist:
             profile = None
-        travelers.append({'user': u, 'profile': profile})
+        travelers.append({
+            'user': u,
+            'profile': profile,
+            'stats': {
+                'bookings_count': getattr(u, 'bookings_count', 0),
+                'custom_packages_count': getattr(u, 'custom_packages_count', 0),
+                'reviews_written_count': getattr(u, 'reviews_written_count', 0),
+                'chats_count': getattr(u, 'traveler_chats_count', 0),
+            },
+        })
 
-    agent_users = User.objects.filter(role=Roles.AGENT).order_by('-date_joined')
+    agent_users = (
+        User.objects.filter(role=Roles.AGENT)
+        .select_related('agent_profile')
+        .annotate(
+            packages_count=Count('packages', distinct=True),
+            reviews_received_count=Count('reviews_received', distinct=True),
+            claimed_custom_packages_count=Count('claimed_custom_packages', distinct=True),
+            agent_chats_count=Count('chat_rooms_as_agent', distinct=True),
+        )
+        .order_by('-date_joined')
+    )
     agents = []
     for u in agent_users:
         try:
             profile = u.agent_profile
         except AgentProfile.DoesNotExist:
             profile = None
-        agents.append({'user': u, 'profile': profile})
+        agents.append({
+            'user': u,
+            'profile': profile,
+            'stats': {
+                'packages_count': getattr(u, 'packages_count', 0),
+                'reviews_received_count': getattr(u, 'reviews_received_count', 0),
+                'claimed_custom_packages_count': getattr(u, 'claimed_custom_packages_count', 0),
+                'chats_count': getattr(u, 'agent_chats_count', 0),
+            },
+        })
 
     context = {
         'user': request.user,
