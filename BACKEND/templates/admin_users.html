@@ -341,18 +341,27 @@
     }
     .details-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: 300px repeat(3, minmax(0, 1fr));
+        grid-auto-rows: minmax(50px, auto);
+        grid-auto-flow: dense;
+        align-items: start;
         gap: 10px;
     }
     .details-item {
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        padding: 10px 12px;
+        padding: 8px 12px;
         min-width: 0;
     }
     .details-item.wide {
         grid-column: span 2;
+    }
+    .details-item.details-photo-item {
+        grid-column: 1;
+        grid-row: span 5;
+        align-self: start;
+        padding: 8px;
     }
     .details-item .label {
         display: block;
@@ -361,18 +370,46 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.03em;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
     .details-item .value {
         color: #0f172a;
         font-size: 13px;
         font-weight: 600;
-        line-height: 1.35;
+        line-height: 1.2;
         word-break: break-word;
     }
     .details-item .value.subtle {
         color: #475569;
         font-weight: 500;
+    }
+    .details-photo-preview {
+        width: 100%;
+        max-width: none;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        border-radius: 14px;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        display: block;
+        margin: 0 auto;
+    }
+    .details-photo-placeholder {
+        width: 100%;
+        max-width: none;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        margin: 0 auto;
     }
     @media (max-width: 768px) {
         .page-head-top { align-items: flex-start; flex-direction: column; }
@@ -385,9 +422,18 @@
         .users-table th:nth-child(5), .users-table td:nth-child(5) { display: none; }
         .agent-create-grid { grid-template-columns: 1fr; }
         .agent-create-actions { flex-direction: column; align-items: stretch; }
-        .details-grid { grid-template-columns: 1fr; }
-        .details-item.wide { grid-column: span 1; }
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-auto-rows: auto;
+        }
+        .details-item, .details-item.wide, .details-item.details-photo-item {
+            grid-column: auto;
+            grid-row: auto;
+            width: 100%;
+        }
         .details-head { align-items: flex-start; flex-direction: column; }
+        .details-photo-preview, .details-photo-placeholder { width: 180px; height: 180px; }
     }
 </style>
 {% endblock admin_extra_css %}
@@ -536,11 +582,18 @@
                                     </div>
                                 </div>
                                 <div class="details-grid">
+                                    <div class="details-item details-photo-item">
+                                        {% if item.profile and item.profile.profile_picture %}
+                                            <img src="{{ item.profile.profile_picture.url }}" alt="Traveler profile picture" class="details-photo-preview">
+                                        {% else %}
+                                            <div class="details-photo-placeholder">No image</div>
+                                        {% endif %}
+                                    </div>
                                     <div class="details-item">
                                         <span class="label">User ID</span>
                                         <div class="value">{{ item.user.id }}</div>
                                     </div>
-                                    <div class="details-item wide">
+                                    <div class="details-item">
                                         <span class="label">Email</span>
                                         <div class="value subtle">{{ item.user.email }}</div>
                                     </div>
@@ -565,16 +618,8 @@
                                         <div class="value">{{ item.user.date_joined|date:"M d, Y H:i" }}</div>
                                     </div>
                                     <div class="details-item">
-                                        <span class="label">Last Login</span>
-                                        <div class="value">{% if item.user.last_login %}{{ item.user.last_login|date:"M d, Y H:i" }}{% else %}&mdash;{% endif %}</div>
-                                    </div>
-                                    <div class="details-item">
                                         <span class="label">Role</span>
                                         <div class="value">{{ item.user.get_role_display }}</div>
-                                    </div>
-                                    <div class="details-item">
-                                        <span class="label">Account Flags</span>
-                                        <div class="value">{% if item.user.is_staff %}Staff{% else %}Regular{% endif %}{% if item.user.is_superuser %} / Superuser{% endif %}</div>
                                     </div>
                                     <div class="details-item">
                                         <span class="label">Bookings</span>
@@ -596,10 +641,6 @@
                                     <div class="details-item">
                                         <span class="label">Profile Updated</span>
                                         <div class="value">{{ item.profile.updated_at|date:"M d, Y H:i" }}</div>
-                                    </div>
-                                    <div class="details-item wide">
-                                        <span class="label">Profile Picture File</span>
-                                        <div class="value subtle">{% if item.profile.profile_picture %}{{ item.profile.profile_picture.name }}{% else %}&mdash;{% endif %}</div>
                                     </div>
                                     {% endif %}
                                 </div>
@@ -693,11 +734,18 @@
                                     </div>
                                 </div>
                                 <div class="details-grid">
+                                    <div class="details-item details-photo-item">
+                                        {% if item.profile and item.profile.profile_picture %}
+                                            <img src="{{ item.profile.profile_picture.url }}" alt="Agent profile picture" class="details-photo-preview">
+                                        {% else %}
+                                            <div class="details-photo-placeholder">No image</div>
+                                        {% endif %}
+                                    </div>
                                     <div class="details-item">
                                         <span class="label">User ID</span>
                                         <div class="value">{{ item.user.id }}</div>
                                     </div>
-                                    <div class="details-item wide">
+                                    <div class="details-item">
                                         <span class="label">Email</span>
                                         <div class="value subtle">{{ item.user.email }}</div>
                                     </div>
@@ -713,10 +761,16 @@
                                         <span class="label">Phone</span>
                                         <div class="value">{% if item.profile and item.profile.phone_number %}{{ item.profile.phone_number }}{% else %}&mdash;{% endif %}</div>
                                     </div>
-                                    <div class="details-item wide">
+                                    <div class="details-item">
                                         <span class="label">Location</span>
                                         <div class="value">{% if item.profile and item.profile.location %}{{ item.profile.location }}{% else %}&mdash;{% endif %}</div>
                                     </div>
+                                    {% if item.profile %}
+                                    <div class="details-item">
+                                        <span class="label">Profile Updated</span>
+                                        <div class="value">{{ item.profile.updated_at|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    {% endif %}
                                     <div class="details-item">
                                         <span class="label">Rating</span>
                                         <div class="value">{% if item.profile %}{{ item.profile.rating }} / 5{% else %}&mdash;{% endif %}</div>
@@ -728,10 +782,6 @@
                                     <div class="details-item">
                                         <span class="label">Joined</span>
                                         <div class="value">{{ item.user.date_joined|date:"M d, Y H:i" }}</div>
-                                    </div>
-                                    <div class="details-item">
-                                        <span class="label">Last Login</span>
-                                        <div class="value">{% if item.user.last_login %}{{ item.user.last_login|date:"M d, Y H:i" }}{% else %}&mdash;{% endif %}</div>
                                     </div>
                                     <div class="details-item">
                                         <span class="label">Packages</span>
@@ -749,22 +799,10 @@
                                         <span class="label">Chats</span>
                                         <div class="value">{{ item.stats.chats_count }}</div>
                                     </div>
-                                    <div class="details-item">
-                                        <span class="label">Account Flags</span>
-                                        <div class="value">{% if item.user.is_staff %}Staff{% else %}Regular{% endif %}{% if item.user.is_superuser %} / Superuser{% endif %}</div>
-                                    </div>
                                     {% if item.profile %}
                                     <div class="details-item">
                                         <span class="label">Profile Created</span>
                                         <div class="value">{{ item.profile.created_at|date:"M d, Y H:i" }}</div>
-                                    </div>
-                                    <div class="details-item">
-                                        <span class="label">Profile Updated</span>
-                                        <div class="value">{{ item.profile.updated_at|date:"M d, Y H:i" }}</div>
-                                    </div>
-                                    <div class="details-item wide">
-                                        <span class="label">Profile Picture File</span>
-                                        <div class="value subtle">{% if item.profile.profile_picture %}{{ item.profile.profile_picture.name }}{% else %}&mdash;{% endif %}</div>
                                     </div>
                                     {% else %}
                                     <div class="details-item wide">
