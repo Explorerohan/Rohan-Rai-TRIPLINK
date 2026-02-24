@@ -610,6 +610,118 @@ def admin_dashboard_view(request):
     return render(request, "admin_dashboard.html", context)
 
 
+def admin_packages_view(request):
+    """Admin view to list all agent-created packages with ownership and booking participation details."""
+    if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
+        messages.error(request, 'Access denied. Admin access required.')
+        return redirect('login')
+
+    search_query = (request.GET.get("q") or "").strip()
+    packages_qs = (
+        Package.objects.select_related("agent", "agent__agent_profile")
+        .prefetch_related("features")
+        .annotate(
+            confirmed_bookings_count=Count(
+                "bookings",
+                filter=Q(bookings__status=BookingStatus.CONFIRMED),
+                distinct=True,
+            ),
+            joined_travelers_count=Sum(
+                "bookings__traveler_count",
+                filter=Q(bookings__status=BookingStatus.CONFIRMED),
+            ),
+        )
+        .order_by("-created_at")
+    )
+    if search_query:
+        packages_qs = packages_qs.filter(
+            Q(title__icontains=search_query)
+            | Q(location__icontains=search_query)
+            | Q(country__icontains=search_query)
+            | Q(agent__email__icontains=search_query)
+            | Q(agent__agent_profile__first_name__icontains=search_query)
+            | Q(agent__agent_profile__last_name__icontains=search_query)
+        )
+
+    packages = []
+    total_joined_travelers = 0
+    total_confirmed_bookings = 0
+    unique_agent_ids = set()
+    status_counts = {
+        PackageStatus.ACTIVE: 0,
+        PackageStatus.COMPLETED: 0,
+        PackageStatus.DRAFT: 0,
+    }
+    for package in packages_qs:
+        try:
+            agent_profile = package.agent.agent_profile
+            agent_name = agent_profile.full_name
+            agent_location = agent_profile.location
+        except AgentProfile.DoesNotExist:
+            agent_name = package.agent.email.split("@")[0]
+            agent_location = ""
+
+        joined_travelers_count = package.joined_travelers_count
+        if joined_travelers_count is None:
+            joined_travelers_count = package.participants_count or 0
+
+        total_joined_travelers += int(joined_travelers_count or 0)
+        total_confirmed_bookings += int(package.confirmed_bookings_count or 0)
+        unique_agent_ids.add(package.agent_id)
+        if package.status in status_counts:
+            status_counts[package.status] += 1
+
+        packages.append({
+            "id": package.id,
+            "title": package.title,
+            "location": package.location,
+            "country": package.country,
+            "description": package.description,
+            "main_image_url": package.main_image.url if package.main_image else "",
+            "feature_names": [f.name for f in package.features.all()[:4]],
+            "price_per_person": package.price_per_person,
+            "duration_days": package.duration_days,
+            "duration_nights": package.duration_nights,
+            "trip_start_date": package.trip_start_date,
+            "trip_end_date": package.trip_end_date,
+            "status": package.get_status_display(),
+            "status_key": package.status,
+            "participants_count": package.participants_count or 0,
+            "joined_travelers_count": joined_travelers_count,
+            "confirmed_bookings_count": package.confirmed_bookings_count or 0,
+            "agent_name": agent_name,
+            "agent_email": package.agent.email,
+            "agent_location": agent_location,
+            "agent_rating": package.agent_rating,
+            "created_at": package.created_at,
+            "updated_at": package.updated_at,
+        })
+
+    recent_packages = packages[:5]
+    completed_packages = [p for p in packages if p["status_key"] == PackageStatus.COMPLETED][:5]
+    display_name = request.user.email.split("@")[0]
+
+    context = {
+        'user': request.user,
+        'packages': packages,
+        'recent_packages': recent_packages,
+        'completed_packages': completed_packages,
+        'total_packages': len(packages),
+        'search_query': search_query,
+        'display_name': display_name,
+        'package_metrics': {
+            'active': status_counts[PackageStatus.ACTIVE],
+            'completed': status_counts[PackageStatus.COMPLETED],
+            'draft': status_counts[PackageStatus.DRAFT],
+            'agents': len(unique_agent_ids),
+            'joined_travelers': total_joined_travelers,
+            'confirmed_bookings': total_confirmed_bookings,
+        },
+        'active_nav': 'packages',
+    }
+    return render(request, 'admin_packages.html', context)
+
+
 def admin_users_view(request):
     """Admin view to list all travelers and agents"""
     if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
