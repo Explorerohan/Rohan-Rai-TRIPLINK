@@ -688,7 +688,7 @@
 
     @media (max-width: 768px) {
         .header {
-            left: 80px;
+            margin: -20px -20px 0;
         }
     }
 
@@ -718,21 +718,21 @@
     <div class="header-left">
         <div class="header-logo">TRIPLINK</div>
         <form class="search-bar" method="get" action="{% url 'admin_packages' %}" role="search">
-            <span class="search-icon">??</span>
+            <span class="search-icon">S</span>
             <input type="search" name="q" placeholder="Search by title, location, country or agent" value="{{ search_query|default:'' }}" aria-label="Search packages">
         </form>
     </div>
     <div class="header-right">
         <div class="notification-icon">
-            ??
+            N
             <span class="notification-badge">1</span>
         </div>
         <div class="notification-icon">
-            ??
+            C
             <span class="notification-badge">3</span>
         </div>
         <div class="notification-icon">
-            ??
+            G
             <span class="notification-badge red">1</span>
         </div>
         <div class="user-profile">
@@ -759,7 +759,7 @@
                 </div>
             </div>
             <a href="{% url 'admin_packages' %}" class="btn-add">
-                <span>?</span>
+                <span>+</span>
                 <span>Refresh Packages</span>
             </a>
         </div>
@@ -775,7 +775,7 @@
                             </div>
                         {% else %}
                             <div class="package-image-wrap" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px;">
-                                📦
+                                PKG
                             </div>
                         {% endif %}
 
@@ -819,29 +819,29 @@
                             <div class="package-actions">
                                 <div class="package-features">
                                     <div class="feature-item">
-                                        <span class="feature-icon">👤</span>
+                                        <span class="feature-icon">AG</span>
                                         <span class="feature-text">{{ package.agent_name }}</span>
                                     </div>
                                     <div class="feature-item">
-                                        <span class="feature-icon">✅</span>
+                                        <span class="feature-icon">OK</span>
                                         <span class="feature-text">{{ package.confirmed_bookings_count }} confirmed bookings</span>
                                     </div>
                                     <div class="feature-item">
-                                        <span class="feature-icon">👥</span>
+                                        <span class="feature-icon">TR</span>
                                         <span class="feature-text">{{ package.joined_travelers_count }} travelers joined</span>
                                     </div>
                                     <div class="feature-item">
-                                        <span class="feature-icon">📍</span>
+                                        <span class="feature-icon">LO</span>
                                         <span class="feature-text">{{ package.agent_location|default:"Agent location not set" }}</span>
                                     </div>
                                     {% for feature_name in package.feature_names|slice:":2" %}
                                         <div class="feature-item">
-                                            <span class="feature-icon">✨</span>
+                                            <span class="feature-icon">FX</span>
                                             <span class="feature-text">{{ feature_name }}</span>
                                         </div>
                                     {% endfor %}
                                     <div class="feature-item">
-                                        <span class="feature-icon">🕒</span>
+                                        <span class="feature-icon">UP</span>
                                         <span class="feature-text">Updated {{ package.updated_at|date:"d M Y" }}</span>
                                     </div>
                                 </div>
@@ -852,7 +852,7 @@
                 {% endfor %}
             {% else %}
                 <div class="empty-state">
-                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-icon">PKG</div>
                     <div class="empty-state-text">No packages yet. Create your first package to get started!</div>
                 </div>
             {% endif %}
@@ -869,14 +869,14 @@
                             {% if package.main_image_url %}
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="package-thumbnail">
                             {% else %}
-                                <div class="package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">📦</div>
+                                <div class="package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">PKG</div>
                             {% endif %}
                             <div class="package-list-content">
                                 <div class="package-list-title">{{ package.location }}</div>
                                 <div class="package-list-subtitle">{{ package.country }}</div>
                                 <div class="package-list-date">{{ package.created_at|date:"d F Y" }}</div>
                             </div>
-                            <span class="package-list-arrow">→</span>
+                            <span class="package-list-arrow">-&gt;</span>
                         </a>
                     {% endfor %}
                 {% else %}
@@ -896,7 +896,7 @@
                             {% if package.main_image_url %}
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="completed-package-thumbnail">
                             {% else %}
-                                <div class="completed-package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">📦</div>
+                                <div class="completed-package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">PKG</div>
                             {% endif %}
                             <div class="completed-package-content">
                                 <div class="completed-package-title">{{ package.location }}</div>
@@ -905,11 +905,11 @@
                                 <div class="completed-package-rating">
                                     {% for i in "12345"|make_list %}
                                         {% if forloop.counter <= package.agent_rating %}
-                                            <span class="star">★</span>
+                                            <span class="star">*</span>
                                         {% elif forloop.counter|add:"-1" < package.agent_rating %}
-                                            <span class="star half">★</span>
+                                            <span class="star half">*</span>
                                         {% else %}
-                                            <span class="star" style="color: #e2e8f0;">★</span>
+                                            <span class="star" style="color: #e2e8f0;">*</span>
                                         {% endif %}
                                     {% endfor %}
                                     <span style="margin-left: 4px; font-size: 12px; color: #64748b;">{{ package.agent_rating|floatformat:1 }}</span>
