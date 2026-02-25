@@ -1141,9 +1141,29 @@
         text-overflow: ellipsis;
     }
 
+    .glance-item.glance-dates {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        line-height: 1.35;
+    }
+
     .glance-item strong {
         color: #0f172a;
         margin-right: 4px;
+    }
+
+    .glance-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 6px;
+        color: #64748b;
+        vertical-align: -2px;
+    }
+
+    .glance-icon ion-icon {
+        font-size: 14px;
     }
 
     .package-cta-row {
@@ -1624,7 +1644,18 @@
                             </div>
 
                             <div class="package-glance">
-                                <div class="glance-item"><strong>Bookings:</strong> {{ package.confirmed_bookings_count }}</div>
+                                <div class="glance-item glance-dates">
+                                    <span class="glance-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
+                                    {% if package.trip_start_date and package.trip_end_date %}
+                                        {{ package.trip_start_date|date:"d M Y" }} - {{ package.trip_end_date|date:"d M Y" }}
+                                    {% elif package.trip_start_date %}
+                                        Starts {{ package.trip_start_date|date:"d M Y" }}
+                                    {% elif package.trip_end_date %}
+                                        Ends {{ package.trip_end_date|date:"d M Y" }}
+                                    {% else %}
+                                        Dates not set
+                                    {% endif %}
+                                </div>
                                 <div class="glance-item"><strong>Updated:</strong> {{ package.updated_at|date:"d M Y" }}</div>
                             </div>
 
