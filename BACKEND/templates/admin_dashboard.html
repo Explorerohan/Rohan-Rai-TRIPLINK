@@ -173,6 +173,11 @@
         display: inline-block;
     }
 
+    .legend-dot.travelers { background: #0f766e; }
+    .legend-dot.bookings { background: #1d4ed8; }
+    .legend-dot.packages { background: #b45309; }
+    .legend-dot.custom-requests { background: #7c3aed; }
+
     .growth-chart {
         height: 250px;
         border: 1px solid #edf2f7;
@@ -232,6 +237,10 @@
         height: 250px;
         border: 1px dashed var(--line);
         border-radius: 12px;
+    }
+
+    .is-hidden {
+        display: none !important;
     }
 
     .donut-wrap {
@@ -346,6 +355,15 @@
         height: 100%;
         background: linear-gradient(90deg, #1d4ed8, #2563eb);
         border-radius: 999px;
+    }
+
+    .agent-email {
+        color: #64748b;
+    }
+
+    .panel-head.tight-top {
+        margin-top: 16px;
+        margin-bottom: 8px;
     }
 
     .table-wrap {
@@ -547,13 +565,13 @@
             </div>
         </div>
         <div class="legend">
-            <div class="legend-item"><span class="legend-dot" style="background:#0f766e;"></span>Travelers</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#1d4ed8;"></span>Bookings</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#b45309;"></span>Packages</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#7c3aed;"></span>Custom Requests</div>
+            <div class="legend-item"><span class="legend-dot travelers"></span>Travelers</div>
+            <div class="legend-item"><span class="legend-dot bookings"></span>Bookings</div>
+            <div class="legend-item"><span class="legend-dot packages"></span>Packages</div>
+            <div class="legend-item"><span class="legend-dot custom-requests"></span>Custom Requests</div>
         </div>
         <div id="growth-chart" class="growth-chart"></div>
-        <div id="growth-empty" class="empty-state" style="display:none;">No trend data available yet.</div>
+        <div id="growth-empty" class="empty-state is-hidden">No trend data available yet.</div>
     </section>
 
     <section class="panel">
@@ -564,7 +582,7 @@
             </div>
         </div>
         <div class="donut-wrap">
-            <div class="donut" style="background: {{ booking_donut }};">
+            <div class="donut js-dynamic-bg" data-bg="{{ booking_donut }}">
                 <div class="donut-center">
                     <strong>{{ stats.confirmed_bookings }}</strong>
                     <span>Confirmed</span>
@@ -580,7 +598,7 @@
                         <span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span>
                     </div>
                     <div class="status-track">
-                        <div class="status-fill {{ row.css_class }}" style="width: {{ row.percent }}%;"></div>
+                        <div class="status-fill {{ row.css_class }} js-width-fill" data-width="{{ row.percent|floatformat:2 }}"></div>
                     </div>
                 </div>
             </div>
@@ -606,7 +624,7 @@
                         <span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span>
                     </div>
                     <div class="status-track">
-                        <div class="status-fill {{ row.css_class }}" style="width: {{ row.percent }}%;"></div>
+                        <div class="status-fill {{ row.css_class }} js-width-fill" data-width="{{ row.percent|floatformat:2 }}"></div>
                     </div>
                 </div>
             </div>
@@ -630,7 +648,7 @@
                         <span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span>
                     </div>
                     <div class="status-track">
-                        <div class="status-fill {{ row.css_class }}" style="width: {{ row.percent }}%;"></div>
+                        <div class="status-fill {{ row.css_class }} js-width-fill" data-width="{{ row.percent|floatformat:2 }}"></div>
                     </div>
                 </div>
             </div>
@@ -653,7 +671,7 @@
                     <span>{{ item.bookings }} bookings</span>
                 </div>
                 <div class="destination-track">
-                    <div class="destination-fill" style="width: {{ item.percent_of_top }}%;">
+                    <div class="destination-fill js-width-fill" data-width="{{ item.percent_of_top|floatformat:2 }}">
 
                     </div>
                 </div>
@@ -690,7 +708,7 @@
                     <tr>
                         <td>
                             <strong>{{ agent.name }}</strong><br>
-                            <span style="color:#64748b;">{{ agent.email }}</span>
+                            <span class="agent-email">{{ agent.email }}</span>
                         </td>
                         <td>{{ agent.confirmed_bookings }}</td>
                         <td>{{ agent.active_packages }}</td>
@@ -735,7 +753,7 @@
         <div class="no-data">No recent signups found.</div>
         {% endif %}
 
-        <div class="panel-head" style="margin-top:16px; margin-bottom:8px;">
+        <div class="panel-head tight-top">
             <div>
                 <div class="panel-title">Planning Insights</div>
                 <div class="panel-sub">Immediate signals to guide next decisions</div>
@@ -812,6 +830,24 @@
             monthGroup.appendChild(barsWrap);
             monthGroup.appendChild(monthLabel);
             chartEl.appendChild(monthGroup);
+        });
+    })();
+
+    (function applyTemplateStyles() {
+        document.querySelectorAll(".js-dynamic-bg").forEach(function(el) {
+            var bg = el.getAttribute("data-bg");
+            if (bg) {
+                el.style.background = bg;
+            }
+        });
+
+        document.querySelectorAll(".js-width-fill").forEach(function(el) {
+            var raw = el.getAttribute("data-width");
+            var value = Number(raw);
+            if (!Number.isFinite(value)) value = 0;
+            if (value < 0) value = 0;
+            if (value > 100) value = 100;
+            el.style.width = value + "%";
         });
     })();
 </script>

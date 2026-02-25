@@ -722,6 +722,89 @@ def admin_packages_view(request):
     return render(request, 'admin_packages.html', context)
 
 
+def admin_package_detail_view(request, package_id):
+    """Admin view to inspect full package details, reviews, and participants."""
+    if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
+        messages.error(request, 'Access denied. Admin access required.')
+        return redirect('login')
+
+    try:
+        package = (
+            Package.objects.select_related("agent")
+            .prefetch_related("features")
+            .get(id=package_id)
+        )
+    except Package.DoesNotExist:
+        messages.error(request, 'Package not found.')
+        return redirect('admin_packages')
+
+    # Agent profile and display fields
+    try:
+        agent_profile = AgentProfile.objects.get(user=package.agent)
+        agent_name = agent_profile.full_name
+        agent_location = agent_profile.location
+        agent_rating = float(agent_profile.rating or 0)
+    except AgentProfile.DoesNotExist:
+        agent_name = package.agent.email.split('@')[0]
+        agent_location = ''
+        agent_rating = 0.0
+
+    # Reviews for the package owner (agent)
+    agent_reviews = AgentReview.objects.filter(agent=package.agent).order_by('-created_at')
+    reviews_with_profiles = []
+    for review in agent_reviews:
+        try:
+            profile = review.user.user_profile
+            reviews_with_profiles.append({
+                'review': review,
+                'profile': profile,
+            })
+        except UserProfile.DoesNotExist:
+            reviews_with_profiles.append({
+                'review': review,
+                'profile': None,
+            })
+
+    # Confirmed bookings (travelers joined)
+    bookings = Booking.objects.filter(
+        package=package,
+        status=BookingStatus.CONFIRMED
+    ).order_by('-created_at')
+    participants = []
+    total_joined_travelers = 0
+    for booking in bookings:
+        total_joined_travelers += int(getattr(booking, "traveler_count", 0) or 0)
+        try:
+            profile = booking.user.user_profile
+            participants.append({
+                'booking': booking,
+                'profile': profile,
+            })
+        except UserProfile.DoesNotExist:
+            participants.append({
+                'booking': booking,
+                'profile': None,
+            })
+
+    display_name = request.user.email.split('@')[0]
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'package': package,
+        'agent_name': agent_name,
+        'agent_location': agent_location,
+        'agent_rating': agent_rating,
+        'reviews': reviews_with_profiles,
+        'reviews_count': agent_reviews.count(),
+        'participants': participants,
+        'participants_count': bookings.count(),
+        'joined_travelers_total': total_joined_travelers,
+        'active_nav': 'packages',
+    }
+    return render(request, 'admin_package_detail.html', context)
+
+
 def admin_users_view(request):
     """Admin view to list all travelers and agents"""
     if not request.user.is_authenticated or request.user.role != Roles.ADMIN:

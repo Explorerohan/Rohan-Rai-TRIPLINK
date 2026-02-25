@@ -1037,6 +1037,72 @@
         margin-top: 2px;
     }
 
+    .package-glance {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 10px;
+        margin-top: 2px;
+    }
+
+    .glance-item {
+        min-width: 0;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: #fff;
+        color: #475569;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .glance-item strong {
+        color: #0f172a;
+        margin-right: 4px;
+    }
+
+    .package-cta-row {
+        margin-top: 4px;
+        display: flex;
+        justify-content: flex-start;
+    }
+
+    .btn-open-page {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        border: 1px solid #d6ead9;
+        background: #f3fbf5;
+        color: #1f6b2a;
+        font-size: 13px;
+        font-weight: 700;
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .btn-open-page:hover {
+        background: #eaf7ee;
+        border-color: #b7dbbf;
+        transform: translateY(-1px);
+    }
+
+    .btn-open-page::after {
+        content: "›";
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #d6ead9;
+        background: #fff;
+        line-height: 1;
+    }
+
     .package-features {
         gap: 8px 10px;
     }
@@ -1057,6 +1123,11 @@
         font-size: 10px;
         font-weight: 800;
         letter-spacing: 0.04em;
+    }
+
+    .feature-icon ion-icon {
+        font-size: 14px;
+        color: currentColor;
     }
 
     .feature-text {
@@ -1249,6 +1320,10 @@
         .package-features {
             grid-template-columns: 1fr;
         }
+
+        .package-glance {
+            grid-template-columns: 1fr;
+        }
     }
 
     @media (max-width: 768px) {
@@ -1396,11 +1471,6 @@
                                 </div>
                             </div>
 
-                            <div class="package-description-wrap">
-                                <p class="package-description" id="desc-{{ package.id }}">{{ package.description }}</p>
-                                <button type="button" class="read-more-toggle" data-desc-id="desc-{{ package.id }}" aria-label="Toggle full description">Read more</button>
-                            </div>
-
                             <div class="package-details">
                                 <div class="package-detail">
                                     <span class="detail-label">Price</span>
@@ -1412,35 +1482,13 @@
                                 </div>
                             </div>
 
-                            <div class="package-actions">
-                                <div class="package-features">
-                                    <div class="feature-item">
-                                        <span class="feature-icon">AG</span>
-                                        <span class="feature-text">{{ package.agent_name }}</span>
-                                    </div>
-                                    <div class="feature-item">
-                                        <span class="feature-icon">OK</span>
-                                        <span class="feature-text">{{ package.confirmed_bookings_count }} confirmed bookings</span>
-                                    </div>
-                                    <div class="feature-item">
-                                        <span class="feature-icon">TR</span>
-                                        <span class="feature-text">{{ package.joined_travelers_count }} travelers joined</span>
-                                    </div>
-                                    <div class="feature-item">
-                                        <span class="feature-icon">LO</span>
-                                        <span class="feature-text">{{ package.agent_location|default:"Agent location not set" }}</span>
-                                    </div>
-                                    {% for feature_name in package.feature_names|slice:":2" %}
-                                        <div class="feature-item">
-                                            <span class="feature-icon">FX</span>
-                                            <span class="feature-text">{{ feature_name }}</span>
-                                        </div>
-                                    {% endfor %}
-                                    <div class="feature-item">
-                                        <span class="feature-icon">UP</span>
-                                        <span class="feature-text">Updated {{ package.updated_at|date:"d M Y" }}</span>
-                                    </div>
-                                </div>
+                            <div class="package-glance">
+                                <div class="glance-item"><strong>Bookings:</strong> {{ package.confirmed_bookings_count }}</div>
+                                <div class="glance-item"><strong>Updated:</strong> {{ package.updated_at|date:"d M Y" }}</div>
+                            </div>
+
+                            <div class="package-cta-row">
+                                <a href="{% url 'admin_package_detail' package.id %}" class="btn-open-page">View Full Details</a>
                             </div>
                         </div>
                         </div>
@@ -1464,7 +1512,7 @@
             <div class="package-list">
                 {% if recent_packages %}
                     {% for package in recent_packages %}
-                        <a href="#package-{{ package.id }}" class="package-list-item">
+                        <a href="{% url 'admin_package_detail' package.id %}" class="package-list-item">
                             {% if package.main_image_url %}
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="package-thumbnail">
                             {% else %}
@@ -1494,7 +1542,7 @@
             <div class="package-list">
                 {% if completed_packages %}
                     {% for package in completed_packages %}
-                        <a href="#package-{{ package.id }}" class="completed-package-item">
+                        <a href="{% url 'admin_package_detail' package.id %}" class="completed-package-item">
                             {% if package.main_image_url %}
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="completed-package-thumbnail">
                             {% else %}
@@ -1533,6 +1581,8 @@
 {% endblock main_content %}
 
 {% block admin_extra_js %}
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 <script>
 (function() {
     document.querySelectorAll('.read-more-toggle').forEach(function(btn) {

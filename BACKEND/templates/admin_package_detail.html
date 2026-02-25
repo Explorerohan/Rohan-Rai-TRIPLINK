@@ -1,0 +1,642 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}{{ package.title }} - Admin Package Details{% endblock %}
+
+{% block admin_extra_css %}
+<style>
+    .apd-page {
+        max-width: 1240px;
+        margin: 0 auto;
+    }
+
+    .apd-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 14px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+    }
+
+    .apd-topbar-left {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .apd-back {
+        text-decoration: none;
+        color: #1f6b2a;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 7px 10px;
+        border-radius: 9px;
+        border: 1px solid #d6ead9;
+        background: #f3fbf5;
+    }
+
+    .apd-back:hover {
+        background: #eaf7ee;
+    }
+
+    .apd-title-wrap {
+        min-width: 0;
+    }
+
+    .apd-title {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.2;
+        font-weight: 800;
+        color: #0f172a;
+        word-break: break-word;
+    }
+
+    .apd-sub {
+        margin-top: 3px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .apd-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border: 1px solid transparent;
+        white-space: nowrap;
+    }
+
+    .apd-status::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    .apd-status.active {
+        background: #ecfdf3;
+        color: #166534;
+        border-color: #bbf7d0;
+    }
+
+    .apd-status.completed {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-color: #bfdbfe;
+    }
+
+    .apd-status.draft {
+        background: #fffbeb;
+        color: #b45309;
+        border-color: #fde68a;
+    }
+
+    .apd-status.default {
+        background: #f8fafc;
+        color: #475569;
+        border-color: #e2e8f0;
+    }
+
+    .apd-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+        gap: 18px;
+        align-items: start;
+    }
+
+    .apd-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+    }
+
+    .apd-hero {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        display: block;
+        background: #e2e8f0;
+    }
+
+    .apd-hero-placeholder {
+        width: 100%;
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #dbeafe 0%, #dcfce7 100%);
+        color: #334155;
+        font-weight: 800;
+        font-size: 28px;
+        letter-spacing: 0.08em;
+    }
+
+    .apd-body {
+        padding: 18px;
+    }
+
+    .apd-location {
+        margin: 0 0 14px;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .apd-stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .apd-stat {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 10px 12px;
+    }
+
+    .apd-stat-label {
+        color: #94a3b8;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 3px;
+    }
+
+    .apd-stat-value {
+        color: #0f172a;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .apd-stat-value.price {
+        color: #166534;
+    }
+
+    .apd-dates {
+        margin: 0 0 14px;
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #fbfdff;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .apd-section {
+        margin-top: 14px;
+    }
+
+    .apd-section:first-child {
+        margin-top: 0;
+    }
+
+    .apd-section-title {
+        margin: 0 0 8px;
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .apd-desc {
+        margin: 0;
+        color: #475569;
+        line-height: 1.65;
+        font-size: 14px;
+    }
+
+    .apd-features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .apd-feature {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 13px;
+    }
+
+    .apd-feature ion-icon {
+        font-size: 14px;
+        color: #64748b;
+    }
+
+    .apd-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: sticky;
+        top: 20px;
+    }
+
+    .apd-side-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 14px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+    }
+
+    .apd-side-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .apd-side-title {
+        margin: 0;
+        color: #0f172a;
+        font-size: 15px;
+        font-weight: 800;
+    }
+
+    .apd-side-count {
+        min-width: 24px;
+        height: 24px;
+        padding: 0 7px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        color: #3730a3;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .apd-meta-grid {
+        display: grid;
+        gap: 8px;
+    }
+
+    .apd-meta-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 9px 10px;
+    }
+
+    .apd-meta-label {
+        color: #94a3b8;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 2px;
+    }
+
+    .apd-meta-value {
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .apd-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 320px;
+        overflow: auto;
+    }
+
+    .apd-row {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 10px;
+    }
+
+    .apd-row-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 4px;
+    }
+
+    .apd-row-name {
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .apd-row-meta {
+        color: #94a3b8;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .apd-row-sub {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .apd-stars {
+        display: inline-flex;
+        align-items: center;
+        gap: 1px;
+    }
+
+    .apd-star {
+        color: #e2e8f0;
+        font-size: 12px;
+        line-height: 1;
+    }
+
+    .apd-star.filled {
+        color: #f59e0b;
+    }
+
+    .apd-rating-num {
+        margin-left: 5px;
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .apd-empty {
+        border: 1px dashed #dbe3ed;
+        border-radius: 12px;
+        background: #fbfdff;
+        padding: 16px 12px;
+        color: #64748b;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+        .apd-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .apd-sidebar {
+            position: static;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .content-wrapper {
+            padding: 16px 20px 28px;
+        }
+
+        .apd-topbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .apd-topbar-left {
+            align-items: flex-start;
+        }
+
+        .apd-hero,
+        .apd-hero-placeholder {
+            height: 220px;
+        }
+
+        .apd-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .apd-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock admin_extra_css %}
+
+{% block main_content %}
+<div class="apd-page">
+    <div class="apd-topbar">
+        <div class="apd-topbar-left">
+            <a href="{% url 'admin_packages' %}" class="apd-back">Back to Packages</a>
+            <div class="apd-title-wrap">
+                <h1 class="apd-title">{{ package.title }}</h1>
+                <div class="apd-sub">Admin package detail view</div>
+            </div>
+        </div>
+        {% if package.status == 'active' %}
+            <span class="apd-status active">{{ package.get_status_display }}</span>
+        {% elif package.status == 'completed' %}
+            <span class="apd-status completed">{{ package.get_status_display }}</span>
+        {% elif package.status == 'draft' %}
+            <span class="apd-status draft">{{ package.get_status_display }}</span>
+        {% else %}
+            <span class="apd-status default">{{ package.get_status_display }}</span>
+        {% endif %}
+    </div>
+
+    <div class="apd-layout">
+        <section class="apd-card">
+            {% if package.main_image %}
+                <img src="{{ package.main_image.url }}" alt="{{ package.title }}" class="apd-hero">
+            {% else %}
+                <div class="apd-hero-placeholder">PKG</div>
+            {% endif %}
+
+            <div class="apd-body">
+                <p class="apd-location">{{ package.location }}, {{ package.country }}</p>
+
+                <div class="apd-stats">
+                    <div class="apd-stat">
+                        <div class="apd-stat-label">Price</div>
+                        <div class="apd-stat-value price">Rs. {{ package.price_per_person|floatformat:0 }}</div>
+                    </div>
+                    <div class="apd-stat">
+                        <div class="apd-stat-label">Duration</div>
+                        <div class="apd-stat-value">{{ package.duration_days }} Days / {{ package.duration_nights }} Nights</div>
+                    </div>
+                    <div class="apd-stat">
+                        <div class="apd-stat-label">Participants</div>
+                        <div class="apd-stat-value">{{ participants_count }}</div>
+                    </div>
+                    <div class="apd-stat">
+                        <div class="apd-stat-label">Joined Travelers</div>
+                        <div class="apd-stat-value">{{ joined_travelers_total }}</div>
+                    </div>
+                </div>
+
+                {% if package.trip_start_date or package.trip_end_date %}
+                    <div class="apd-dates">
+                        {% if package.trip_start_date and package.trip_end_date %}
+                            Trip dates: {{ package.trip_start_date|date:"d M Y" }} to {{ package.trip_end_date|date:"d M Y" }}
+                        {% elif package.trip_start_date %}
+                            Trip starts: {{ package.trip_start_date|date:"d M Y" }}
+                        {% else %}
+                            Trip ends: {{ package.trip_end_date|date:"d M Y" }}
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="apd-section">
+                    <h3 class="apd-section-title">Description</h3>
+                    <p class="apd-desc">{{ package.description|default:"No description provided." }}</p>
+                </div>
+
+                <div class="apd-section">
+                    <h3 class="apd-section-title">Features</h3>
+                    <div class="apd-features">
+                        {% for feature in package.features.all %}
+                            <span class="apd-feature">
+                                {% if feature.icon and "-" in feature.icon %}
+                                    <ion-icon name="{{ feature.icon }}"></ion-icon>
+                                {% else %}
+                                    <ion-icon name="checkmark-circle-outline"></ion-icon>
+                                {% endif %}
+                                {{ feature.name }}
+                            </span>
+                        {% empty %}
+                            <span class="apd-feature">
+                                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                                No features listed
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="apd-sidebar">
+            <section class="apd-side-card">
+                <div class="apd-side-head">
+                    <h3 class="apd-side-title">Agent Info</h3>
+                </div>
+                <div class="apd-meta-grid">
+                    <div class="apd-meta-item">
+                        <div class="apd-meta-label">Agent</div>
+                        <div class="apd-meta-value">{{ agent_name }}</div>
+                    </div>
+                    <div class="apd-meta-item">
+                        <div class="apd-meta-label">Email</div>
+                        <div class="apd-meta-value">{{ package.agent.email }}</div>
+                    </div>
+                    <div class="apd-meta-item">
+                        <div class="apd-meta-label">Location</div>
+                        <div class="apd-meta-value">{{ agent_location|default:"Agent location not set" }}</div>
+                    </div>
+                    <div class="apd-meta-item">
+                        <div class="apd-meta-label">Rating</div>
+                        <div class="apd-meta-value">
+                            <span class="apd-stars">
+                                {% for i in "12345"|make_list %}
+                                    <span class="apd-star {% if forloop.counter <= agent_rating %}filled{% endif %}">*</span>
+                                {% endfor %}
+                            </span>
+                            <span class="apd-rating-num">{{ agent_rating|floatformat:1 }}/5</span>
+                        </div>
+                    </div>
+                    <div class="apd-meta-item">
+                        <div class="apd-meta-label">Created</div>
+                        <div class="apd-meta-value">{{ package.created_at|date:"d M Y, h:i A" }}</div>
+                    </div>
+                    <div class="apd-meta-item">
+                        <div class="apd-meta-label">Updated</div>
+                        <div class="apd-meta-value">{{ package.updated_at|date:"d M Y, h:i A" }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="apd-side-card">
+                <div class="apd-side-head">
+                    <h3 class="apd-side-title">Travelers Joined</h3>
+                    <span class="apd-side-count">{{ participants_count }}</span>
+                </div>
+                {% if participants %}
+                    <div class="apd-list">
+                        {% for item in participants %}
+                            <div class="apd-row">
+                                <div class="apd-row-top">
+                                    <div class="apd-row-name">
+                                        {% if item.profile %}{{ item.profile.full_name }}{% else %}{{ item.booking.user.email|slice:":24" }}{% endif %}
+                                    </div>
+                                    <div class="apd-row-meta">{{ item.booking.created_at|date:"d M" }}</div>
+                                </div>
+                                <div class="apd-row-sub">{{ item.booking.user.email }}</div>
+                                {% if item.profile and item.profile.location %}
+                                    <div class="apd-row-sub">{{ item.profile.location }}</div>
+                                {% endif %}
+                                <div class="apd-row-sub">Travelers in booking: {{ item.booking.traveler_count|default:0 }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="apd-empty">No confirmed travelers yet.</div>
+                {% endif %}
+            </section>
+
+            <section class="apd-side-card">
+                <div class="apd-side-head">
+                    <h3 class="apd-side-title">Agent Reviews</h3>
+                    <span class="apd-side-count">{{ reviews_count }}</span>
+                </div>
+                {% if reviews %}
+                    <div class="apd-list">
+                        {% for item in reviews %}
+                            <div class="apd-row">
+                                <div class="apd-row-top">
+                                    <div class="apd-row-name">
+                                        {% if item.profile %}{{ item.profile.full_name }}{% else %}{{ item.review.user.email|slice:":24" }}{% endif %}
+                                    </div>
+                                    <div class="apd-row-meta">{{ item.review.created_at|date:"d M Y" }}</div>
+                                </div>
+                                <div class="apd-row-sub">
+                                    <span class="apd-stars">
+                                        {% for i in "12345"|make_list %}
+                                            <span class="apd-star {% if forloop.counter <= item.review.rating %}filled{% endif %}">*</span>
+                                        {% endfor %}
+                                    </span>
+                                    <span class="apd-rating-num">{{ item.review.rating|floatformat:1 }}</span>
+                                </div>
+                                {% if item.review.comment %}
+                                    <div class="apd-row-sub">{{ item.review.comment }}</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="apd-empty">No reviews yet.</div>
+                {% endif %}
+            </section>
+        </aside>
+    </div>
+</div>
+{% endblock main_content %}
+
+{% block admin_extra_js %}
+<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+{% endblock admin_extra_js %}
