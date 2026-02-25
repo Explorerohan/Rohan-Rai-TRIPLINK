@@ -45,6 +45,7 @@
         display: flex;
         align-items: center;
         gap: 18px;
+        justify-content: flex-start;
     }
 
     .admin-topbar-logo {
@@ -97,6 +98,7 @@
         gap: 14px;
         min-width: 0;
         flex-shrink: 0;
+        margin-left: auto;
     }
 
     .admin-chip {
@@ -667,11 +669,6 @@
 {% block main_content %}
 <header class="admin-topbar">
     <div class="admin-topbar-left">
-        <div class="admin-topbar-logo">TRIPLINK</div>
-        <form class="admin-topbar-search" method="get" action="{% url 'admin_dashboard' %}" role="search">
-            <span class="admin-topbar-search-icon" aria-hidden="true">&#8981;</span>
-            <input type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search dashboard metrics, agents or destinations" aria-label="Search dashboard">
-        </form>
     </div>
     <div class="admin-topbar-right">
         <div class="admin-chip" title="Notifications">

@@ -1507,8 +1507,7 @@
 
 {% block main_content %}
 <header class="header">
-        <div class="header-left">
-        <div class="header-logo">TRIPLINK</div>
+    <div class="header-left">
         <form class="search-bar" method="get" action="{% url 'admin_packages' %}" role="search">
             <span class="search-icon" aria-hidden="true">&#8981;</span>
             <input type="hidden" name="status" value="{{ filters.status|default:'' }}">
