@@ -792,10 +792,12 @@ def admin_package_detail_view(request, package_id):
         agent_name = agent_profile.full_name
         agent_location = agent_profile.location
         agent_rating = float(agent_profile.rating or 0)
+        agent_profile_picture_url = agent_profile.profile_picture.url if agent_profile.profile_picture else ""
     except AgentProfile.DoesNotExist:
         agent_name = package.agent.email.split('@')[0]
         agent_location = ''
         agent_rating = 0.0
+        agent_profile_picture_url = ''
 
     # Reviews for the package owner (agent)
     agent_reviews = AgentReview.objects.filter(agent=package.agent).order_by('-created_at')
@@ -843,6 +845,7 @@ def admin_package_detail_view(request, package_id):
         'agent_name': agent_name,
         'agent_location': agent_location,
         'agent_rating': agent_rating,
+        'agent_profile_picture_url': agent_profile_picture_url,
         'reviews': reviews_with_profiles,
         'reviews_count': agent_reviews.count(),
         'participants': participants,
