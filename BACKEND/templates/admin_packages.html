@@ -644,6 +644,16 @@
         opacity: 0.5;
     }
 
+    .star.star-empty {
+        color: #e2e8f0;
+    }
+
+    .rating-value {
+        margin-left: 4px;
+        font-size: 12px;
+        color: #64748b;
+    }
+
     .completed-package-participants {
         font-size: 12px;
         color: #64748b;
@@ -710,6 +720,596 @@
             padding: 20px 22px;
         }
     }
+
+    /* Structured UI refresh overrides */
+    :root {
+        --tp-bg: #f4f7fb;
+        --tp-panel: #ffffff;
+        --tp-border: #e2e8f0;
+        --tp-text: #0f172a;
+        --tp-muted: #64748b;
+        --tp-soft: #f8fafc;
+        --tp-green: #1f6b2a;
+        --tp-green-2: #2f8f43;
+        --tp-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+    }
+
+    .main-content {
+        padding-top: 0;
+        background:
+            radial-gradient(circle at 8% -10%, rgba(31, 107, 42, 0.08), transparent 45%),
+            radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.08), transparent 36%),
+            var(--tp-bg);
+    }
+
+    .content-wrapper {
+        padding-top: 0;
+    }
+
+    .header {
+        height: 74px;
+        margin: 0 -40px 0;
+        padding: 0 28px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--tp-border);
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+        justify-content: space-between;
+        gap: 20px;
+        z-index: 30;
+    }
+
+    .header-left {
+        gap: 18px;
+    }
+
+    .header-logo {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        margin-right: 0;
+        white-space: nowrap;
+    }
+
+    .search-bar {
+        max-width: 520px;
+    }
+
+    .search-bar input {
+        height: 42px;
+        padding: 0 14px 0 40px;
+        border-radius: 12px;
+        background: #f9fbfe;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .search-bar input:focus {
+        border-color: #86c090;
+        box-shadow: 0 0 0 4px rgba(31, 107, 42, 0.09);
+    }
+
+    .search-icon {
+        left: 13px;
+        font-size: 15px;
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    .header-right {
+        gap: 14px;
+        margin-left: 0;
+        min-width: 0;
+    }
+
+    .notification-icon {
+        position: static;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 0 10px;
+        border: 1px solid var(--tp-border);
+        border-radius: 999px;
+        background: #fff;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .notification-label {
+        color: #475569;
+        line-height: 1;
+    }
+
+    .notification-badge {
+        position: static;
+        border: none;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .user-profile {
+        gap: 10px;
+        padding-left: 2px;
+    }
+
+    .user-greeting {
+        font-weight: 700;
+    }
+
+    .user-avatar {
+        box-shadow: 0 8px 16px rgba(31, 107, 42, 0.18);
+    }
+
+    .packages-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 24px;
+        padding-top: 20px;
+        align-items: start;
+    }
+
+    .section-header {
+        align-items: flex-start;
+        margin-bottom: 16px;
+        padding: 18px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.78);
+        backdrop-filter: blur(4px);
+    }
+
+    .section-title {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+        margin-top: 6px;
+        line-height: 1.4;
+    }
+
+    .header-stats {
+        margin-top: 12px;
+    }
+
+    .btn-add {
+        height: 42px;
+        padding: 0 16px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--tp-green) 0%, var(--tp-green-2) 100%);
+        border: 1px solid rgba(31, 107, 42, 0.6);
+        box-shadow: 0 10px 20px rgba(31, 107, 42, 0.16);
+        font-weight: 700;
+        white-space: nowrap;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .btn-add:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 22px rgba(31, 107, 42, 0.22);
+    }
+
+    .packages-grid {
+        gap: 18px;
+    }
+
+    .package-card {
+        border-radius: 16px;
+        box-shadow: var(--tp-shadow);
+        border-color: rgba(226, 232, 240, 0.9);
+        scroll-margin-top: 92px;
+    }
+
+    .package-card:hover {
+        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .package-card-inner {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+    }
+
+    .package-image-wrap {
+        width: 100%;
+        max-width: none;
+        min-height: 240px;
+        border-right: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .package-image-wrap .package-image {
+        min-height: 240px;
+    }
+
+    .package-image-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #3b82f6 0%, #1f6b2a 100%);
+        color: #fff;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+    }
+
+    .package-content {
+        padding: 20px 22px;
+        gap: 12px;
+    }
+
+    .package-header {
+        margin-bottom: 0;
+        gap: 14px;
+    }
+
+    .package-header-actions {
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: 42%;
+    }
+
+    .btn-view,
+    .btn-edit {
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.1;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .btn-view {
+        background: var(--tp-soft);
+        border-color: var(--tp-border);
+    }
+
+    .btn-edit {
+        border: 1px solid rgba(31, 107, 42, 0.8);
+    }
+
+    .package-title {
+        margin: 0 0 4px;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        word-break: break-word;
+    }
+
+    .package-location {
+        margin: 0;
+    }
+
+    .package-status-chip {
+        margin-bottom: 0;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+    }
+
+    .package-status-chip::before {
+        width: 7px;
+        height: 7px;
+    }
+
+    .package-description-wrap {
+        margin-bottom: 2px;
+    }
+
+    .package-description {
+        margin: 0;
+    }
+
+    .package-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 16px;
+        margin-bottom: 2px;
+    }
+
+    .package-detail {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #f8fafc;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+
+    .detail-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 2px;
+    }
+
+    .detail-value {
+        font-size: 15px;
+        line-height: 1.35;
+    }
+
+    .package-actions {
+        margin-top: 2px;
+    }
+
+    .package-features {
+        gap: 8px 10px;
+    }
+
+    .feature-item {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: #fff;
+    }
+
+    .feature-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        background: #eef2ff;
+        color: #334155;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+    }
+
+    .feature-text {
+        font-size: 13px;
+    }
+
+    .right-sidebar {
+        width: 340px;
+        position: sticky;
+        top: 92px;
+        align-self: start;
+    }
+
+    .sidebar-widget {
+        border-radius: 16px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        padding: 16px;
+        margin-bottom: 18px;
+        box-shadow: var(--tp-shadow);
+    }
+
+    .sidebar-widget-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .widget-title {
+        margin: 0;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+
+    .widget-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3730a3;
+        border: 1px solid #c7d2fe;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .package-list {
+        gap: 10px;
+    }
+
+    .package-list-item,
+    .completed-package-item {
+        border-radius: 12px;
+        border: 1px solid transparent;
+        background: #fff;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .package-list-item:hover,
+    .completed-package-item:hover {
+        border-color: #e2e8f0;
+        transform: translateY(-1px);
+    }
+
+    .package-thumbnail,
+    .completed-package-thumbnail {
+        border-radius: 10px;
+        background: #e2e8f0;
+    }
+
+    .completed-package-content,
+    .package-list-content {
+        min-width: 0;
+    }
+
+    .package-thumbnail-fallback,
+    .completed-package-thumbnail-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    }
+
+    .package-list-title,
+    .completed-package-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 3px;
+    }
+
+    .package-list-subtitle,
+    .completed-package-participants {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .package-list-arrow {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        font-size: 15px;
+        line-height: 1;
+    }
+
+    .empty-state {
+        border: 1px dashed #dbe3ed;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.7);
+        padding: 48px 20px;
+    }
+
+    .empty-state.compact {
+        padding: 18px 12px;
+        border-style: solid;
+        border-radius: 12px;
+        background: #f8fafc;
+    }
+
+    .empty-state-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+    }
+
+    .empty-state-text {
+        font-size: 14px;
+        line-height: 1.45;
+    }
+
+    @media (max-width: 1280px) {
+        .packages-body {
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 18px;
+        }
+
+        .package-card-inner {
+            grid-template-columns: 250px minmax(0, 1fr);
+        }
+    }
+
+    @media (max-width: 1080px) {
+        .packages-body {
+            grid-template-columns: 1fr;
+        }
+
+        .right-sidebar {
+            width: 100%;
+            position: static;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .header {
+            padding: 0 20px;
+        }
+
+        .package-card-inner {
+            grid-template-columns: 220px minmax(0, 1fr);
+        }
+
+        .package-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .package-header-actions {
+            max-width: none;
+            justify-content: flex-start;
+        }
+
+        .package-features {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .header {
+            height: auto;
+            min-height: 74px;
+            margin: 0 -20px 0;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .header-left,
+        .header-right {
+            width: 100%;
+        }
+
+        .header-right {
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .notification-label {
+            display: none;
+        }
+
+        .main-content {
+            padding-top: 0;
+        }
+
+        .section-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-add {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .package-card-inner {
+            grid-template-columns: 1fr;
+        }
+
+        .package-image-wrap {
+            min-height: 210px;
+            max-height: 260px;
+            border-right: none;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        .package-image-wrap .package-image {
+            min-height: 210px;
+        }
+
+        .package-details {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 {% endblock admin_extra_css %}
 
@@ -718,21 +1318,21 @@
     <div class="header-left">
         <div class="header-logo">TRIPLINK</div>
         <form class="search-bar" method="get" action="{% url 'admin_packages' %}" role="search">
-            <span class="search-icon">S</span>
+            <span class="search-icon" aria-hidden="true">&#8981;</span>
             <input type="search" name="q" placeholder="Search by title, location, country or agent" value="{{ search_query|default:'' }}" aria-label="Search packages">
         </form>
     </div>
     <div class="header-right">
-        <div class="notification-icon">
-            N
+        <div class="notification-icon" title="Notifications">
+            <span class="notification-label">Alerts</span>
             <span class="notification-badge">1</span>
         </div>
-        <div class="notification-icon">
-            C
+        <div class="notification-icon" title="Chats">
+            <span class="notification-label">Chats</span>
             <span class="notification-badge">3</span>
         </div>
-        <div class="notification-icon">
-            G
+        <div class="notification-icon" title="Flags">
+            <span class="notification-label">Flags</span>
             <span class="notification-badge red">1</span>
         </div>
         <div class="user-profile">
@@ -758,23 +1358,19 @@
                     <span class="header-stat-chip">Joined <strong>{{ package_metrics.joined_travelers }}</strong></span>
                 </div>
             </div>
-            <a href="{% url 'admin_packages' %}" class="btn-add">
-                <span>+</span>
-                <span>Refresh Packages</span>
-            </a>
         </div>
 
         <div class="packages-grid">
             {% if packages %}
                 {% for package in packages %}
-                    <div class="package-card">
+                    <article class="package-card" id="package-{{ package.id }}">
                         <div class="package-card-inner">
                         {% if package.main_image_url %}
                             <div class="package-image-wrap">
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="package-image">
                             </div>
                         {% else %}
-                            <div class="package-image-wrap" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 48px;">
+                            <div class="package-image-wrap package-image-fallback">
                                 PKG
                             </div>
                         {% endif %}
@@ -848,7 +1444,7 @@
                             </div>
                         </div>
                         </div>
-                    </div>
+                    </article>
                 {% endfor %}
             {% else %}
                 <div class="empty-state">
@@ -861,45 +1457,51 @@
 
     <aside class="right-sidebar">
         <div class="sidebar-widget">
-            <h3 class="widget-title">Recent Packages</h3>
+            <div class="sidebar-widget-head">
+                <h3 class="widget-title">Recent Packages</h3>
+                <span class="widget-count">{{ recent_packages|length }}</span>
+            </div>
             <div class="package-list">
                 {% if recent_packages %}
                     {% for package in recent_packages %}
-                        <a href="#package-{{ package.id }}" class="package-list-item" style="text-decoration: none; color: inherit;">
+                        <a href="#package-{{ package.id }}" class="package-list-item">
                             {% if package.main_image_url %}
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="package-thumbnail">
                             {% else %}
-                                <div class="package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">PKG</div>
+                                <div class="package-thumbnail package-thumbnail-fallback">PKG</div>
                             {% endif %}
                             <div class="package-list-content">
-                                <div class="package-list-title">{{ package.location }}</div>
-                                <div class="package-list-subtitle">{{ package.country }}</div>
+                                <div class="package-list-title">{{ package.title }}</div>
+                                <div class="package-list-subtitle">{{ package.location }}, {{ package.country }}</div>
                                 <div class="package-list-date">{{ package.created_at|date:"d F Y" }}</div>
                             </div>
-                            <span class="package-list-arrow">-&gt;</span>
+                            <span class="package-list-arrow" aria-hidden="true">&#8250;</span>
                         </a>
                     {% endfor %}
                 {% else %}
-                    <div class="empty-state" style="padding: 20px;">
-                        <div class="empty-state-text" style="font-size: 14px;">No recent packages</div>
+                    <div class="empty-state compact">
+                        <div class="empty-state-text">No recent packages</div>
                     </div>
                 {% endif %}
             </div>
         </div>
 
         <div class="sidebar-widget">
-            <h3 class="widget-title">Completed Packages</h3>
+            <div class="sidebar-widget-head">
+                <h3 class="widget-title">Completed Packages</h3>
+                <span class="widget-count">{{ completed_packages|length }}</span>
+            </div>
             <div class="package-list">
                 {% if completed_packages %}
                     {% for package in completed_packages %}
-                        <a href="#package-{{ package.id }}" class="completed-package-item" style="text-decoration: none; color: inherit;">
+                        <a href="#package-{{ package.id }}" class="completed-package-item">
                             {% if package.main_image_url %}
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="completed-package-thumbnail">
                             {% else %}
-                                <div class="completed-package-thumbnail" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8;">PKG</div>
+                                <div class="completed-package-thumbnail completed-package-thumbnail-fallback">PKG</div>
                             {% endif %}
                             <div class="completed-package-content">
-                                <div class="completed-package-title">{{ package.location }}</div>
+                                <div class="completed-package-title">{{ package.title }}</div>
                                 <div class="completed-package-price">Rs. {{ package.price_per_person|floatformat:0 }}</div>
                                 <div class="completed-package-date">{{ package.created_at|date:"d M" }} - {{ package.updated_at|date:"d M" }}</div>
                                 <div class="completed-package-rating">
@@ -909,18 +1511,19 @@
                                         {% elif forloop.counter|add:"-1" < package.agent_rating %}
                                             <span class="star half">*</span>
                                         {% else %}
-                                            <span class="star" style="color: #e2e8f0;">*</span>
+                                            <span class="star star-empty">*</span>
                                         {% endif %}
                                     {% endfor %}
-                                    <span style="margin-left: 4px; font-size: 12px; color: #64748b;">{{ package.agent_rating|floatformat:1 }}</span>
+                                    <span class="rating-value">{{ package.agent_rating|floatformat:1 }}</span>
                                 </div>
                                 <div class="completed-package-participants">{{ package.joined_travelers_count }} Person{{ package.joined_travelers_count|pluralize }} Joined</div>
                             </div>
+                            <span class="package-list-arrow" aria-hidden="true">&#8250;</span>
                         </a>
                     {% endfor %}
                 {% else %}
-                    <div class="empty-state" style="padding: 20px;">
-                        <div class="empty-state-text" style="font-size: 14px;">No completed packages</div>
+                    <div class="empty-state compact">
+                        <div class="empty-state-text">No completed packages</div>
                     </div>
                 {% endif %}
             </div>
