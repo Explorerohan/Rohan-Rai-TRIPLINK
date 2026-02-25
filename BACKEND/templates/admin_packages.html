@@ -879,6 +879,90 @@
         margin-top: 12px;
     }
 
+    .filters-bar {
+        margin-bottom: 14px;
+        padding: 12px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(4px);
+    }
+
+    .filters-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto auto;
+        gap: 10px;
+        align-items: end;
+    }
+
+    .filter-field {
+        min-width: 0;
+    }
+
+    .filter-label {
+        display: block;
+        margin-bottom: 6px;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .filter-select {
+        width: 100%;
+        height: 38px;
+        border: 1px solid #d8e0ea;
+        border-radius: 10px;
+        background: #fff;
+        color: #334155;
+        font-size: 13px;
+        padding: 0 10px;
+        outline: none;
+    }
+
+    .filter-select:focus {
+        border-color: #86c090;
+        box-shadow: 0 0 0 3px rgba(31, 107, 42, 0.08);
+    }
+
+    .btn-filter {
+        height: 38px;
+        padding: 0 14px;
+        border: 1px solid rgba(31, 107, 42, 0.7);
+        border-radius: 10px;
+        background: #1f6b2a;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn-filter:hover {
+        background: #2b7f39;
+    }
+
+    .btn-clear-filter {
+        height: 38px;
+        padding: 0 12px;
+        border: 1px solid #d8e0ea;
+        border-radius: 10px;
+        background: #fff;
+        color: #475569;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    .btn-clear-filter:hover {
+        background: #f8fafc;
+    }
+
     .btn-add {
         height: 42px;
         padding: 0 16px;
@@ -1324,6 +1408,10 @@
         .package-glance {
             grid-template-columns: 1fr;
         }
+
+        .filters-form {
+            grid-template-columns: 1fr 1fr;
+        }
     }
 
     @media (max-width: 768px) {
@@ -1384,16 +1472,28 @@
         .package-details {
             grid-template-columns: 1fr;
         }
+
+        .filters-form {
+            grid-template-columns: 1fr;
+        }
+
+        .btn-filter,
+        .btn-clear-filter {
+            width: 100%;
+        }
     }
 </style>
 {% endblock admin_extra_css %}
 
 {% block main_content %}
 <header class="header">
-    <div class="header-left">
+        <div class="header-left">
         <div class="header-logo">TRIPLINK</div>
         <form class="search-bar" method="get" action="{% url 'admin_packages' %}" role="search">
             <span class="search-icon" aria-hidden="true">&#8981;</span>
+            <input type="hidden" name="status" value="{{ filters.status|default:'' }}">
+            <input type="hidden" name="country" value="{{ filters.country|default:'' }}">
+            <input type="hidden" name="sort" value="{{ filters.sort|default:'newest' }}">
             <input type="search" name="q" placeholder="Search by title, location, country or agent" value="{{ search_query|default:'' }}" aria-label="Search packages">
         </form>
     </div>
@@ -1433,6 +1533,47 @@
                     <span class="header-stat-chip">Joined <strong>{{ package_metrics.joined_travelers }}</strong></span>
                 </div>
             </div>
+        </div>
+
+        <div class="filters-bar">
+            <form class="filters-form" method="get" action="{% url 'admin_packages' %}">
+                <input type="hidden" name="q" value="{{ search_query|default:'' }}">
+
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-status">Status</label>
+                    <select id="filter-status" name="status" class="filter-select">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="draft" {% if filters.status == 'draft' %}selected{% endif %}>Draft</option>
+                    </select>
+                </div>
+
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-country">Country</label>
+                    <select id="filter-country" name="country" class="filter-select">
+                        <option value="">All Countries</option>
+                        {% for country in filter_options.countries %}
+                            <option value="{{ country }}" {% if filters.country == country %}selected{% endif %}>{{ country }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-field">
+                    <label class="filter-label" for="filter-sort">Sort By</label>
+                    <select id="filter-sort" name="sort" class="filter-select">
+                        <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Newest First</option>
+                        <option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                        <option value="updated" {% if filters.sort == 'updated' %}selected{% endif %}>Recently Updated</option>
+                        <option value="price_high" {% if filters.sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                        <option value="price_low" {% if filters.sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                        <option value="joined_high" {% if filters.sort == 'joined_high' %}selected{% endif %}>Most Joined</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-filter">Apply Filters</button>
+                <a href="{% url 'admin_packages' %}{% if search_query %}?q={{ search_query|urlencode }}{% endif %}" class="btn-clear-filter">Clear Filters</a>
+            </form>
         </div>
 
         <div class="packages-grid">

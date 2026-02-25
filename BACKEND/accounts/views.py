@@ -617,7 +617,22 @@ def admin_packages_view(request):
         return redirect('login')
 
     search_query = (request.GET.get("q") or "").strip()
-    packages_qs = (
+    selected_status = (request.GET.get("status") or "").strip()
+    selected_country = (request.GET.get("country") or "").strip()
+    selected_sort = (request.GET.get("sort") or "newest").strip()
+
+    sort_map = {
+        "newest": "-created_at",
+        "oldest": "created_at",
+        "updated": "-updated_at",
+        "price_high": "-price_per_person",
+        "price_low": "price_per_person",
+        "joined_high": "-joined_travelers_count",
+    }
+    if selected_sort not in sort_map:
+        selected_sort = "newest"
+
+    base_packages_qs = (
         Package.objects.select_related("agent", "agent__agent_profile")
         .prefetch_related("features")
         .annotate(
@@ -631,8 +646,8 @@ def admin_packages_view(request):
                 filter=Q(bookings__status=BookingStatus.CONFIRMED),
             ),
         )
-        .order_by("-created_at")
     )
+    packages_qs = base_packages_qs
     if search_query:
         packages_qs = packages_qs.filter(
             Q(title__icontains=search_query)
@@ -642,6 +657,31 @@ def admin_packages_view(request):
             | Q(agent__agent_profile__first_name__icontains=search_query)
             | Q(agent__agent_profile__last_name__icontains=search_query)
         )
+
+    allowed_statuses = {
+        PackageStatus.ACTIVE,
+        PackageStatus.COMPLETED,
+        PackageStatus.DRAFT,
+    }
+    if selected_status:
+        if selected_status in allowed_statuses:
+            packages_qs = packages_qs.filter(status=selected_status)
+        else:
+            selected_status = ""
+
+    if selected_country:
+        packages_qs = packages_qs.filter(country__iexact=selected_country)
+
+    packages_qs = packages_qs.order_by(sort_map[selected_sort])
+
+    available_countries = sorted(
+        {
+            (country or "").strip()
+            for country in base_packages_qs.values_list("country", flat=True)
+            if (country or "").strip()
+        },
+        key=lambda item: item.lower(),
+    )
 
     packages = []
     total_joined_travelers = 0
@@ -708,6 +748,14 @@ def admin_packages_view(request):
         'completed_packages': completed_packages,
         'total_packages': len(packages),
         'search_query': search_query,
+        'filters': {
+            'status': selected_status,
+            'country': selected_country,
+            'sort': selected_sort,
+        },
+        'filter_options': {
+            'countries': available_countries,
+        },
         'display_name': display_name,
         'package_metrics': {
             'active': status_counts[PackageStatus.ACTIVE],
