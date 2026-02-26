@@ -1067,6 +1067,16 @@ def agent_dashboard_view(request):
         created_at__gte=current_month_start,
         created_at__lt=next_month_start,
     ).count()
+    reviews_last_month = reviews_qs.filter(
+        created_at__gte=previous_month_start,
+        created_at__lt=current_month_start,
+    ).count()
+    reviews_change_pct = _pct_change(reviews_this_month, reviews_last_month)
+    low_rating_reviews_30d_qs = reviews_qs.filter(
+        rating__lte=3,
+        created_at__gte=now - timedelta(days=30),
+    )
+    low_rating_reviews_30d_count = low_rating_reviews_30d_qs.count()
 
     active_chat_rooms = chat_rooms_qs.count()
     messages_last_30_days = messages_qs.filter(created_at__gte=now - timedelta(days=30)).count()
@@ -1151,8 +1161,20 @@ def agent_dashboard_view(request):
     monthly_traveler_values = [int((booking_trend_map.get(key) or {}).get("travelers", 0) or 0) for key in month_keys]
     monthly_revenue_values = [float(revenue_trend_map.get(key, 0) or 0) for key in month_keys]
 
+    review_trend_qs = (
+        reviews_qs.filter(created_at__date__gte=start_window)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"), avg_rating=Avg("rating"))
+        .order_by("month")
+    )
+    review_trend_map = {_month_key(row["month"]): row for row in review_trend_qs}
+    monthly_review_count_values = [int((review_trend_map.get(key) or {}).get("count", 0) or 0) for key in month_keys]
+    monthly_review_avg_values = [float((review_trend_map.get(key) or {}).get("avg_rating", 0) or 0) for key in month_keys]
+
     max_bookings_bar = max(monthly_booking_values, default=0)
     max_revenue_bar = max(monthly_revenue_values, default=0)
+    max_review_count_bar = max(monthly_review_count_values, default=0)
     monthly_booking_bars = [
         {
             "label": month_labels[i],
@@ -1171,6 +1193,18 @@ def agent_dashboard_view(request):
             "height_pct": 0 if max_revenue_bar == 0 else (
                 0 if monthly_revenue_values[i] == 0 else max(14, round((monthly_revenue_values[i] / max_revenue_bar) * 100))
             ),
+        }
+        for i in range(len(month_labels))
+    ]
+    monthly_review_bars = [
+        {
+            "label": month_labels[i],
+            "value": monthly_review_count_values[i],
+            "avg_rating": round(monthly_review_avg_values[i], 1) if monthly_review_count_values[i] else 0,
+            "count_height_pct": 0 if max_review_count_bar == 0 else (
+                0 if monthly_review_count_values[i] == 0 else max(14, round((monthly_review_count_values[i] / max_review_count_bar) * 100))
+            ),
+            "avg_height_pct": 0 if monthly_review_count_values[i] == 0 else max(12, round((monthly_review_avg_values[i] / 5) * 100)),
         }
         for i in range(len(month_labels))
     ]
@@ -1278,6 +1312,24 @@ def agent_dashboard_view(request):
             }
         )
 
+    low_rating_recent_reviews_qs = (
+        low_rating_reviews_30d_qs.select_related("user", "user__user_profile").order_by("-created_at")[:4]
+    )
+    low_rating_recent_reviews = []
+    for r in low_rating_recent_reviews_qs:
+        try:
+            reviewer_name = r.user.user_profile.full_name
+        except UserProfile.DoesNotExist:
+            reviewer_name = r.user.email.split("@")[0]
+        low_rating_recent_reviews.append(
+            {
+                "reviewer_name": reviewer_name,
+                "rating": r.rating,
+                "comment": r.comment,
+                "created_at": r.created_at,
+            }
+        )
+
     upcoming_departures_qs = (
         package_qs.filter(
             status=PackageStatus.ACTIVE,
@@ -1352,6 +1404,7 @@ def agent_dashboard_view(request):
             "avg_rating": avg_rating,
             "reviews_count": reviews_count,
             "reviews_this_month": reviews_this_month,
+            "reviews_last_month": reviews_last_month,
             "active_chat_rooms": active_chat_rooms,
             "messages_last_30_days": messages_last_30_days,
             "unread_traveler_messages": unread_traveler_messages,
@@ -1372,6 +1425,7 @@ def agent_dashboard_view(request):
         },
         "monthly_booking_bars": monthly_booking_bars,
         "monthly_revenue_bars": monthly_revenue_bars,
+        "monthly_review_bars": monthly_review_bars,
         "package_status": package_status,
         "booking_status": booking_status,
         "review_breakdown": review_breakdown,
@@ -1379,10 +1433,148 @@ def agent_dashboard_view(request):
         "top_travelers": top_travelers,
         "recent_bookings": recent_bookings,
         "recent_reviews": recent_reviews,
+        "low_rating_recent_reviews": low_rating_recent_reviews,
         "upcoming_departures": upcoming_departures,
+        "review_insights": {
+            "reviews_change_pct": reviews_change_pct,
+            "low_rating_reviews_30d_count": low_rating_reviews_30d_count,
+            "low_rating_reviews_30d_percent": _safe_pct(low_rating_reviews_30d_count, reviews_count),
+        },
         "insights": insights[:5],
     }
     return render(request, 'agent_dashboard.html', context)
+
+
+def agent_reviews_view(request):
+    """Agent reviews analytics page (sidebar Reviews)."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    now = timezone.now()
+    today = timezone.localdate()
+    current_month_start = today.replace(day=1)
+    previous_month_start = _shift_month(current_month_start, -1)
+    next_month_start = _shift_month(current_month_start, 1)
+    month_starts = [_shift_month(current_month_start, offset) for offset in range(-5, 1)]
+    month_labels = [m.strftime("%b") for m in month_starts]
+    month_keys = [m.strftime("%Y-%m") for m in month_starts]
+    start_window = month_starts[0]
+
+    agent_profile, _ = AgentProfile.objects.get_or_create(user=request.user)
+    display_name = agent_profile.full_name or request.user.email.split("@")[0]
+    reviews_qs = AgentReview.objects.filter(agent=request.user)
+
+    reviews_count = reviews_qs.count()
+    avg_rating = float(agent_profile.rating or 0)
+    reviews_this_month = reviews_qs.filter(
+        created_at__gte=current_month_start,
+        created_at__lt=next_month_start,
+    ).count()
+    reviews_last_month = reviews_qs.filter(
+        created_at__gte=previous_month_start,
+        created_at__lt=current_month_start,
+    ).count()
+    reviews_change_pct = _pct_change(reviews_this_month, reviews_last_month)
+
+    low_rating_reviews_30d_qs = reviews_qs.filter(
+        rating__lte=3,
+        created_at__gte=now - timedelta(days=30),
+    )
+    low_rating_reviews_30d_count = low_rating_reviews_30d_qs.count()
+
+    review_rating_rows = list(
+        reviews_qs.values("rating").annotate(count=Count("id")).order_by("-rating")
+    )
+    review_rating_map = {int(row["rating"]): row["count"] for row in review_rating_rows}
+    review_breakdown = [
+        {
+            "rating": rating,
+            "count": review_rating_map.get(rating, 0),
+            "percent": _safe_pct(review_rating_map.get(rating, 0), reviews_count),
+        }
+        for rating in range(5, 0, -1)
+    ]
+
+    review_trend_qs = (
+        reviews_qs.filter(created_at__date__gte=start_window)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"), avg_rating=Avg("rating"))
+        .order_by("month")
+    )
+    review_trend_map = {_month_key(row["month"]): row for row in review_trend_qs}
+    monthly_review_count_values = [int((review_trend_map.get(key) or {}).get("count", 0) or 0) for key in month_keys]
+    monthly_review_avg_values = [float((review_trend_map.get(key) or {}).get("avg_rating", 0) or 0) for key in month_keys]
+    max_review_count_bar = max(monthly_review_count_values, default=0)
+    monthly_review_bars = [
+        {
+            "label": month_labels[i],
+            "value": monthly_review_count_values[i],
+            "avg_rating": round(monthly_review_avg_values[i], 1) if monthly_review_count_values[i] else 0,
+            "count_height_pct": 0 if max_review_count_bar == 0 else (
+                0 if monthly_review_count_values[i] == 0 else max(14, round((monthly_review_count_values[i] / max_review_count_bar) * 100))
+            ),
+        }
+        for i in range(len(month_labels))
+    ]
+
+    recent_reviews_qs = reviews_qs.select_related("user", "user__user_profile").order_by("-created_at")[:12]
+    recent_reviews = []
+    for r in recent_reviews_qs:
+        reviewer_profile_picture_url = None
+        try:
+            reviewer_profile = r.user.user_profile
+            reviewer_name = reviewer_profile.full_name
+            if reviewer_profile.profile_picture:
+                reviewer_profile_picture_url = reviewer_profile.profile_picture.url
+        except UserProfile.DoesNotExist:
+            reviewer_name = r.user.email.split("@")[0]
+        recent_reviews.append({
+            "reviewer_name": reviewer_name,
+            "reviewer_profile_picture_url": reviewer_profile_picture_url,
+            "rating": r.rating,
+            "comment": r.comment,
+            "created_at": r.created_at,
+        })
+
+    low_rating_recent_reviews_qs = (
+        low_rating_reviews_30d_qs.select_related("user", "user__user_profile").order_by("-created_at")[:8]
+    )
+    low_rating_recent_reviews = []
+    for r in low_rating_recent_reviews_qs:
+        try:
+            reviewer_name = r.user.user_profile.full_name
+        except UserProfile.DoesNotExist:
+            reviewer_name = r.user.email.split("@")[0]
+        low_rating_recent_reviews.append({
+            "reviewer_name": reviewer_name,
+            "rating": r.rating,
+            "comment": r.comment,
+            "created_at": r.created_at,
+        })
+
+    context = {
+        "user": request.user,
+        "profile": agent_profile,
+        "display_name": display_name,
+        "active_nav": "reviews",
+        "review_stats": {
+            "avg_rating": avg_rating,
+            "reviews_count": reviews_count,
+            "reviews_this_month": reviews_this_month,
+            "reviews_last_month": reviews_last_month,
+            "reviews_change_pct": reviews_change_pct,
+            "low_rating_reviews_30d_count": low_rating_reviews_30d_count,
+            "low_rating_reviews_30d_percent": _safe_pct(low_rating_reviews_30d_count, reviews_count),
+        },
+        "review_breakdown": review_breakdown,
+        "monthly_review_bars": monthly_review_bars,
+        "recent_reviews": recent_reviews,
+        "low_rating_recent_reviews": low_rating_recent_reviews,
+        "star_slots": [1, 2, 3, 4, 5],
+    }
+    return render(request, 'agent_reviews.html', context)
 
 
 @csrf_exempt

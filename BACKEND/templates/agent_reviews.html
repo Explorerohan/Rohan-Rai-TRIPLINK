@@ -1,0 +1,169 @@
+{% extends 'base_agent.html' %}
+
+{% block title %}Agent Reviews - TRIPLINK{% endblock %}
+
+{% block agent_extra_css %}
+<style>
+.header{position:fixed;top:0;left:260px;right:0;height:70px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;align-items:center;padding:0 30px;z-index:100}
+.header-left{flex:1;display:flex;align-items:center}
+.header-right{display:flex;align-items:center;gap:20px}.notification-icon{position:relative;font-size:20px;color:#64748b}.notification-badge{position:absolute;top:-5px;right:-5px;background:#3b82f6;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}.notification-badge.red{background:#ef4444}
+.user-profile{display:flex;align-items:center;gap:10px}.user-greeting{color:#1e293b;font-size:14px;font-weight:500}.user-avatar{width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;overflow:hidden}.user-avatar img{width:100%;height:100%;object-fit:cover}
+.main-content{padding-top:70px}
+.reviews-page{display:grid;gap:16px}
+.hero{background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.hero h1{font-size:28px;font-weight:800;color:#0f172a;margin:0 0 5px}.hero p{margin:0;color:#64748b;font-size:13px;line-height:1.4}
+.hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.hero-badge{background:#f8fafc;border:1px solid #e2e8f0;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;color:#334155}
+.hero-stat{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:12px 14px;min-width:190px}.hero-stat .label{font-size:11px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.35px}.hero-stat .value{font-size:24px;font-weight:800;color:#14532d;margin-top:6px}.hero-stat .sub{font-size:12px;color:#166534;margin-top:3px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.card,.panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 3px 10px rgba(15,23,42,.03)}.card{padding:13px}.panel{padding:14px}
+.k-label{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px}.k-value{font-size:22px;font-weight:800;color:#0f172a;margin-top:6px}.k-meta{font-size:12px;color:#64748b;line-height:1.35;margin-top:5px}
+.delta{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700}.up{background:#dcfce7;color:#166534}.down{background:#fee2e2;color:#b91c1c}.flat{background:#e2e8f0;color:#334155}
+.p-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px}.p-title{font-size:14px;font-weight:800;color:#0f172a}.p-sub{font-size:12px;color:#64748b}.mini{border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.rows{display:grid;gap:10px}.row{display:grid;gap:5px}.rowtop{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:#334155}.track{height:8px;background:#eef2f7;border-radius:999px;overflow:hidden}.fill{height:100%;border-radius:inherit}.f-review{background:#f59e0b}
+.bars{height:210px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end}.bcol{display:grid;grid-template-rows:auto 140px auto;gap:5px;align-items:end}.bval{text-align:center;font-size:10px;color:#475569;font-weight:700;line-height:1.1}
+.bwrap{height:140px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;display:flex;align-items:flex-end;overflow:hidden}.bfill{width:100%;min-height:0}.review-count{background:#f59e0b}.blbl{text-align:center;font-size:11px;color:#64748b;font-weight:700}
+.mini-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mini-stat{border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:8px}.mini-stat.warn{background:#fff7ed;border-color:#fed7aa}.ms-l{font-size:10px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.35px}.ms-v{font-size:16px;color:#0f172a;font-weight:800;line-height:1.1;margin-top:4px}.ms-m{font-size:11px;color:#64748b;margin-top:4px;line-height:1.3}
+.list{display:grid;gap:10px}.item{border:1px solid #e2e8f0;border-radius:12px;padding:10px}.alert-item{border-color:#fecaca;background:#fff1f2}.ihead{display:flex;justify-content:space-between;gap:8px}.iname{font-size:13px;font-weight:800;color:#0f172a}.isub{font-size:11px;color:#64748b}.irating{color:#f59e0b;font-weight:700;font-size:12px}.alert-item .irating{color:#dc2626}.icmt{font-size:12px;color:#475569;line-height:1.4;margin:6px 0}
+.review-card{display:grid;gap:8px}
+.review-meta{display:flex;align-items:flex-start;gap:10px}
+.review-avatar{width:40px;height:40px;border-radius:50%;background:#e2e8f0;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.review-avatar img{width:100%;height:100%;object-fit:cover}
+.review-avatar-fallback{font-size:18px;color:#64748b;line-height:1}
+.review-main{flex:1;min-width:0}
+.review-topline{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.review-stars{display:flex;align-items:center;gap:2px;color:#f59e0b;font-size:12px;line-height:1}
+.review-star.off{color:#cbd5e1}
+.review-rating-value{margin-left:4px;font-weight:700;color:#92400e;font-size:11px}
+.empty{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:12px;padding:14px;font-size:13px;color:#64748b}
+@media (max-width:1200px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:1fr}.hero{flex-direction:column}.hero-stat{min-width:0}}
+@media (max-width:768px){.grid4,.grid2{grid-template-columns:1fr}.header{left:80px}}
+</style>
+{% endblock agent_extra_css %}
+
+{% block main_content %}
+<div class="reviews-page">
+  <header class="header">
+    <div class="header-left">
+      
+    </div>
+    <div class="header-right">
+      <div class="notification-icon" title="Notifications">&#128276;<span class="notification-badge">{{ review_stats.reviews_this_month }}</span></div>
+      <div class="notification-icon" title="Chat">&#128172;<span class="notification-badge">{{ review_stats.low_rating_reviews_30d_count }}</span></div>
+      <div class="notification-icon" title="Attention">&#9881;&#65039;<span class="notification-badge red">{{ review_stats.low_rating_reviews_30d_count }}</span></div>
+      <div class="user-profile">
+        <span class="user-greeting">Hello, {{ display_name|default:user.email }}</span>
+        <div class="user-avatar">
+          {% if profile and profile.profile_picture %}<img src="{{ profile.profile_picture.url }}" alt="{{ display_name }}">{% else %}<span>&#128100;</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Reviews</h1>
+      <p>Monitor traveler satisfaction, spot low-rating alerts, and track review momentum over time.</p>
+      <div class="hero-badges">
+        <span class="hero-badge">{{ review_stats.reviews_count }} total reviews</span>
+        <span class="hero-badge">{{ review_stats.reviews_this_month }} this month</span>
+        <span class="hero-badge">{{ review_stats.low_rating_reviews_30d_count }} low ratings (30d)</span>
+      </div>
+    </div>
+    <div class="hero-stat">
+      <div class="label">Average Rating</div>
+      <div class="value">{{ review_stats.avg_rating|floatformat:1 }}/5</div>
+      <div class="sub">Agent-wide traveler feedback</div>
+    </div>
+  </section>
+
+  <section class="grid4">
+    <div class="card"><div class="k-label">Total Reviews</div><div class="k-value">{{ review_stats.reviews_count }}</div><div class="k-meta">All-time traveler reviews for your account</div></div>
+    <div class="card"><div class="k-label">This Month</div><div class="k-value">{{ review_stats.reviews_this_month }}</div><div class="k-meta">{{ review_stats.reviews_last_month }} last month
+      {% if review_stats.reviews_change_pct > 0 %}<span class="delta up">+{{ review_stats.reviews_change_pct|floatformat:1 }}%</span>
+      {% elif review_stats.reviews_change_pct < 0 %}<span class="delta down">{{ review_stats.reviews_change_pct|floatformat:1 }}%</span>
+      {% else %}<span class="delta flat">{{ review_stats.reviews_change_pct|floatformat:1 }}%</span>{% endif %}
+    </div></div>
+    <div class="card"><div class="k-label">Average Rating</div><div class="k-value">{{ review_stats.avg_rating|floatformat:1 }}/5</div><div class="k-meta">Quality indicator from all reviews</div></div>
+    <div class="card"><div class="k-label">Review Health</div><div class="k-value">{{ review_stats.avg_rating|floatformat:1 }}/5</div><div class="k-meta">{{ review_stats.low_rating_reviews_30d_count }} low ratings (<=3*) in last 30 days</div></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Rating Breakdown</div><div class="p-sub">Distribution of traveler ratings</div></div><div class="mini">{{ review_stats.avg_rating|floatformat:1 }}/5</div></div>
+      <div class="mini-stats" style="margin-bottom:10px;">
+        <div class="mini-stat"><div class="ms-l">Top Ratings</div><div class="ms-v">{{ review_breakdown.0.count }} / {{ review_breakdown.1.count }}</div><div class="ms-m">5* and 4* review counts</div></div>
+        <div class="mini-stat warn"><div class="ms-l">Low Ratings (30d)</div><div class="ms-v">{{ review_stats.low_rating_reviews_30d_count }}</div><div class="ms-m">Recent low-rating reviews count</div></div>
+      </div>
+      <div class="rows">
+        {% for row in review_breakdown %}
+        <div class="row">
+          <div class="rowtop"><span>{{ row.rating }}*</span><span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span></div>
+          <div class="track"><div class="fill f-review" style="width: {{ row.percent|floatformat:2 }}%;"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Monthly Review Trend</div><div class="p-sub">Review volume and monthly average rating (last 6 months)</div></div></div>
+      <div class="bars">
+        {% for bar in monthly_review_bars %}
+        <div class="bcol">
+          <div class="bval">{{ bar.value }}<br><span style="font-weight:600;color:#64748b;">{{ bar.avg_rating|floatformat:1 }}/5</span></div>
+          <div class="bwrap" title="{{ bar.label }}: {{ bar.value }} reviews | Avg {{ bar.avg_rating|floatformat:1 }}/5">
+            <div class="bfill review-count" style="height: {{ bar.count_height_pct }}%;"></div>
+          </div>
+          <div class="blbl">{{ bar.label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Recent Reviews</div><div class="p-sub">Latest traveler feedback</div></div></div>
+      {% if recent_reviews %}
+      <div class="list">
+        {% for review in recent_reviews %}
+        <div class="item {% if review.rating <= 3 %}alert-item{% endif %}">
+          <div class="review-card">
+            <div class="review-meta">
+              <div class="review-avatar">
+                {% if review.reviewer_profile_picture_url %}
+                  <img src="{{ review.reviewer_profile_picture_url }}" alt="{{ review.reviewer_name }}">
+                {% else %}
+                  <span class="review-avatar-fallback">&#128100;</span>
+                {% endif %}
+              </div>
+              <div class="review-main">
+                <div class="review-topline">
+                  <div>
+                    <div class="iname">{{ review.reviewer_name }}</div>
+                    <div class="isub">{{ review.created_at|date:"M d, Y" }}</div>
+                  </div>
+                  <div class="review-stars" aria-label="{{ review.rating }} star review">
+                    {% for n in star_slots %}
+                      {% if n <= review.rating %}
+                        <span class="review-star">&#9733;</span>
+                      {% else %}
+                        <span class="review-star off">&#9733;</span>
+                      {% endif %}
+                    {% endfor %}
+                    <span class="review-rating-value">{{ review.rating }}/5</span>
+                  </div>
+                </div>
+                <div class="icmt">{% if review.comment %}{{ review.comment|truncatechars:200 }}{% else %}<em>No written comment.</em>{% endif %}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">No traveler reviews yet.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock main_content %}
