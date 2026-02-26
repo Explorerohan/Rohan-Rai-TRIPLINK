@@ -1,34 +1,256 @@
-{% extends 'base_agent.html' %}
-{% load static %}
+﻿{% extends 'base_agent.html' %}
 
 {% block title %}Agent Dashboard - TRIPLINK{% endblock %}
 
 {% block agent_extra_css %}
 <style>
-    .welcome-message {
-        background: white;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        text-align: center;
-    }
-
-    .welcome-message h1 {
-        color: #1e293b;
-        font-size: 28px;
-        margin-bottom: 10px;
-    }
-
-    .welcome-message p {
-        color: #64748b;
-        font-size: 16px;
-    }
+.dash{display:grid;gap:16px}
+.header{position:fixed;top:0;left:260px;right:0;height:70px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;align-items:center;padding:0 30px;z-index:100}
+.header-left{flex:1;display:flex;align-items:center}
+.header-right{display:flex;align-items:center;gap:20px}
+.notification-icon{position:relative;cursor:pointer;font-size:20px;color:#64748b}
+.notification-badge{position:absolute;top:-5px;right:-5px;background:#3b82f6;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+.notification-badge.red{background:#ef4444}
+.user-profile{display:flex;align-items:center;gap:10px}
+.user-greeting{color:#1e293b;font-size:14px;font-weight:500}
+.user-avatar{width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.user-avatar img{width:100%;height:100%;object-fit:cover}
+.main-content{padding-top:70px}
+.hero{background:#166534;color:#fff;border-radius:16px;padding:18px;display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+.hero h1{font-size:24px;margin:0 0 6px;font-weight:800}.hero p{margin:0;color:rgba(255,255,255,.88);font-size:13px;line-height:1.45}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.badge{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.1);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
+.insights{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px}
+.insights h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.4px}.insights ul{margin:0;padding-left:18px;display:grid;gap:6px}.insights li{font-size:12px;line-height:1.35}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.card,.panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 3px 10px rgba(15,23,42,.03)}
+.card{padding:13px}.k-label{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px}.k-value{font-size:22px;font-weight:800;color:#0f172a;margin-top:6px}.k-meta{font-size:12px;color:#64748b;line-height:1.35;margin-top:5px}
+.delta{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700}.up{background:#dcfce7;color:#166534}.down{background:#fee2e2;color:#b91c1c}.flat{background:#e2e8f0;color:#334155}
+.panel{padding:14px}.p-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px}.p-title{font-size:14px;font-weight:800;color:#0f172a}.p-sub{font-size:12px;color:#64748b}
+.mini{border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:700;white-space:nowrap}
+.bars{height:210px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end}
+.bcol{display:grid;grid-template-rows:auto 140px auto;gap:5px;align-items:end}.bval{text-align:center;font-size:10px;color:#475569;font-weight:700;line-height:1.1}
+.bwrap{height:140px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;display:flex;align-items:flex-end;overflow:hidden}.bfill{width:100%;min-height:0}.book{background:#2563eb}.rev{background:#16a34a}.blbl{text-align:center;font-size:11px;color:#64748b;font-weight:700}
+.rows{display:grid;gap:10px}.row{display:grid;gap:5px}.rowtop{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:#334155}.track{height:8px;background:#eef2f7;border-radius:999px;overflow:hidden}.fill{height:100%;border-radius:inherit}
+.f-confirmed{background:#22c55e}.f-cancelled{background:#ef4444}.f-active{background:#3b82f6}.f-completed{background:#14b8a6}.f-draft{background:#94a3b8}.f-review{background:#f59e0b}
+.ranklist{display:grid;gap:10px}.rank{border:1px solid #e2e8f0;border-radius:12px;padding:10px}.rtop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.rname{font-size:13px;font-weight:800;color:#0f172a}.rmeta{font-size:11px;color:#64748b;margin-top:2px}.rval{font-size:12px;font-weight:700;white-space:nowrap}
+.rtrack{height:7px;background:#eef2f7;border-radius:999px;overflow:hidden;margin:6px 0 5px}.rfill{height:100%;background:#16a34a}.rsub{display:flex;flex-wrap:wrap;gap:8px 10px;font-size:11px;color:#64748b}
+.tablewrap{overflow:auto}.tbl{width:100%;border-collapse:collapse;min-width:620px}.tbl th,.tbl td{padding:9px 8px;border-bottom:1px solid #eef2f7;text-align:left}.tbl th{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.4px}.tbl td{font-size:13px;color:#334155}
+.tt{font-weight:700;color:#0f172a}.ts{display:block;font-size:11px;color:#64748b;margin-top:2px}.pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700}.p-confirmed{background:#dcfce7;color:#166534}.p-cancelled{background:#fee2e2;color:#b91c1c}
+.list{display:grid;gap:10px}.item{border:1px solid #e2e8f0;border-radius:12px;padding:10px}.ihead{display:flex;justify-content:space-between;gap:8px}.iname{font-size:13px;font-weight:800;color:#0f172a}.isub{font-size:11px;color:#64748b}.irating{color:#f59e0b;font-weight:700;font-size:12px}.icmt{font-size:12px;color:#475569;line-height:1.4;margin:6px 0}
+.empty{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:12px;padding:14px;font-size:13px;color:#64748b}
+@media (max-width:1200px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:1fr}.hero{grid-template-columns:1fr}}
+@media (max-width:768px){.grid4,.grid2{grid-template-columns:1fr}.tbl{min-width:520px}.header{left:80px}}
 </style>
 {% endblock agent_extra_css %}
 
 {% block main_content %}
-<div class="welcome-message">
-    <h1>Welcome back, {{ user.email }}!</h1>
-    <p>Your dashboard is ready. Content will be added here.</p>
+<div class="dash">
+  <header class="header">
+    <div class="header-left">
+      
+    </div>
+    <div class="header-right">
+      <div class="notification-icon" title="Notifications">
+        &#128276;
+        <span class="notification-badge">{{ stats.upcoming_packages }}</span>
+      </div>
+      <div class="notification-icon" title="Chat">
+        &#128172;
+        <span class="notification-badge">{{ stats.unread_traveler_messages }}</span>
+      </div>
+      <div class="notification-icon" title="Settings / Reviews">
+        &#9881;&#65039;
+        <span class="notification-badge red">{{ stats.reviews_this_month }}</span>
+      </div>
+      <div class="user-profile">
+        <span class="user-greeting">Hello, {{ display_name|default:user.email }}</span>
+        <div class="user-avatar">
+          {% if profile and profile.profile_picture %}
+            <img src="{{ profile.profile_picture.url }}" alt="{{ display_name }}">
+          {% else %}
+            <span>&#128100;</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Welcome back, {{ display_name }}.</h1>
+      <p>Track bookings, revenue, traveler demand, reviews, and package performance for your trips.</p>
+      <div class="badges">
+        <span class="badge">{{ stats.active_packages }} active packages</span>
+        <span class="badge">{{ stats.confirmed_bookings }} confirmed bookings</span>
+        <span class="badge">{{ stats.travelers_served }} travelers served</span>
+        <span class="badge">Rating {{ stats.avg_rating|floatformat:1 }}/5</span>
+        <span class="badge">{{ stats.unread_traveler_messages }} unread messages</span>
+      </div>
+    </div>
+    <div class="insights">
+      <h3>Quick Insights</h3>
+      <ul>
+        {% for insight in insights %}<li>{{ insight }}</li>{% empty %}<li>No insights yet.</li>{% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="grid4">
+    <div class="card">
+      <div class="k-label">Confirmed Revenue</div>
+      <div class="k-value">Rs {{ stats.estimated_revenue|floatformat:0 }}</div>
+      <div class="k-meta">{{ momentum.revenue_this_month|floatformat:0 }} this month
+        {% if momentum.revenue_change_pct > 0 %}<span class="delta up">+{{ momentum.revenue_change_pct|floatformat:1 }}%</span>
+        {% elif momentum.revenue_change_pct < 0 %}<span class="delta down">{{ momentum.revenue_change_pct|floatformat:1 }}%</span>
+        {% else %}<span class="delta flat">{{ momentum.revenue_change_pct|floatformat:1 }}%</span>{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="k-label">Confirmed Bookings</div>
+      <div class="k-value">{{ stats.confirmed_bookings }}</div>
+      <div class="k-meta">{{ momentum.bookings_this_month }} this month
+        {% if momentum.bookings_change_pct > 0 %}<span class="delta up">+{{ momentum.bookings_change_pct|floatformat:1 }}%</span>
+        {% elif momentum.bookings_change_pct < 0 %}<span class="delta down">{{ momentum.bookings_change_pct|floatformat:1 }}%</span>
+        {% else %}<span class="delta flat">{{ momentum.bookings_change_pct|floatformat:1 }}%</span>{% endif %}
+      </div>
+    </div>
+    <div class="card"><div class="k-label">Travelers Served</div><div class="k-value">{{ stats.travelers_served }}</div><div class="k-meta">{{ stats.unique_travelers }} unique travelers</div></div>
+    <div class="card"><div class="k-label">Avg Booking Value</div><div class="k-value">Rs {{ stats.avg_booking_value|floatformat:0 }}</div><div class="k-meta">Confirmed bookings only</div></div>
+    <div class="card"><div class="k-label">Packages</div><div class="k-value">{{ stats.total_packages }}</div><div class="k-meta">{{ stats.active_packages }} active, {{ stats.draft_packages }} draft, {{ stats.completed_packages }} completed</div></div>
+    <div class="card"><div class="k-label">Reviews</div><div class="k-value">{{ stats.avg_rating|floatformat:1 }}/5</div><div class="k-meta">{{ stats.reviews_count }} total, {{ stats.reviews_this_month }} this month</div></div>
+    <div class="card"><div class="k-label">Chat Activity</div><div class="k-value">{{ stats.active_chat_rooms }}</div><div class="k-meta">{{ stats.messages_last_30_days }} messages in 30 days</div></div>
+    <div class="card"><div class="k-label">Custom Requests</div><div class="k-value">{{ stats.claimed_custom_total }}</div><div class="k-meta">{{ stats.claimed_custom_active }} in progress | {{ stats.marketplace_open_custom }} open marketplace</div></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Monthly Confirmed Bookings</div><div class="p-sub">Last 6 months</div></div><div class="mini">{{ stats.booking_confirmation_rate|floatformat:1 }}% confirmed</div></div>
+      <div class="bars">
+        {% for bar in monthly_booking_bars %}
+          <div class="bcol">
+            <div class="bval">{{ bar.value }}</div>
+            <div class="bwrap" title="{{ bar.label }}: {{ bar.value }} bookings / {{ bar.travelers }} travelers">
+              <div class="bfill book" style="height: {{ bar.height_pct }}%;"></div>
+            </div>
+            <div class="blbl">{{ bar.label }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Monthly Confirmed Revenue</div><div class="p-sub">Last 6 months</div></div><div class="mini">Rs {{ stats.estimated_revenue|floatformat:0 }}</div></div>
+      <div class="bars">
+        {% for bar in monthly_revenue_bars %}
+          <div class="bcol">
+            <div class="bval">Rs {{ bar.value|floatformat:0 }}</div>
+            <div class="bwrap" title="{{ bar.label }}: Rs {{ bar.value|floatformat:0 }}">
+              <div class="bfill rev" style="height: {{ bar.height_pct }}%;"></div>
+            </div>
+            <div class="blbl">{{ bar.label }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="grid3">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Booking Status Mix</div><div class="p-sub">Booking quality</div></div></div>
+      <div class="rows">{% for row in booking_status %}<div class="row"><div class="rowtop"><span>{{ row.label }}</span><span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span></div><div class="track"><div class="fill {{ row.css_class|default:'f-confirmed' }}" style="width: {{ row.percent|floatformat:2 }}%;"></div></div></div>{% endfor %}</div>
+    </section>
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Package Status Mix</div><div class="p-sub">Supply lifecycle</div></div></div>
+      <div class="rows">{% for row in package_status %}<div class="row"><div class="rowtop"><span>{{ row.label }}</span><span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span></div><div class="track"><div class="fill {{ row.css_class }}" style="width: {{ row.percent|floatformat:2 }}%;"></div></div></div>{% endfor %}</div>
+    </section>
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Review Breakdown</div><div class="p-sub">Traveler ratings</div></div></div>
+      <div class="rows">{% for row in review_breakdown %}<div class="row"><div class="rowtop"><span>{{ row.rating }}*</span><span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span></div><div class="track"><div class="fill f-review" style="width: {{ row.percent|floatformat:2 }}%;"></div></div></div>{% endfor %}</div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Top Packages by Demand</div><div class="p-sub">Ranked by confirmed bookings</div></div><div class="mini">{{ stats.upcoming_packages }} upcoming</div></div>
+      {% if top_packages %}
+      <div class="ranklist">
+        {% for item in top_packages %}
+        <div class="rank">
+          <div class="rtop"><div><div class="rname">{{ item.title }}</div><div class="rmeta">{{ item.location }} | {{ item.status }}</div></div><div class="rval">{{ item.confirmed_bookings }} bookings</div></div>
+          <div class="rtrack"><div class="rfill" style="width: {{ item.bar_percent|floatformat:2 }}%;"></div></div>
+          <div class="rsub"><span>{{ item.traveler_seats }} travelers</span><span>Rs {{ item.revenue|floatformat:0 }}</span></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="empty">No package performance data yet.</div>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Top Travelers</div><div class="p-sub">Most frequent travelers on your packages</div></div></div>
+      {% if top_travelers %}
+      <div class="ranklist">
+        {% for item in top_travelers %}
+        <div class="rank">
+          <div class="rtop"><div><div class="rname">{{ item.name }}</div><div class="rmeta">{{ item.location }} | {{ item.email }}</div></div><div class="rval">{{ item.bookings_count }} bookings</div></div>
+          <div class="rtrack"><div class="rfill" style="width: {{ item.bar_percent|floatformat:2 }}%;"></div></div>
+          <div class="rsub"><span>{{ item.traveler_seats }} seats</span><span>Rs {{ item.total_spend|floatformat:0 }}</span>{% if item.last_booking_at %}<span>{{ item.last_booking_at|date:"M d, Y" }}</span>{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="empty">No traveler history yet.</div>{% endif %}
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Recent Bookings</div><div class="p-sub">Latest activity on your packages</div></div></div>
+      {% if recent_bookings %}
+      <div class="tablewrap">
+        <table class="tbl">
+          <thead><tr><th>Traveler</th><th>Package</th><th>People</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for row in recent_bookings %}
+            <tr>
+              <td><span class="tt">{{ row.traveler_name }}</span><span class="ts">{{ row.traveler_email }}</span></td>
+              <td>{{ row.package_title }}</td><td>{{ row.traveler_count }}</td><td>Rs {{ row.total_amount|floatformat:0 }}</td>
+              <td><span class="pill {% if row.status_key == 'confirmed' %}p-confirmed{% else %}p-cancelled{% endif %}">{{ row.status }}</span></td>
+              <td>{{ row.created_at|date:"M d, Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<div class="empty">No bookings yet.</div>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Recent Reviews & Upcoming Trips</div><div class="p-sub">Traveler feedback and scheduled departures</div></div></div>
+      {% if recent_reviews %}
+      <div class="list">
+        {% for review in recent_reviews %}
+        <div class="item">
+          <div class="ihead"><div><div class="iname">{{ review.reviewer_name }}</div><div class="isub">{{ review.created_at|date:"M d, Y" }}</div></div><div class="irating">{{ review.rating }}*</div></div>
+          <div class="icmt">{% if review.comment %}{{ review.comment|truncatechars:160 }}{% else %}<em>No written comment.</em>{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty" style="margin-bottom:10px;">No traveler reviews yet.</div>
+      {% endif %}
+
+      <div class="p-head" style="margin-top:12px;"><div><div class="p-title">Upcoming Departures</div><div class="p-sub">Trips starting soon</div></div></div>
+      {% if upcoming_departures %}
+      <div class="list">
+        {% for item in upcoming_departures %}
+        <div class="item">
+          <div class="ihead"><div><div class="iname">{{ item.title }}</div><div class="isub">{{ item.location }}</div></div><div class="isub">{{ item.trip_start_date|date:"M d" }}{% if item.trip_end_date %} - {{ item.trip_end_date|date:"M d" }}{% endif %}</div></div>
+          <div class="icmt" style="margin:4px 0 0;">{{ item.confirmed_bookings }} bookings | {{ item.joined_travelers }} travelers</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="empty">No upcoming departures.</div>{% endif %}
+    </section>
+  </div>
 </div>
 {% endblock main_content %}
+
+
