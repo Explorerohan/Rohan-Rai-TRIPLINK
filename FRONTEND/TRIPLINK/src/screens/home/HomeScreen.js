@@ -56,36 +56,6 @@ const popularTrips = [
   },
 ];
 
-const recommendedTrips = [
-  {
-    id: "a",
-    title: "Swiss Alps Escape",
-    badge: "Hot Deal",
-    image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80",
-    price: "$1180",
-    nights: "5D/4N",
-    tag: "Ski + Scenic",
-  },
-  {
-    id: "b",
-    title: "Bali Beachside",
-    badge: "Limited",
-    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-    price: "$740",
-    nights: "4D/3N",
-    tag: "Couple Retreat",
-  },
-  {
-    id: "c",
-    title: "Santorini Sunset",
-    badge: "Top Pick",
-    image: "https://media.istockphoto.com/id/541132240/photo/oia-at-sunset.jpg?s=612x612&w=0&k=20&c=kql4X3tMkOmYsa4PX45WK7-vHzpOk__IeAaHiz4VfyA=",
-    price: "$960",
-    nights: "5D/4N",
-    tag: "Island Hopper",
-  },
-];
-
 const NAV_ICON_SIZE = 22;
 
 const navItems = [
@@ -109,6 +79,50 @@ const cleanPrice = (price) => {
     return Number.isNaN(parsed) ? price : parsed;
   }
   return price;
+};
+
+const toDateOnlyKey = (value = new Date()) => {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const normalizeDateKey = (value) => {
+  if (!value) return "";
+  const str = String(value).trim();
+  if (!str) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  return toDateOnlyKey(str);
+};
+
+const isPackageRunningToday = (pkg, todayKey) => {
+  const startKey = normalizeDateKey(pkg?.trip_start_date);
+  const endKey = normalizeDateKey(pkg?.trip_end_date);
+  if (!startKey || !endKey || !todayKey) return false;
+  return startKey <= todayKey && todayKey <= endKey;
+};
+
+const isPackageUpcoming = (pkg, todayKey) => {
+  const startKey = normalizeDateKey(pkg?.trip_start_date);
+  if (!startKey || !todayKey) return false;
+  return startKey > todayKey;
+};
+
+const formatShortDateRange = (start, end) => {
+  const startDate = start ? new Date(start) : null;
+  const endDate = end ? new Date(end) : null;
+  const validStart = startDate && !Number.isNaN(startDate.getTime());
+  const validEnd = endDate && !Number.isNaN(endDate.getTime());
+  const fmt = (d) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  if (validStart && validEnd) return `${fmt(startDate)} - ${fmt(endDate)}`;
+  if (validStart) return `From ${fmt(startDate)}`;
+  if (validEnd) return `Until ${fmt(endDate)}`;
+  return "Running now";
 };
 
 const transformRawPackages = (rawList) => {
@@ -272,6 +286,28 @@ const HomeScreen = ({
     });
   }, [activeCategory, packages, searchQuery]);
 
+  const runningNowPackages = useMemo(() => {
+    const todayKey = toDateOnlyKey(new Date());
+    return filteredPopular
+      .filter((pkg) => isPackageRunningToday(pkg, todayKey))
+      .sort((a, b) => {
+        const aEnd = normalizeDateKey(a?.trip_end_date);
+        const bEnd = normalizeDateKey(b?.trip_end_date);
+        return String(aEnd).localeCompare(String(bEnd));
+      });
+  }, [filteredPopular]);
+
+  const upcomingTopPicks = useMemo(() => {
+    const todayKey = toDateOnlyKey(new Date());
+    return filteredPopular
+      .filter((pkg) => isPackageUpcoming(pkg, todayKey))
+      .sort((a, b) => {
+        const aStart = normalizeDateKey(a?.trip_start_date);
+        const bStart = normalizeDateKey(b?.trip_start_date);
+        return String(aStart).localeCompare(String(bStart));
+      });
+  }, [filteredPopular]);
+
   const handleTripSelect = (trip) => {
     if (!trip || typeof trip !== "object") return;
     // Extract numeric price value
@@ -432,14 +468,14 @@ const HomeScreen = ({
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>Error loading packages: {error}</Text>
           </View>
-        ) : filteredPopular.length === 0 ? (
+        ) : upcomingTopPicks.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               {searchQuery.trim()
-                ? "No packages match your search"
+                ? "No upcoming packages match your search"
                 : activeCategory === "All"
-                  ? "No packages available"
-                  : `No packages in ${activeCategory}`}
+                  ? "No upcoming packages available"
+                  : `No upcoming packages in ${activeCategory}`}
             </Text>
           </View>
         ) : (
@@ -448,7 +484,7 @@ const HomeScreen = ({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.cardRow}
           >
-            {filteredPopular.map((place) => (
+            {upcomingTopPicks.map((place) => (
             <TouchableOpacity
               key={place.id}
               style={styles.placeCard}
@@ -488,46 +524,54 @@ const HomeScreen = ({
         )}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recommended Packages</Text>
+          <Text style={styles.sectionTitle}>Running Now</Text>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.recommendedRow}
-        >
-          {recommendedTrips.map((place) => (
-            <TouchableOpacity
-              key={place.id}
-              style={styles.recommendCard}
-              activeOpacity={0.9}
-              onPress={() =>
-                handleTripSelect({
-                  ...place,
-                  location: place.tag || "Scenic escape",
-                  hero: place.image,
-                })
-              }
-            >
-              <View style={styles.recommendImageWrap}>
-                <Image
-                  source={{ uri: place.image }}
-                  style={styles.recommendImage}
-                />
-                <View style={styles.recommendOverlay}>
-                  <Text style={styles.recommendTitle}>{place.title}</Text>
-                  <View style={styles.recommendMeta}>
-                    <View style={styles.nights}>
-                      <Ionicons name="time-outline" size={14} color="#e6e8ea" />
-                      <Text style={styles.metaText}>{place.nights}</Text>
+        {runningNowPackages.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.recommendedRow}
+          >
+            {runningNowPackages.map((place) => (
+              <TouchableOpacity
+                key={`running-${place.id}`}
+                style={styles.recommendCard}
+                activeOpacity={0.9}
+                onPress={() => handleTripSelect(place)}
+              >
+                <View style={styles.recommendImageWrap}>
+                  <Image
+                    source={{ uri: place.image }}
+                    style={styles.recommendImage}
+                  />
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveBadgeText}>LIVE</Text>
+                  </View>
+                  <View style={styles.recommendOverlay}>
+                    <Text style={styles.recommendTitle} numberOfLines={2}>{place.title}</Text>
+                    <View style={styles.recommendMeta}>
+                      <View style={styles.nights}>
+                        <Ionicons name="time-outline" size={14} color="#e6e8ea" />
+                        <Text style={styles.metaText}>
+                          {formatShortDateRange(place.trip_start_date, place.trip_end_date)}
+                        </Text>
+                      </View>
+                      <Text style={styles.recommendPrice}>{place.price}</Text>
                     </View>
-                    <Text style={styles.recommendPrice}>{place.price}</Text>
                   </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No packages are running today.
+            </Text>
+          </View>
+        )}
       </ScrollView>
       </View>
 
@@ -925,6 +969,32 @@ const styles = StyleSheet.create({
   recommendImage: {
     width: "100%",
     height: "100%",
+  },
+  liveBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(185, 28, 28, 0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(254, 202, 202, 0.55)",
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#ffffff",
+  },
+  liveBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#ffffff",
+    letterSpacing: 0.5,
   },
   recommendOverlay: {
     position: "absolute",
