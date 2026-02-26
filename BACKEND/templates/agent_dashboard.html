@@ -239,7 +239,7 @@
   </div>
 
   <div class="grid2">
-    <section class="panel">
+    <section class="panel" style="grid-column:1 / -1;">
       <div class="p-head"><div><div class="p-title">Recent Bookings</div><div class="p-sub">Latest activity on your packages</div></div></div>
       {% if recent_bookings %}
       <div class="tablewrap">
@@ -258,63 +258,6 @@
         </table>
       </div>
       {% else %}<div class="empty">No bookings yet.</div>{% endif %}
-    </section>
-
-    <section class="panel">
-      <div class="p-head"><div><div class="p-title">Review Inbox & Upcoming Trips</div><div class="p-sub">Feedback trends, low-rating alerts, and departures</div></div></div>
-
-      <div class="subhead">Monthly Review Trend (6 months)</div>
-      <div class="bars review-bars">
-        {% for bar in monthly_review_bars %}
-          <div class="bcol">
-            <div class="bval">{{ bar.value }}<br><span style="font-weight:600;color:#64748b;">{{ bar.avg_rating|floatformat:1 }}/5</span></div>
-            <div class="bwrap" title="{{ bar.label }}: {{ bar.value }} reviews | Avg {{ bar.avg_rating|floatformat:1 }}/5">
-              <div class="bfill review-count" style="height: {{ bar.count_height_pct }}%;"></div>
-            </div>
-            <div class="blbl">{{ bar.label }}</div>
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="subhead">Needs Attention (Low Ratings <=3, last 30 days)</div>
-      {% if low_rating_recent_reviews %}
-      <div class="list" style="margin-bottom:10px;">
-        {% for review in low_rating_recent_reviews %}
-        <div class="item alert-item">
-          <div class="ihead"><div><div class="iname">{{ review.reviewer_name }}</div><div class="isub">{{ review.created_at|date:"M d, Y" }}</div></div><div class="irating">{{ review.rating }}*</div></div>
-          <div class="icmt">{% if review.comment %}{{ review.comment|truncatechars:140 }}{% else %}<em>No written comment.</em>{% endif %}</div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty" style="margin-bottom:10px;">No low-rating reviews in the last 30 days.</div>
-      {% endif %}
-
-      <div class="subhead">Recent Reviews</div>
-      {% if recent_reviews %}
-      <div class="list">
-        {% for review in recent_reviews %}
-        <div class="item {% if review.rating <= 3 %}alert-item{% endif %}">
-          <div class="ihead"><div><div class="iname">{{ review.reviewer_name }}</div><div class="isub">{{ review.created_at|date:"M d, Y" }}</div></div><div class="irating">{{ review.rating }}*</div></div>
-          <div class="icmt">{% if review.comment %}{{ review.comment|truncatechars:160 }}{% else %}<em>No written comment.</em>{% endif %}</div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="empty" style="margin-bottom:10px;">No traveler reviews yet.</div>
-      {% endif %}
-
-      <div class="p-head" style="margin-top:12px;"><div><div class="p-title">Upcoming Departures</div><div class="p-sub">Trips starting soon</div></div></div>
-      {% if upcoming_departures %}
-      <div class="list">
-        {% for item in upcoming_departures %}
-        <div class="item">
-          <div class="ihead"><div><div class="iname">{{ item.title }}</div><div class="isub">{{ item.location }}</div></div><div class="isub">{{ item.trip_start_date|date:"M d" }}{% if item.trip_end_date %} - {{ item.trip_end_date|date:"M d" }}{% endif %}</div></div>
-          <div class="icmt" style="margin:4px 0 0;">{{ item.confirmed_bookings }} bookings | {{ item.joined_travelers }} travelers</div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}<div class="empty">No upcoming departures.</div>{% endif %}
     </section>
   </div>
 </div>
