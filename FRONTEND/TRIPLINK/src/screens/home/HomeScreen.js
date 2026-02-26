@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import {
+  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -14,7 +15,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getPackages, getProfile } from "../../utils/api";
+import { addBookmarkedPackage, getPackages, getProfile, removeBookmarkedPackage } from "../../utils/api";
 
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -146,6 +147,7 @@ const transformRawPackages = (rawList) => {
       icon: f.icon || "checkmark-circle-outline",
     })) || defaultFacilities,
     user_has_booked: pkg.user_has_booked ?? false,
+    is_bookmarked: Boolean(pkg.is_bookmarked),
     trip_start_date: pkg.trip_start_date ?? null,
     trip_end_date: pkg.trip_end_date ?? null,
     packageData: pkg,
@@ -176,6 +178,7 @@ const HomeScreen = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [bookmarkBusyIds, setBookmarkBusyIds] = useState([]);
 
   const displayName =
     profile?.first_name ||
@@ -328,6 +331,44 @@ const HomeScreen = ({
         trip.description ||
         "Discover tailored experiences with comfortable stays, great dining, and curated activities throughout your trip.",
     });
+  };
+
+  const handleToggleBookmark = async (trip) => {
+    const packageId = trip?.id;
+    if (!packageId) return;
+    if (!session?.access) {
+      Alert.alert("Login Required", "Please log in to save packages to your bookmarks.");
+      return;
+    }
+    if (bookmarkBusyIds.includes(String(packageId))) return;
+
+    const currentlyBookmarked = Boolean(trip?.is_bookmarked);
+    const targetState = !currentlyBookmarked;
+    const packageIdStr = String(packageId);
+
+    setBookmarkBusyIds((prev) => [...prev, packageIdStr]);
+    setPackages((prev) =>
+      (prev || []).map((pkg) =>
+        String(pkg?.id) === packageIdStr ? { ...pkg, is_bookmarked: targetState } : pkg
+      )
+    );
+
+    try {
+      if (targetState) {
+        await addBookmarkedPackage(packageId, session.access);
+      } else {
+        await removeBookmarkedPackage(packageId, session.access);
+      }
+    } catch (err) {
+      setPackages((prev) =>
+        (prev || []).map((pkg) =>
+          String(pkg?.id) === packageIdStr ? { ...pkg, is_bookmarked: currentlyBookmarked } : pkg
+        )
+      );
+      Alert.alert("Bookmark Error", err?.message || "Could not update bookmark.");
+    } finally {
+      setBookmarkBusyIds((prev) => prev.filter((id) => id !== packageIdStr));
+    }
   };
 
   return (
@@ -513,8 +554,23 @@ const HomeScreen = ({
                     <Ionicons name="location-outline" size={14} color="#6b7076" />
                     <Text style={styles.placeMeta}>{place.location}</Text>
                   </View>
-                  <TouchableOpacity style={styles.saveBadge} activeOpacity={0.8}>
-                    <Ionicons name="bookmark-outline" size={18} color="#1f6b2a" />
+                  <TouchableOpacity
+                    style={[
+                      styles.saveBadge,
+                      place?.is_bookmarked && styles.saveBadgeActive,
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={(event) => {
+                      event?.stopPropagation?.();
+                      handleToggleBookmark(place);
+                    }}
+                    disabled={bookmarkBusyIds.includes(String(place.id))}
+                  >
+                    <Ionicons
+                      name={place?.is_bookmarked ? "bookmark" : "bookmark-outline"}
+                      size={18}
+                      color={place?.is_bookmarked ? "#ffffff" : "#1f6b2a"}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -887,6 +943,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#f3f5f7",
     borderWidth: 1,
     borderColor: "#e3e6ea",
+  },
+  saveBadgeActive: {
+    backgroundColor: "#1f6b2a",
+    borderColor: "#1f6b2a",
   },
   priceRow: {
     flexDirection: "row",

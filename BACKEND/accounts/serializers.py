@@ -2,7 +2,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Roles
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Roles
 
 User = get_user_model()
 
@@ -223,6 +223,7 @@ class PackageSerializer(serializers.ModelSerializer):
     agent_rating = serializers.SerializerMethodField()
     duration_display = serializers.ReadOnlyField()
     user_has_booked = serializers.SerializerMethodField()
+    is_bookmarked = serializers.SerializerMethodField()
     participants_preview = serializers.SerializerMethodField()
 
     class Meta:
@@ -232,7 +233,7 @@ class PackageSerializer(serializers.ModelSerializer):
             'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
             'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'status',
-            'agent_rating', 'participants_count', 'participants_preview', 'agent_name', 'user_has_booked',
+            'agent_rating', 'participants_count', 'participants_preview', 'agent_name', 'user_has_booked', 'is_bookmarked',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -281,6 +282,18 @@ class PackageSerializer(serializers.ModelSerializer):
         return Booking.objects.filter(
             user=request.user, package=obj, status=BookingStatus.CONFIRMED
         ).exists()
+
+    def get_is_bookmarked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'traveler':
+            return False
+        bookmarked_ids = self.context.get("bookmarked_package_ids")
+        if bookmarked_ids is not None:
+            try:
+                return obj.id in bookmarked_ids
+            except TypeError:
+                pass
+        return PackageBookmark.objects.filter(user=request.user, package=obj).exists()
 
 
 class BookingSerializer(serializers.ModelSerializer):

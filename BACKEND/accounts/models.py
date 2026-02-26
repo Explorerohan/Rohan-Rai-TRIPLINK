@@ -215,6 +215,33 @@ class Package(models.Model):
             return 0.0
 
 
+class PackageBookmark(models.Model):
+    """Traveler-saved packages (bookmarks)."""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="package_bookmarks",
+        limit_choices_to={"role": Roles.TRAVELER},
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name="bookmarks",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Package Bookmark"
+        verbose_name_plural = "Package Bookmarks"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "package"], name="unique_traveler_package_bookmark")
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} -> {self.package.title}"
+
+
 class CustomPackage(models.Model):
     """
     Custom trip package created by a traveler. Only visible to the user who created it.

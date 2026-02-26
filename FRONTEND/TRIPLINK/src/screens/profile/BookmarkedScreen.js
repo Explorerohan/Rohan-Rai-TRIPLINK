@@ -1,0 +1,359 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { getBookmarkedPackages, removeBookmarkedPackage } from "../../utils/api";
+
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80";
+
+const formatPrice = (price) => {
+  const numeric =
+    typeof price === "number"
+      ? price
+      : typeof price === "string"
+        ? parseFloat(price.replace(/[^0-9.]/g, "")) || 0
+        : 0;
+  return `Rs. ${numeric.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+};
+
+const formatDateRange = (start, end) => {
+  const fmt = (value) => {
+    const d = value ? new Date(value) : null;
+    if (!d || Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+  const startText = fmt(start);
+  const endText = fmt(end);
+  if (startText && endText) return `${startText} - ${endText}`;
+  if (startText) return `From ${startText}`;
+  if (endText) return `Until ${endText}`;
+  return "Dates not set";
+};
+
+const mapPackages = (rawList) =>
+  (Array.isArray(rawList) ? rawList : []).filter(Boolean).map((pkg) => ({
+    id: String(pkg.id),
+    title: pkg.title || "Package",
+    location: `${pkg.location || ""}${pkg.country ? `, ${pkg.country}` : ""}`.replace(/^,\s*/, "") || "Location",
+    image: pkg.main_image_url || FALLBACK_IMAGE,
+    price: pkg.price_per_person,
+    duration: pkg.duration_display || `${pkg.duration_days || 0}D/${pkg.duration_nights || 0}N`,
+    trip_start_date: pkg.trip_start_date ?? null,
+    trip_end_date: pkg.trip_end_date ?? null,
+    status: pkg.status || "active",
+    raw: pkg,
+  }));
+
+const BookmarkedScreen = ({
+  session,
+  onBack = () => {},
+  onTripPress = () => {},
+}) => {
+  const [bookmarks, setBookmarks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [busyIds, setBusyIds] = useState([]);
+
+  const fetchBookmarks = useCallback(async ({ silent = false } = {}) => {
+    if (!session?.access) {
+      setBookmarks([]);
+      setLoading(false);
+      return;
+    }
+    if (!silent) setLoading(true);
+    try {
+      const { data } = await getBookmarkedPackages(session.access);
+      setBookmarks(mapPackages(data));
+    } catch (err) {
+      if (!silent) {
+        Alert.alert("Load Failed", err?.message || "Could not load bookmarked packages.");
+      }
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [session?.access]);
+
+  useEffect(() => {
+    fetchBookmarks();
+  }, [fetchBookmarks]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const { data } = await getBookmarkedPackages(session?.access);
+      setBookmarks(mapPackages(data));
+    } catch (_) {
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRemove = async (item) => {
+    const id = String(item?.id || "");
+    if (!id || !session?.access || busyIds.includes(id)) return;
+    setBusyIds((prev) => [...prev, id]);
+    setBookmarks((prev) => prev.filter((row) => String(row.id) !== id));
+    try {
+      await removeBookmarkedPackage(id, session.access);
+    } catch (err) {
+      setBookmarks((prev) => [item, ...prev]);
+      Alert.alert("Bookmark Error", err?.message || "Could not remove bookmark.");
+    } finally {
+      setBusyIds((prev) => prev.filter((rowId) => rowId !== id));
+    }
+  };
+
+  const headerSubtitle = useMemo(
+    () => `${bookmarks.length} saved package${bookmarks.length === 1 ? "" : "s"}`,
+    [bookmarks.length]
+  );
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerBtn} onPress={onBack} activeOpacity={0.8}>
+          <Ionicons name="chevron-back" size={22} color="#1f1f1f" />
+        </TouchableOpacity>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.headerTitle}>Bookmarked</Text>
+          <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {loading ? (
+        <View style={styles.centerWrap}>
+          <ActivityIndicator size="large" color="#1f6b2a" />
+          <Text style={styles.centerText}>Loading bookmarks...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#1f6b2a"]}
+              tintColor="#1f6b2a"
+            />
+          }
+        >
+          {bookmarks.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="bookmark-outline" size={26} color="#64748b" />
+              <Text style={styles.emptyTitle}>No bookmarks yet</Text>
+              <Text style={styles.emptyText}>
+                Save packages from the Home screen and they will appear here.
+              </Text>
+            </View>
+          ) : (
+            bookmarks.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.card}
+                activeOpacity={0.9}
+                onPress={() => onTripPress(item.raw || item)}
+              >
+                <Image source={{ uri: item.image }} style={styles.cardImage} />
+                <View style={styles.cardBody}>
+                  <View style={styles.cardTopRow}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+                    <TouchableOpacity
+                      style={[styles.removeBtn, busyIds.includes(item.id) && styles.removeBtnDisabled]}
+                      activeOpacity={0.8}
+                      disabled={busyIds.includes(item.id)}
+                      onPress={(event) => {
+                        event?.stopPropagation?.();
+                        handleRemove(item);
+                      }}
+                    >
+                      <Ionicons name="bookmark" size={16} color="#ffffff" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.metaRow}>
+                    <Ionicons name="location-outline" size={14} color="#64748b" />
+                    <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
+                  </View>
+
+                  <View style={styles.metaRow}>
+                    <Ionicons name="calendar-outline" size={14} color="#64748b" />
+                    <Text style={styles.metaText}>{formatDateRange(item.trip_start_date, item.trip_end_date)}</Text>
+                  </View>
+
+                  <View style={styles.footerRow}>
+                    <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
+                    <Text style={styles.durationText}>{item.duration}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eef2f7",
+    backgroundColor: "#ffffff",
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f6f7f9",
+  },
+  headerTextWrap: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  headerTitle: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  headerSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: "#64748b",
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  centerWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  centerText: {
+    fontSize: 14,
+    color: "#64748b",
+  },
+  scroll: {
+    padding: 16,
+    gap: 12,
+    paddingBottom: 28,
+  },
+  emptyCard: {
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderStyle: "dashed",
+    backgroundColor: "#f8fafc",
+    padding: 18,
+    alignItems: "center",
+  },
+  emptyTitle: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+  emptyText: {
+    marginTop: 6,
+    fontSize: 13,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  card: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: "#e3e6ea",
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+  },
+  cardImage: {
+    width: 118,
+    height: 132,
+    backgroundColor: "#eef2f7",
+  },
+  cardBody: {
+    flex: 1,
+    padding: 12,
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  removeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1f6b2a",
+  },
+  removeBtnDisabled: {
+    opacity: 0.55,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  metaText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#64748b",
+  },
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  priceText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#1f6b2a",
+  },
+  durationText: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "600",
+  },
+});
+
+export default BookmarkedScreen;

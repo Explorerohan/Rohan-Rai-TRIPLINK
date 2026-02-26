@@ -12,6 +12,8 @@ from .views import (
     PublicAgentDetailView,
     PackageListView,
     PackageDetailView,
+    TravelerBookmarkListCreateView,
+    TravelerBookmarkDeleteView,
     BookingListCreateView,
     BookingDetailView,
     EsewaPaymentInitiateView,
@@ -43,6 +45,8 @@ urlpatterns = [
     # Package endpoints
     path("packages/", PackageListView.as_view(), name="package_list"),
     path("packages/<int:id>/", PackageDetailView.as_view(), name="package_detail"),
+    path("bookmarks/", TravelerBookmarkListCreateView.as_view(), name="traveler_bookmark_list_create"),
+    path("bookmarks/<int:package_id>/", TravelerBookmarkDeleteView.as_view(), name="traveler_bookmark_delete"),
     # Agent review endpoints (travelers review agents after completing a trip)
     path("agents/<int:agent_id>/profile/", PublicAgentDetailView.as_view(), name="public_agent_detail"),
     path("agents/<int:agent_id>/reviews/", AgentReviewListCreateView.as_view(), name="agent_review_list_create"),

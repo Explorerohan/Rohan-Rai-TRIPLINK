@@ -34,6 +34,7 @@ from .models import (
     Package,
     PackageFeature,
     PackageStatus,
+    PackageBookmark,
     CustomPackage,
     Booking,
     BookingStatus,
@@ -2544,7 +2545,55 @@ class PackageDetailView(generics.RetrieveAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
+        if (
+            self.request.user.is_authenticated
+            and getattr(self.request.user, "role", None) == Roles.TRAVELER
+        ):
+            context["bookmarked_package_ids"] = set(
+                PackageBookmark.objects.filter(user=self.request.user).values_list("package_id", flat=True)
+            )
         return context
+
+
+class TravelerBookmarkListCreateView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+    serializer_class = PackageSerializer
+
+    def get(self, request, *args, **kwargs):
+        _mark_overdue_packages_completed()
+        queryset = (
+            Package.objects.filter(bookmarks__user=request.user)
+            .order_by("-bookmarks__created_at", "-created_at")
+            .distinct()
+        )
+        context = self.get_serializer_context()
+        context["bookmarked_package_ids"] = set(queryset.values_list("id", flat=True))
+        serializer = self.get_serializer(queryset, many=True, context=context)
+        return response.Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        package_id = request.data.get("package_id")
+        if not package_id:
+            return response.Response(
+                {"package_id": "package_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        package = get_object_or_404(Package, pk=package_id)
+        _, created = PackageBookmark.objects.get_or_create(user=request.user, package=package)
+        return response.Response(
+            {"bookmarked": True, "created": created, "package_id": package.id},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+class TravelerBookmarkDeleteView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsTraveler]
+
+    def delete(self, request, package_id, *args, **kwargs):
+        deleted, _ = PackageBookmark.objects.filter(user=request.user, package_id=package_id).delete()
+        return response.Response(
+            {"bookmarked": False, "removed": bool(deleted), "package_id": package_id}
+        )
 
 
 class AgentReviewListCreateView(generics.ListCreateAPIView):

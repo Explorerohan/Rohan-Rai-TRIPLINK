@@ -222,6 +222,44 @@ export const getPackages = async (filters = {}, accessToken = null) => {
 };
 
 /**
+ * Get current traveler's bookmarked packages
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const getBookmarkedPackages = async (accessToken) => {
+  return apiRequest("/api/auth/bookmarks/", { method: "GET" }, accessToken);
+};
+
+/**
+ * Save a package to current traveler's bookmarks
+ * @param {number|string} packageId
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const addBookmarkedPackage = async (packageId, accessToken) => {
+  const id = typeof packageId === "string" ? parseInt(packageId, 10) : packageId;
+  return apiRequest(
+    "/api/auth/bookmarks/",
+    {
+      method: "POST",
+      body: JSON.stringify({ package_id: id }),
+    },
+    accessToken
+  );
+};
+
+/**
+ * Remove a package from current traveler's bookmarks
+ * @param {number|string} packageId
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<object>}
+ */
+export const removeBookmarkedPackage = async (packageId, accessToken) => {
+  const id = typeof packageId === "string" ? packageId : String(packageId);
+  return apiRequest(`/api/auth/bookmarks/${id}/`, { method: "DELETE" }, accessToken);
+};
+
+/**
  * Get package by ID (optional token for user_has_booked when logged in)
  * @param {number|string} packageId - Package ID
  * @param {string} accessToken - Optional JWT

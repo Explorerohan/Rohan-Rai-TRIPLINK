@@ -8,7 +8,7 @@ import { ForgotPasswordScreen } from "./src/screens/forgotPassword";
 import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
-import ProfileScreen, { EditProfileScreen, ProfileDetailsScreen } from "./src/screens/profile";
+import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
@@ -440,6 +440,7 @@ export default function App() {
           onBack={() => setScreen("home")}
           onEdit={() => setScreen("editProfile")}
           onProfileDetailsPress={() => setScreen("profileDetails")}
+          onBookmarkedPress={() => setScreen("bookmarked")}
           onCalendarPress={() => setScreen("schedule")}
           onMessagesPress={() => setScreen("messages")}
           onLogout={handleLogout}
@@ -451,6 +452,18 @@ export default function App() {
         <ProfileDetailsScreen
           profile={userProfile}
           onBack={() => setScreen("profile")}
+        />
+      )}
+      {screen === "bookmarked" && (
+        <BookmarkedScreen
+          session={session}
+          onBack={() => setScreen("profile")}
+          onTripPress={(pkg) => {
+            if (pkg?.id != null) {
+              setSelectedTrip({ id: String(pkg.id) });
+              setScreen("details");
+            }
+          }}
         />
       )}
       {screen === "customPackages" && (

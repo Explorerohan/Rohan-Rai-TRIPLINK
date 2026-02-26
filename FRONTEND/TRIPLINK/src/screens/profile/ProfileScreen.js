@@ -43,6 +43,7 @@ const ProfileScreen = ({
   onBack = () => {},
   onEdit = () => {},
   onProfileDetailsPress = () => {},
+  onBookmarkedPress = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
   onMessagesPress = () => {},
@@ -214,7 +215,15 @@ const ProfileScreen = ({
               <TouchableOpacity
                 style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
                 activeOpacity={0.7}
-                onPress={item.id === "logout" ? onLogout : item.id === "profile" ? onProfileDetailsPress : undefined}
+                onPress={
+                  item.id === "logout"
+                    ? onLogout
+                    : item.id === "profile"
+                      ? onProfileDetailsPress
+                      : item.id === "bookmarked"
+                        ? onBookmarkedPress
+                        : undefined
+                }
               >
                 <View style={styles.menuItemLeft}>
                   <Ionicons
