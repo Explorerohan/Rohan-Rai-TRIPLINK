@@ -499,22 +499,17 @@ class ParticipantSerializer(serializers.ModelSerializer):
 
 
 class AgentInfoSerializer(serializers.ModelSerializer):
-    """Serializer for agent info in package detail - includes rating and reviews"""
+    """Serializer for agent info in package detail."""
     full_name = serializers.ReadOnlyField()
     profile_picture_url = serializers.SerializerMethodField()
     agent_id = serializers.SerializerMethodField()
     rating = serializers.DecimalField(max_digits=3, decimal_places=1, read_only=True)
-    reviews = serializers.SerializerMethodField()
-    reviews_count = serializers.SerializerMethodField()
-    user_can_review_agent = serializers.SerializerMethodField()
-    user_has_reviewed_agent = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentProfile
         fields = [
             'id', 'agent_id', 'full_name', 'phone_number', 'location',
-            'profile_picture_url', 'is_verified', 'rating',
-            'reviews', 'reviews_count', 'user_can_review_agent', 'user_has_reviewed_agent'
+            'profile_picture_url', 'is_verified', 'rating'
         ]
 
     def get_profile_picture_url(self, obj):
@@ -528,39 +523,9 @@ class AgentInfoSerializer(serializers.ModelSerializer):
     def get_agent_id(self, obj):
         return obj.user_id
 
-    def get_reviews(self, obj):
-        reviews = AgentReview.objects.filter(agent=obj.user).order_by('-created_at')[:10]
-        return AgentReviewSerializer(reviews, many=True, context=self.context).data
-
-    def get_reviews_count(self, obj):
-        return AgentReview.objects.filter(agent=obj.user).count()
-
-    def get_user_can_review_agent(self, obj):
-        """True if traveler has booked a trip, package is completed (trip end date passed), and hasn't reviewed yet."""
-        request = self.context.get('request')
-        if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'traveler':
-            return False
-        user = request.user
-        has_completed_trip = Booking.objects.filter(
-            user=user,
-            package__agent=obj.user,
-            package__status=PackageStatus.COMPLETED,
-            package__trip_end_date__isnull=False,
-            package__trip_end_date__lte=date.today(),
-            status=BookingStatus.CONFIRMED
-        ).exists()
-        has_reviewed = AgentReview.objects.filter(user=user, agent=obj.user).exists()
-        return has_completed_trip and not has_reviewed
-
-    def get_user_has_reviewed_agent(self, obj):
-        request = self.context.get('request')
-        if not request or not request.user.is_authenticated or getattr(request.user, 'role', None) != 'traveler':
-            return False
-        return AgentReview.objects.filter(user=request.user, agent=obj.user).exists()
-
 
 class PackageDetailSerializer(serializers.ModelSerializer):
-    """Detailed serializer for Package with agent info (reviews) and participants"""
+    """Detailed serializer for Package with agent info and participants."""
     features = PackageFeatureSerializer(many=True, read_only=True)
     main_image_url = serializers.SerializerMethodField()
     duration_display = serializers.ReadOnlyField()
@@ -621,10 +586,6 @@ class PackageDetailSerializer(serializers.ModelSerializer):
                 'profile_picture_url': None,
                 'is_verified': False,
                 'rating': 0.0,
-                'reviews': [],
-                'reviews_count': 0,
-                'user_can_review_agent': False,
-                'user_has_reviewed_agent': False
             }
 
     def get_participants(self, obj):

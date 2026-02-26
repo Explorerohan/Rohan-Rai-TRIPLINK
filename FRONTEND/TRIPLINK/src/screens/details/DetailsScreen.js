@@ -83,21 +83,6 @@ const formatTripDate = (dateStr) => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
-const formatReviewDate = (dateStr) => {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const now = new Date();
-  const diffMs = now - d;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-};
-
 const COLS = 4;
 const CARD_GAP = 10;
 const ROW_GAP = 12;
@@ -115,27 +100,6 @@ const StarRating = ({ rating, size = 16, color = "#f7b500" }) => {
   }
   return <View style={{ flexDirection: "row", gap: 2 }}>{stars}</View>;
 };
-
-const ReviewCard = ({ review }) => (
-  <View style={styles.reviewCard}>
-    <View style={styles.reviewHeader}>
-      <Image
-        source={{ uri: review.reviewer_profile_picture || DEFAULT_AVATAR_URL }}
-        style={styles.reviewerAvatar}
-      />
-      <View style={styles.reviewerInfo}>
-        <Text style={styles.reviewerName}>{review.reviewer_name || "Anonymous"}</Text>
-        <Text style={styles.reviewDate}>{formatReviewDate(review.created_at)}</Text>
-      </View>
-      <View style={styles.reviewRating}>
-        <StarRating rating={review.rating} size={14} />
-      </View>
-    </View>
-    {review.comment ? (
-      <Text style={styles.reviewComment}>{review.comment}</Text>
-    ) : null}
-  </View>
-);
 
 const ParticipantAvatar = ({ participant, index }) => (
   <View style={[styles.participantAvatarWrap, { marginLeft: index > 0 ? -12 : 0 }]}>
@@ -255,7 +219,6 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       return {
         ...cachedDetail,
         user_has_booked: tripFromProp.user_has_booked ?? cachedDetail.user_has_booked ?? false,
-        user_has_reviewed: cachedDetail.user_has_reviewed ?? false,
       };
     }
     return null;
@@ -277,15 +240,13 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       setPackageDetail({
         ...cachedDetail,
         user_has_booked: tripFromProp.user_has_booked ?? cachedDetail.user_has_booked ?? false,
-        user_has_reviewed: cachedDetail.user_has_reviewed ?? false,
       });
       setUserHasBooked(tripFromProp.user_has_booked ?? cachedDetail.user_has_booked ?? false);
-      setUserHasReviewed(cachedDetail.user_has_reviewed ?? false);
       setLoading(false);
     }
   }, [cachedDetail]);
 
-  // Fetch full package details with reviews and participants (use cache for first paint)
+  // Fetch full package details and participants (use cache for first paint)
   useEffect(() => {
     const fetchPackageDetails = async () => {
       if (!packageId) {
@@ -298,7 +259,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         if (response?.data) {
           setPackageDetail(response.data);
           setUserHasBooked(response.data.user_has_booked ?? false);
-          setUserHasReviewed(response.data.user_has_reviewed ?? false);
+          setUserHasReviewed(response.data.user_has_reviewed ?? response.data?.agent?.user_has_reviewed_agent ?? false);
         }
       } catch (error) {
         console.error("Error fetching package details:", error);
@@ -316,6 +277,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       Alert.alert("Error", "Please log in to submit a review");
       return;
     }
+
     const agentId = packageDetail?.agent?.agent_id;
     if (!agentId) {
       Alert.alert("Error", "Agent information not found");
@@ -327,13 +289,6 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       await createAgentReview(agentId, rating, comment, session.access);
       setReviewModalVisible(false);
       setUserHasReviewed(true);
-
-      // Refresh package details to show new review
-      const response = await getPackageById(packageId, session.access);
-      if (response?.data) {
-        setPackageDetail(response.data);
-      }
-
       Alert.alert("Success", "Your review has been submitted!");
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to submit review");
@@ -426,7 +381,6 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         if (refreshed?.data) {
           setPackageDetail(refreshed.data);
           setUserHasBooked(refreshed.data.user_has_booked ?? true);
-          setUserHasReviewed(refreshed.data.user_has_reviewed ?? userHasReviewed);
         }
       } catch (_) {}
 
@@ -496,9 +450,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     : trip.description;
 
   const agent = packageDetail?.agent;
-  const reviews = agent?.reviews || [];
   const participants = packageDetail?.participants || [];
-  const userCanReviewAgent = agent?.user_can_review_agent ?? false;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -607,7 +559,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
             })()}
           </View>
 
-          {/* Agent/Host Info with Review action and Reviews */}
+          {/* Agent/Host Info */}
           {agent && (
             <>
               <Text style={styles.sectionTitle}>Hosted by</Text>
@@ -673,39 +625,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                     </View>
                   )}
                 </View>
-                {/* Reviews inside agent section */}
-                <View style={styles.agentReviewsInline}>
-                  {loading ? (
-                    <View style={styles.loadingSection}>
-                      <ActivityIndicator size="small" color="#1f6b2a" />
-                    </View>
-                  ) : reviews.length > 0 ? (
-                    <View style={styles.reviewsList}>
-                      {reviews.map((review, index) => (
-                        <ReviewCard key={review.id || index} review={review} />
-                      ))}
-                    </View>
-                  ) : (
-                    <Text style={styles.noReviewsInline}>No reviews yet</Text>
-                  )}
-                </View>
               </View>
-
-              {/* Reminder to review agent after completing trip */}
-              {(userHasBooked || trip.user_has_booked) && !userHasReviewed && (
-                <View style={[styles.reviewReminderCard, userCanReviewAgent && styles.reviewReminderCardHighlight]}>
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={22}
-                    color={userCanReviewAgent ? "#1f6b2a" : "#6f747a"}
-                  />
-                  <Text style={[styles.reviewReminderText, userCanReviewAgent && styles.reviewReminderTextHighlight]}>
-                    {userCanReviewAgent
-                      ? "You've completed your trip! Tap Review above to leave feedback for your agent."
-                      : "Don't forget to provide a review for your agent after completing your trip."}
-                  </Text>
-                </View>
-              )}
             </>
           )}
 
@@ -773,7 +693,6 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         )}
       </View>
 
-      {/* Review Modal */}
       <ReviewModal
         visible={reviewModalVisible}
         onClose={() => setReviewModalVisible(false)}
