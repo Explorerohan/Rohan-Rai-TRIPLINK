@@ -16,7 +16,7 @@ from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -53,6 +53,7 @@ from .serializers import (
     UserSerializer,
     UserProfileSerializer,
     AgentProfileSerializer,
+    PublicAgentDetailSerializer,
     PackageSerializer,
     BookingSerializer,
     PackageDetailSerializer,
@@ -2001,6 +2002,27 @@ class AgentReviewListCreateView(generics.ListCreateAPIView):
         from django.contrib.auth import get_user_model
         agent = get_user_model().objects.get(id=agent_id, role=Roles.AGENT)
         serializer.save(agent=agent)
+
+
+class PublicAgentDetailView(generics.RetrieveAPIView):
+    """Public traveler-facing agent profile details (profile, stats, recent reviews)."""
+    serializer_class = PublicAgentDetailSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_url_kwarg = 'agent_id'
+
+    def get_queryset(self):
+        return AgentProfile.objects.select_related('user').filter(user__role=Roles.AGENT)
+
+    def get_object(self):
+        agent_id = self.kwargs.get(self.lookup_url_kwarg)
+        agent_user = get_object_or_404(User.objects.filter(role=Roles.AGENT), id=agent_id)
+        profile, _ = AgentProfile.objects.get_or_create(user=agent_user)
+        return profile
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 
 class BookingListCreateView(generics.ListCreateAPIView):

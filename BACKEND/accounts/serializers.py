@@ -524,6 +524,64 @@ class AgentInfoSerializer(serializers.ModelSerializer):
         return obj.user_id
 
 
+class PublicAgentDetailSerializer(serializers.ModelSerializer):
+    """Public agent profile details for traveler-facing profile popup."""
+    full_name = serializers.ReadOnlyField()
+    email = serializers.EmailField(source='user.email', read_only=True)
+    profile_picture_url = serializers.SerializerMethodField()
+    agent_id = serializers.SerializerMethodField()
+    rating = serializers.DecimalField(max_digits=3, decimal_places=1, read_only=True)
+    reviews = serializers.SerializerMethodField()
+    reviews_count = serializers.SerializerMethodField()
+    total_packages_created = serializers.SerializerMethodField()
+    total_bookings_handled = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AgentProfile
+        fields = [
+            'id',
+            'agent_id',
+            'full_name',
+            'email',
+            'phone_number',
+            'location',
+            'profile_picture_url',
+            'is_verified',
+            'rating',
+            'reviews_count',
+            'total_packages_created',
+            'total_bookings_handled',
+            'reviews',
+        ]
+
+    def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        return None
+
+    def get_agent_id(self, obj):
+        return obj.user_id
+
+    def get_reviews(self, obj):
+        reviews = AgentReview.objects.filter(agent=obj.user).order_by('-created_at')[:10]
+        return AgentReviewSerializer(reviews, many=True, context=self.context).data
+
+    def get_reviews_count(self, obj):
+        return AgentReview.objects.filter(agent=obj.user).count()
+
+    def get_total_packages_created(self, obj):
+        return Package.objects.filter(agent=obj.user).count()
+
+    def get_total_bookings_handled(self, obj):
+        return Booking.objects.filter(
+            package__agent=obj.user,
+            status=BookingStatus.CONFIRMED,
+        ).count()
+
+
 class PackageDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for Package with agent info and participants."""
     features = PackageFeatureSerializer(many=True, read_only=True)

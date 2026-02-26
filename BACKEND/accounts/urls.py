@@ -9,6 +9,7 @@ from .views import (
     ProfileView,
     UserProfileView,
     AgentProfileView,
+    PublicAgentDetailView,
     PackageListView,
     PackageDetailView,
     BookingListCreateView,
@@ -43,6 +44,7 @@ urlpatterns = [
     path("packages/", PackageListView.as_view(), name="package_list"),
     path("packages/<int:id>/", PackageDetailView.as_view(), name="package_detail"),
     # Agent review endpoints (travelers review agents after completing a trip)
+    path("agents/<int:agent_id>/profile/", PublicAgentDetailView.as_view(), name="public_agent_detail"),
     path("agents/<int:agent_id>/reviews/", AgentReviewListCreateView.as_view(), name="agent_review_list_create"),
     # Booking endpoints
     path("bookings/", BookingListCreateView.as_view(), name="booking_list_create"),

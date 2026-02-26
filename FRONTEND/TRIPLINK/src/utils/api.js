@@ -321,6 +321,17 @@ export const getAgentReviews = async (agentId) => {
 };
 
 /**
+ * Get public agent profile details for traveler-facing profile popup
+ * Includes profile info, stats, and recent reviews.
+ * @param {number|string} agentId - Agent (user) ID
+ * @returns {Promise<object>}
+ */
+export const getAgentPublicProfile = async (agentId) => {
+  const id = typeof agentId === "string" ? agentId : String(agentId);
+  return apiRequest(`/api/auth/agents/${id}/profile/`, { method: "GET" });
+};
+
+/**
  * Create a review for an agent (only after completing a trip with that agent)
  * @param {number|string} agentId - Agent (user) ID
  * @param {number} rating - Rating (1-5)

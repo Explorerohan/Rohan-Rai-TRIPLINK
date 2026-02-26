@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
-import { getPackageById, createAgentReview, initiateEsewaPayment, verifyEsewaPayment } from "../../utils/api";
+import { getPackageById, getAgentPublicProfile, createAgentReview, initiateEsewaPayment, verifyEsewaPayment } from "../../utils/api";
 
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -83,6 +83,13 @@ const formatTripDate = (dateStr) => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
+const formatReviewDate = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
 const COLS = 4;
 const CARD_GAP = 10;
 const ROW_GAP = 12;
@@ -109,6 +116,139 @@ const ParticipantAvatar = ({ participant, index }) => (
     />
   </View>
 );
+
+const AgentProfileReviewCard = ({ review }) => (
+  <View style={styles.agentProfileReviewCard}>
+    <View style={styles.agentProfileReviewHeader}>
+      <Image
+        source={{ uri: review?.reviewer_profile_picture || DEFAULT_AVATAR_URL }}
+        style={styles.agentProfileReviewAvatar}
+      />
+      <View style={styles.agentProfileReviewMeta}>
+        <Text style={styles.agentProfileReviewName} numberOfLines={1}>
+          {review?.reviewer_name || "Traveler"}
+        </Text>
+        <Text style={styles.agentProfileReviewDate}>{formatReviewDate(review?.created_at)}</Text>
+      </View>
+      <StarRating rating={Number(review?.rating || 0)} size={12} />
+    </View>
+    {!!review?.comment && (
+      <Text style={styles.agentProfileReviewComment}>{review.comment}</Text>
+    )}
+  </View>
+);
+
+const AgentProfileDetailsModal = ({
+  visible,
+  onClose,
+  loading,
+  error,
+  data,
+  fallbackAgent,
+}) => {
+  const ratingRaw = data?.rating ?? fallbackAgent?.rating ?? 0;
+  const ratingNumber = Number(ratingRaw);
+  const ratingDisplayValue = Number.isFinite(ratingNumber) ? Math.max(0, Math.min(ratingNumber, 5)) : 0;
+  const ratingText = Number.isFinite(ratingNumber) ? ratingNumber.toFixed(1).replace(/\.0$/, "") : "0";
+  const reviews = Array.isArray(data?.reviews) ? data.reviews : [];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.agentProfileModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Agent Details</Text>
+            <TouchableOpacity onPress={onClose} style={styles.modalClose}>
+              <Ionicons name="close" size={24} color="#6b7076" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.agentProfileHero}>
+              <Image
+                source={{ uri: data?.profile_picture_url || fallbackAgent?.profile_picture_url || DEFAULT_AVATAR_URL }}
+                style={styles.agentProfileHeroAvatar}
+              />
+              <View style={styles.agentProfileHeroInfo}>
+                <View style={styles.agentNameRow}>
+                  <Text style={styles.agentProfileHeroName}>
+                    {data?.full_name || fallbackAgent?.full_name || "Travel Agent"}
+                  </Text>
+                  {(data?.is_verified ?? fallbackAgent?.is_verified) ? (
+                    <View style={styles.verifiedBadge}>
+                      <Ionicons name="checkmark-circle" size={16} color="#1f6b2a" />
+                      <Text style={styles.verifiedText}>Verified</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <View style={styles.agentRatingInline}>
+                  <StarRating rating={ratingDisplayValue} size={13} />
+                  <Text style={styles.agentRatingInlineText}>{ratingText}</Text>
+                </View>
+              </View>
+            </View>
+
+            {loading ? (
+              <View style={styles.agentProfileLoadingWrap}>
+                <ActivityIndicator size="small" color="#1f6b2a" />
+                <Text style={styles.agentProfileLoadingText}>Loading agent details...</Text>
+              </View>
+            ) : error ? (
+              <View style={styles.agentProfileErrorCard}>
+                <Text style={styles.agentProfileErrorText}>{error}</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.agentProfileInfoCard}>
+                  <View style={styles.agentProfileInfoRow}>
+                    <Ionicons name="mail-outline" size={16} color="#6b7280" />
+                    <Text style={styles.agentProfileInfoText}>{data?.email || "-"}</Text>
+                  </View>
+                  <View style={styles.agentProfileInfoRow}>
+                    <Ionicons name="call-outline" size={16} color="#6b7280" />
+                    <Text style={styles.agentProfileInfoText}>{data?.phone_number || "-"}</Text>
+                  </View>
+                  <View style={styles.agentProfileInfoRow}>
+                    <Ionicons name="location-outline" size={16} color="#6b7280" />
+                    <Text style={styles.agentProfileInfoText}>{data?.location || "-"}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.agentStatsGrid}>
+                  <View style={styles.agentStatCard}>
+                    <Text style={styles.agentStatValue}>{data?.reviews_count ?? 0}</Text>
+                    <Text style={styles.agentStatLabel}>Reviews</Text>
+                  </View>
+                  <View style={styles.agentStatCard}>
+                    <Text style={styles.agentStatValue}>{data?.total_packages_created ?? 0}</Text>
+                    <Text style={styles.agentStatLabel}>Packages</Text>
+                  </View>
+                  <View style={styles.agentStatCard}>
+                    <Text style={styles.agentStatValue}>{data?.total_bookings_handled ?? 0}</Text>
+                    <Text style={styles.agentStatLabel}>Bookings</Text>
+                  </View>
+                </View>
+
+                <View style={styles.agentProfileReviewsSection}>
+                  <Text style={styles.agentProfileReviewsTitle}>Traveler Reviews</Text>
+                  {reviews.length > 0 ? (
+                    reviews.map((review, index) => (
+                      <AgentProfileReviewCard key={review?.id || index} review={review} />
+                    ))
+                  ) : (
+                    <View style={styles.agentProfileEmptyReviews}>
+                      <Text style={styles.agentProfileEmptyReviewsText}>No reviews yet</Text>
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
   const [rating, setRating] = useState(5);
@@ -226,6 +366,10 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
   });
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [agentProfileModalVisible, setAgentProfileModalVisible] = useState(false);
+  const [agentProfileLoading, setAgentProfileLoading] = useState(false);
+  const [agentProfileData, setAgentProfileData] = useState(null);
+  const [agentProfileError, setAgentProfileError] = useState("");
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
   const [bookingStep, setBookingStep] = useState("traveler_count");
   const [travelerCountInput, setTravelerCountInput] = useState("1");
@@ -295,6 +439,32 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       Alert.alert("Error", error.message || "Failed to submit review");
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  const handleOpenAgentProfile = async () => {
+    const agentId = packageDetail?.agent?.agent_id;
+    setAgentProfileModalVisible(true);
+
+    if (!agentId) {
+      setAgentProfileError("Agent details are not available.");
+      return;
+    }
+
+    if (String(agentProfileData?.agent_id || "") === String(agentId)) {
+      setAgentProfileError("");
+      return;
+    }
+
+    try {
+      setAgentProfileLoading(true);
+      setAgentProfileError("");
+      const response = await getAgentPublicProfile(agentId);
+      setAgentProfileData(response?.data || null);
+    } catch (error) {
+      setAgentProfileError(error?.message || "Failed to load agent details.");
+    } finally {
+      setAgentProfileLoading(false);
     }
   };
 
@@ -570,25 +740,31 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
               <Text style={styles.sectionTitle}>Hosted by</Text>
               <View style={styles.agentCard}>
                 <View style={styles.agentCardTop}>
-                  <Image
-                    source={{ uri: agent.profile_picture_url || DEFAULT_AVATAR_URL }}
-                    style={styles.agentAvatar}
-                  />
-                  <View style={styles.agentInfo}>
-                    <View style={styles.agentNameRow}>
-                      <Text style={styles.agentName}>{agent.full_name || "Travel Agent"}</Text>
-                      {agent.is_verified && (
-                        <View style={styles.verifiedBadge}>
-                          <Ionicons name="checkmark-circle" size={16} color="#1f6b2a" />
-                          <Text style={styles.verifiedText}>Verified</Text>
-                        </View>
-                      )}
+                  <TouchableOpacity
+                    style={styles.agentProfileTapArea}
+                    onPress={handleOpenAgentProfile}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={{ uri: agent.profile_picture_url || DEFAULT_AVATAR_URL }}
+                      style={styles.agentAvatar}
+                    />
+                    <View style={styles.agentInfo}>
+                      <View style={styles.agentNameRow}>
+                        <Text style={styles.agentName}>{agent.full_name || "Travel Agent"}</Text>
+                        {agent.is_verified && (
+                          <View style={styles.verifiedBadge}>
+                            <Ionicons name="checkmark-circle" size={16} color="#1f6b2a" />
+                            <Text style={styles.verifiedText}>Verified</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.agentRatingInline}>
+                        <StarRating rating={agentRatingDisplayValue} size={13} />
+                        <Text style={styles.agentRatingInlineText}>{agentRatingText}</Text>
+                      </View>
                     </View>
-                    <View style={styles.agentRatingInline}>
-                      <StarRating rating={agentRatingDisplayValue} size={13} />
-                      <Text style={styles.agentRatingInlineText}>{agentRatingText}</Text>
-                    </View>
-                  </View>
+                  </TouchableOpacity>
                   {session?.access && (
                     <TouchableOpacity
                       style={[styles.agentReviewButton, { marginRight: 8 }]}
@@ -707,6 +883,15 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         onClose={() => setReviewModalVisible(false)}
         onSubmit={handleSubmitReview}
         submitting={submittingReview}
+      />
+
+      <AgentProfileDetailsModal
+        visible={agentProfileModalVisible}
+        onClose={() => setAgentProfileModalVisible(false)}
+        loading={agentProfileLoading}
+        error={agentProfileError}
+        data={agentProfileData}
+        fallbackAgent={agent}
       />
 
       <Modal
@@ -1087,6 +1272,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  agentProfileTapArea: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 10,
+  },
   agentAvatar: {
     width: 56,
     height: 56,
@@ -1185,6 +1376,160 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#1f6b2a",
+  },
+  agentProfileModalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 28,
+    maxHeight: "88%",
+  },
+  agentProfileHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  agentProfileHeroAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    marginRight: 14,
+  },
+  agentProfileHeroInfo: {
+    flex: 1,
+  },
+  agentProfileHeroName: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+    flexShrink: 1,
+  },
+  agentProfileLoadingWrap: {
+    paddingVertical: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  agentProfileLoadingText: {
+    fontSize: 13,
+    color: "#6b7280",
+  },
+  agentProfileErrorCard: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  agentProfileErrorText: {
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  agentProfileInfoCard: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    padding: 12,
+    gap: 10,
+    marginBottom: 12,
+  },
+  agentProfileInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  agentProfileInfoText: {
+    flex: 1,
+    color: "#374151",
+    fontSize: 13,
+  },
+  agentStatsGrid: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+  },
+  agentStatCard: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  agentStatValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  agentStatLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  agentProfileReviewsSection: {
+    marginTop: 2,
+  },
+  agentProfileReviewsTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 10,
+  },
+  agentProfileReviewCard: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+  agentProfileReviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  agentProfileReviewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  agentProfileReviewMeta: {
+    flex: 1,
+    marginRight: 8,
+  },
+  agentProfileReviewName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  agentProfileReviewDate: {
+    fontSize: 11,
+    color: "#6b7280",
+    marginTop: 1,
+  },
+  agentProfileReviewComment: {
+    marginTop: 8,
+    fontSize: 13,
+    color: "#374151",
+    lineHeight: 18,
+  },
+  agentProfileEmptyReviews: {
+    backgroundColor: "#f9fafb",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    padding: 12,
+  },
+  agentProfileEmptyReviewsText: {
+    fontSize: 13,
+    color: "#6b7280",
   },
   reviewReminderCard: {
     flexDirection: "row",
