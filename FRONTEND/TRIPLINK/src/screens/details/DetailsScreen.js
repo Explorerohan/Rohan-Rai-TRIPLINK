@@ -179,6 +179,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
 const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, onBack = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
+  const [descriptionHasOverflow, setDescriptionHasOverflow] = useState(false);
   const [userHasBooked, setUserHasBooked] = useState(false);
   const [userHasReviewed, setUserHasReviewed] = useState(false);
 
@@ -443,14 +444,17 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     setEsewaWebViewLoading(true);
   };
 
-  const body = expanded
-    ? trip.description
-    : trip.description.length > 140
-    ? `${trip.description.slice(0, 140)}...`
-    : trip.description;
-
   const agent = packageDetail?.agent;
   const participants = packageDetail?.participants || [];
+  const descriptionText = packageDetail?.description || trip.description || "";
+  const agentRatingRaw = packageDetail?.agent_rating ?? agent?.rating ?? trip.rating ?? 0;
+  const agentRatingNumber = Number(agentRatingRaw);
+  const agentRatingDisplayValue = Number.isFinite(agentRatingNumber)
+    ? Math.max(0, Math.min(agentRatingNumber, 5))
+    : 0;
+  const agentRatingText = Number.isFinite(agentRatingNumber)
+    ? agentRatingNumber.toFixed(1).replace(/\.0$/, "")
+    : "0";
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -468,9 +472,6 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           {/* Title & Map Link */}
           <View style={styles.titleRow}>
             <Text style={styles.title}>{packageDetail?.title || trip.title}</Text>
-            <TouchableOpacity activeOpacity={0.8}>
-              <Text style={styles.mapLink}>Show map</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Location */}
@@ -479,13 +480,6 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
             <Text style={styles.locationText}>
               {packageDetail ? `${packageDetail.location}, ${packageDetail.country}` : trip.location}
             </Text>
-          </View>
-
-          {/* Agent Rating */}
-          <View style={styles.ratingRow}>
-            <Ionicons name="star" size={16} color="#f7b500" />
-            <Text style={styles.ratingValue}>{packageDetail?.agent_rating ?? agent?.rating ?? trip.rating}</Text>
-            <Text style={styles.ratingMeta}> Agent rating</Text>
           </View>
 
           {/* Trip Dates */}
@@ -504,8 +498,19 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
           {/* Description */}
           <View style={styles.descriptionWrap}>
-            <Text style={styles.description}>{packageDetail?.description || body}</Text>
-            {(packageDetail?.description || trip.description).length > 140 && (
+            <Text
+              style={styles.description}
+              numberOfLines={expanded ? undefined : 4}
+              onTextLayout={(e) => {
+                const hasOverflow = (e?.nativeEvent?.lines?.length || 0) > 4;
+                if (hasOverflow !== descriptionHasOverflow) {
+                  setDescriptionHasOverflow(hasOverflow);
+                }
+              }}
+            >
+              {descriptionText}
+            </Text>
+            {descriptionHasOverflow && (
               <TouchableOpacity
                 style={styles.readMoreRow}
                 activeOpacity={0.8}
@@ -578,6 +583,10 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                           <Text style={styles.verifiedText}>Verified</Text>
                         </View>
                       )}
+                    </View>
+                    <View style={styles.agentRatingInline}>
+                      <StarRating rating={agentRatingDisplayValue} size={13} />
+                      <Text style={styles.agentRatingInlineText}>{agentRatingText}</Text>
                     </View>
                   </View>
                   {session?.access && (
@@ -1092,6 +1101,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 4,
+  },
+  agentRatingInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  agentRatingInlineText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#4b5563",
   },
   agentName: {
     fontSize: 16,
