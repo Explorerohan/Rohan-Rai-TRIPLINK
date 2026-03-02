@@ -167,6 +167,7 @@ const HomeScreen = ({
   onMessagesPress = () => {},
   onSearchPress = () => {},
   onPlusPress = () => {},
+  onSeeAllTopPicksPress = () => {},
   unreadCount = 0,
 }) => {
   const hasInitialPackages = initialPackages && initialPackages.length > 0;
@@ -495,7 +496,7 @@ const HomeScreen = ({
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Top Picks for You</Text>
-          <TouchableOpacity activeOpacity={0.8}>
+          <TouchableOpacity activeOpacity={0.8} onPress={onSeeAllTopPicksPress}>
             <Text style={styles.sectionLink}>See all</Text>
           </TouchableOpacity>
         </View>

@@ -8,6 +8,7 @@ import { ForgotPasswordScreen } from "./src/screens/forgotPassword";
 import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
+import TopPicksScreen from "./src/screens/home/TopPicksScreen";
 import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
@@ -308,7 +309,20 @@ export default function App() {
           onMessagesPress={() => setScreen("messages")}
           onSearchPress={() => setScreen("search")}
           onPlusPress={() => setScreen("customPackages")}
+          onSeeAllTopPicksPress={() => setScreen("topPicks")}
           unreadCount={unreadCount}
+        />
+      )}
+      {screen === "topPicks" && (
+        <TopPicksScreen
+          session={session}
+          initialPackages={cachedPackages}
+          onUpdateCachedPackages={setCachedPackages}
+          onTripPress={(trip) => {
+            setSelectedTrip(trip?.packageData ? { ...trip, id: String(trip.packageData.id) } : trip);
+            setScreen("details");
+          }}
+          onBack={() => setScreen("home")}
         />
       )}
       {screen === "search" && (
