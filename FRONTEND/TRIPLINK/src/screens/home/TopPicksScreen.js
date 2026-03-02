@@ -3,16 +3,21 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  Platform,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { addBookmarkedPackage, getPackages, removeBookmarkedPackage } from "../../utils/api";
 
 const FALLBACK_IMAGE =
@@ -37,6 +42,11 @@ const cleanPrice = (price) => {
 const formatPrice = (price) => {
   const numericValue = typeof cleanPrice(price) === "number" ? cleanPrice(price) : 0;
   return `Rs. ${numericValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+};
+
+const toNumericPrice = (price) => {
+  const cleaned = cleanPrice(price);
+  return typeof cleaned === "number" && Number.isFinite(cleaned) ? cleaned : 0;
 };
 
 const toDateOnlyKey = (value = new Date()) => {
@@ -75,14 +85,57 @@ const formatDateRange = (start, end) => {
   return "Dates to be announced";
 };
 
+const parsePickerDate = (value) => {
+  if (!isIsoDateInput(value)) return new Date();
+  const parsed = new Date(`${String(value).trim()}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
+const formatFilterDateLabel = (value) => {
+  if (!isIsoDateInput(value)) return "Tap to pick date";
+  const parsed = new Date(`${String(value).trim()}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return "Tap to pick date";
+  return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+const DEFAULT_FILTERS = {
+  location: "All",
+  country: "All",
+  agent: "All",
+  dateFrom: "",
+  dateTo: "",
+  minPrice: "",
+  maxPrice: "",
+  minRating: "Any",
+};
+
+const isIsoDateInput = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+
+const countActiveFilters = (filters) => {
+  let count = 0;
+  if (filters.location !== "All") count += 1;
+  if (filters.country !== "All") count += 1;
+  if (filters.agent !== "All") count += 1;
+  if (filters.dateFrom) count += 1;
+  if (filters.dateTo) count += 1;
+  if (filters.minPrice) count += 1;
+  if (filters.maxPrice) count += 1;
+  if (filters.minRating !== "Any") count += 1;
+  return count;
+};
+
 const transformRawPackages = (rawList) => {
   if (!Array.isArray(rawList)) return [];
   return rawList.filter(Boolean).map((pkg) => ({
     id: String(pkg.id),
     title: pkg.title || "Package",
     location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "Location",
+    locationName: (pkg.location || "").trim() || "Other",
+    country: (pkg.country || "").trim() || "Other",
+    agentName: (pkg.agent_name || "").trim() || "Travel Agent",
     image: pkg.main_image_url || FALLBACK_IMAGE,
     price: pkg.price_per_person,
+    priceValue: toNumericPrice(pkg.price_per_person),
     nights: pkg.duration_display || `${pkg.duration_days || 0}D/${pkg.duration_nights || 0}N`,
     rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
     reviews: pkg.participants_count || 0,
@@ -120,6 +173,12 @@ const TopPicksScreen = ({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [busyIds, setBusyIds] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
+  const [draftFilters, setDraftFilters] = useState({ ...DEFAULT_FILTERS });
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [showDateFromPicker, setShowDateFromPicker] = useState(false);
+  const [showDateToPicker, setShowDateToPicker] = useState(false);
 
   const syncPackages = useCallback((rawList) => {
     const transformed = transformRawPackages(rawList);
@@ -158,6 +217,175 @@ const TopPicksScreen = ({
       .filter((pkg) => isPackageUpcoming(pkg, todayKey))
       .sort((a, b) => String(normalizeDateKey(a.trip_start_date)).localeCompare(String(normalizeDateKey(b.trip_start_date))));
   }, [packages]);
+
+  const locationOptions = useMemo(() => {
+    if (!upcomingTopPicks.length) return ["All"];
+    const names = upcomingTopPicks.map((pkg) => pkg.locationName).filter(Boolean);
+    const unique = [...new Set(names)].sort((a, b) => String(a).localeCompare(String(b)));
+    return ["All", ...unique];
+  }, [upcomingTopPicks]);
+
+  const countryOptions = useMemo(() => {
+    if (!upcomingTopPicks.length) return ["All"];
+    const names = upcomingTopPicks.map((pkg) => pkg.country).filter(Boolean);
+    const unique = [...new Set(names)].sort((a, b) => String(a).localeCompare(String(b)));
+    return ["All", ...unique];
+  }, [upcomingTopPicks]);
+
+  const agentOptions = useMemo(() => {
+    if (!upcomingTopPicks.length) return ["All"];
+    const names = upcomingTopPicks.map((pkg) => pkg.agentName).filter(Boolean);
+    const unique = [...new Set(names)].sort((a, b) => String(a).localeCompare(String(b)));
+    return ["All", ...unique];
+  }, [upcomingTopPicks]);
+
+  const filteredTopPicks = useMemo(() => {
+    let list = upcomingTopPicks;
+
+    if (filters.location !== "All") {
+      const locationLower = String(filters.location).trim().toLowerCase();
+      list = list.filter(
+        (item) => String(item.locationName || "").trim().toLowerCase() === locationLower
+      );
+    }
+
+    if (filters.country !== "All") {
+      const countryLower = String(filters.country).trim().toLowerCase();
+      list = list.filter(
+        (item) => String(item.country || "").trim().toLowerCase() === countryLower
+      );
+    }
+
+    if (filters.agent !== "All") {
+      const agentLower = String(filters.agent).trim().toLowerCase();
+      list = list.filter(
+        (item) => String(item.agentName || "").trim().toLowerCase() === agentLower
+      );
+    }
+
+    const query = String(searchQuery || "").trim().toLowerCase();
+    if (query) {
+      list = list.filter((item) => {
+        const title = String(item.title || "").toLowerCase();
+        const location = String(item.location || "").toLowerCase();
+        const country = String(item.country || "").toLowerCase();
+        const agent = String(item.agentName || "").toLowerCase();
+        const description = String(item.description || "").toLowerCase();
+        return (
+          title.includes(query) ||
+          location.includes(query) ||
+          country.includes(query) ||
+          agent.includes(query) ||
+          description.includes(query)
+        );
+      });
+    }
+
+    const minPrice = filters.minPrice ? parseFloat(String(filters.minPrice).replace(/[^0-9.]/g, "")) : null;
+    const maxPrice = filters.maxPrice ? parseFloat(String(filters.maxPrice).replace(/[^0-9.]/g, "")) : null;
+    if (Number.isFinite(minPrice)) {
+      list = list.filter((item) => item.priceValue >= minPrice);
+    }
+    if (Number.isFinite(maxPrice)) {
+      list = list.filter((item) => item.priceValue <= maxPrice);
+    }
+
+    if (filters.minRating !== "Any") {
+      const minRating = parseFloat(filters.minRating);
+      if (Number.isFinite(minRating)) {
+        list = list.filter((item) => Number(item.rating || 0) >= minRating);
+      }
+    }
+
+    const dateFrom = isIsoDateInput(filters.dateFrom) ? filters.dateFrom.trim() : "";
+    const dateTo = isIsoDateInput(filters.dateTo) ? filters.dateTo.trim() : "";
+    if (dateFrom || dateTo) {
+      list = list.filter((item) => {
+        const startKey = normalizeDateKey(item.trip_start_date);
+        const endKey = normalizeDateKey(item.trip_end_date) || startKey;
+        if (!startKey) return false;
+        if (dateFrom && endKey < dateFrom) return false;
+        if (dateTo && startKey > dateTo) return false;
+        return true;
+      });
+    }
+
+    return list;
+  }, [filters, searchQuery, upcomingTopPicks]);
+
+  const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
+  const hasAnyFiltersApplied = activeFilterCount > 0 || searchQuery.trim().length > 0;
+
+  const openFilterSheet = useCallback(() => {
+    setDraftFilters({ ...filters });
+    setFilterVisible(true);
+  }, [filters]);
+
+  const applyFilters = useCallback(() => {
+    let nextDateFrom = draftFilters.dateFrom.trim();
+    let nextDateTo = draftFilters.dateTo.trim();
+    if (isIsoDateInput(nextDateFrom) && isIsoDateInput(nextDateTo) && nextDateFrom > nextDateTo) {
+      const temp = nextDateFrom;
+      nextDateFrom = nextDateTo;
+      nextDateTo = temp;
+    }
+
+    let nextMinPrice = draftFilters.minPrice.trim();
+    let nextMaxPrice = draftFilters.maxPrice.trim();
+    const minPriceValue = nextMinPrice ? parseFloat(nextMinPrice) : null;
+    const maxPriceValue = nextMaxPrice ? parseFloat(nextMaxPrice) : null;
+    if (Number.isFinite(minPriceValue) && Number.isFinite(maxPriceValue) && minPriceValue > maxPriceValue) {
+      nextMinPrice = String(maxPriceValue);
+      nextMaxPrice = String(minPriceValue);
+    }
+
+    setFilters({
+      ...draftFilters,
+      dateFrom: nextDateFrom,
+      dateTo: nextDateTo,
+      minPrice: nextMinPrice,
+      maxPrice: nextMaxPrice,
+    });
+    setFilterVisible(false);
+  }, [draftFilters]);
+
+  const clearAllFilters = useCallback(() => {
+    setFilters({ ...DEFAULT_FILTERS });
+    setDraftFilters({ ...DEFAULT_FILTERS });
+    setSearchQuery("");
+  }, []);
+
+  const onDateFromChange = useCallback((event, selectedDate) => {
+    if (Platform.OS === "android") {
+      setShowDateFromPicker(false);
+    }
+    if (event?.type === "dismissed" || !selectedDate) return;
+
+    const nextDate = toDateOnlyKey(selectedDate);
+    setDraftFilters((prev) => {
+      const next = { ...prev, dateFrom: nextDate };
+      if (isIsoDateInput(prev.dateTo) && prev.dateTo < nextDate) {
+        next.dateTo = nextDate;
+      }
+      return next;
+    });
+  }, []);
+
+  const onDateToChange = useCallback((event, selectedDate) => {
+    if (Platform.OS === "android") {
+      setShowDateToPicker(false);
+    }
+    if (event?.type === "dismissed" || !selectedDate) return;
+
+    const nextDate = toDateOnlyKey(selectedDate);
+    setDraftFilters((prev) => {
+      const next = { ...prev, dateTo: nextDate };
+      if (isIsoDateInput(prev.dateFrom) && prev.dateFrom > nextDate) {
+        next.dateFrom = nextDate;
+      }
+      return next;
+    });
+  }, []);
 
   const handleTripSelect = useCallback((trip) => {
     if (!trip || typeof trip !== "object") return;
@@ -253,6 +481,317 @@ const TopPicksScreen = ({
             />
           }
         >
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Ionicons name="search-outline" size={19} color="#7a7f85" style={styles.searchIcon} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search packages or locations"
+                placeholderTextColor="#9aa0a6"
+                style={styles.searchInput}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
+              activeOpacity={0.85}
+              onPress={openFilterSheet}
+            >
+              <Ionicons
+                name="options-outline"
+                size={20}
+                color={activeFilterCount > 0 ? "#ffffff" : "#1f6b2a"}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.resultsRow}>
+            <Text style={styles.resultsText}>
+              {filteredTopPicks.length} package{filteredTopPicks.length === 1 ? "" : "s"}
+            </Text>
+            {hasAnyFiltersApplied ? (
+              <TouchableOpacity style={styles.clearFiltersButton} activeOpacity={0.85} onPress={clearAllFilters}>
+                <Ionicons name="close-circle-outline" size={14} color="#1f6b2a" />
+                <Text style={styles.clearFiltersText}>Clear all</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.activeFilterPill}>
+                <Ionicons name="sparkles-outline" size={13} color="#1f6b2a" />
+                <Text style={styles.activeFilterText}>All top picks</Text>
+              </View>
+            )}
+          </View>
+
+          {hasAnyFiltersApplied ? (
+            <View style={styles.appliedFiltersWrap}>
+              {searchQuery.trim() ? (
+                <View style={styles.appliedFilterChip}>
+                  <Ionicons name="search-outline" size={12} color="#1f6b2a" />
+                  <Text style={styles.appliedFilterText}>{searchQuery.trim()}</Text>
+                </View>
+              ) : null}
+              {filters.location !== "All" ? (
+                <View style={styles.appliedFilterChip}>
+                  <Ionicons name="pin-outline" size={12} color="#1f6b2a" />
+                  <Text style={styles.appliedFilterText}>{filters.location}</Text>
+                </View>
+              ) : null}
+              {filters.country !== "All" ? (
+                <View style={styles.appliedFilterChip}>
+                  <Ionicons name="earth-outline" size={12} color="#1f6b2a" />
+                  <Text style={styles.appliedFilterText}>{filters.country}</Text>
+                </View>
+              ) : null}
+              {filters.agent !== "All" ? (
+                <View style={styles.appliedFilterChip}>
+                  <Ionicons name="person-outline" size={12} color="#1f6b2a" />
+                  <Text style={styles.appliedFilterText}>{filters.agent}</Text>
+                </View>
+              ) : null}
+              {filters.minRating !== "Any" ? (
+                <View style={styles.appliedFilterChip}>
+                  <Ionicons name="star-outline" size={12} color="#1f6b2a" />
+                  <Text style={styles.appliedFilterText}>{filters.minRating}+ rating</Text>
+                </View>
+              ) : null}
+              {filters.minPrice || filters.maxPrice ? (
+                <View style={styles.appliedFilterChip}>
+                  <Ionicons name="cash-outline" size={12} color="#1f6b2a" />
+                  <Text style={styles.appliedFilterText}>
+                    {filters.minPrice || "0"} - {filters.maxPrice || "Any"}
+                  </Text>
+                </View>
+              ) : null}
+              {filters.dateFrom || filters.dateTo ? (
+                <View style={styles.appliedFilterChip}>
+                  <Ionicons name="calendar-outline" size={12} color="#1f6b2a" />
+                  <Text style={styles.appliedFilterText}>
+                    {filters.dateFrom || "Start"} to {filters.dateTo || "End"}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
+          <Modal
+            visible={filterVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setFilterVisible(false)}
+          >
+            <Pressable
+              style={styles.filterOverlay}
+              onPress={() => setFilterVisible(false)}
+            >
+              <Pressable style={styles.filterModal} onPress={() => {}}>
+                <View style={styles.filterHeader}>
+                  <Text style={styles.filterTitle}>Filter top picks</Text>
+                  <TouchableOpacity onPress={() => setFilterVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                    <Ionicons name="close" size={24} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView
+                  style={styles.filterList}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>Location</Text>
+                    <View style={styles.optionWrap}>
+                      {locationOptions.map((option) => {
+                        const active = draftFilters.location === option;
+                        return (
+                          <TouchableOpacity
+                            key={`location-${option}`}
+                            style={[styles.optionChip, active && styles.optionChipActive]}
+                            activeOpacity={0.8}
+                            onPress={() => setDraftFilters((prev) => ({ ...prev, location: option }))}
+                          >
+                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>Country</Text>
+                    <View style={styles.optionWrap}>
+                      {countryOptions.map((option) => {
+                        const active = draftFilters.country === option;
+                        return (
+                          <TouchableOpacity
+                            key={`country-${option}`}
+                            style={[styles.optionChip, active && styles.optionChipActive]}
+                            activeOpacity={0.8}
+                            onPress={() => setDraftFilters((prev) => ({ ...prev, country: option }))}
+                          >
+                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>Agent</Text>
+                    <View style={styles.optionWrap}>
+                      {agentOptions.map((option) => {
+                        const active = draftFilters.agent === option;
+                        return (
+                          <TouchableOpacity
+                            key={`agent-${option}`}
+                            style={[styles.optionChip, active && styles.optionChipActive]}
+                            activeOpacity={0.8}
+                            onPress={() => setDraftFilters((prev) => ({ ...prev, agent: option }))}
+                          >
+                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>Trip Dates</Text>
+                    <View style={styles.inlineInputs}>
+                      <View style={styles.inlineInputWrap}>
+                        <Text style={styles.inlineLabel}>From</Text>
+                        <TouchableOpacity
+                          style={styles.filterDateButton}
+                          activeOpacity={0.85}
+                          onPress={() => setShowDateFromPicker(true)}
+                        >
+                          <Text style={draftFilters.dateFrom ? styles.filterDateText : styles.filterDatePlaceholder}>
+                            {formatFilterDateLabel(draftFilters.dateFrom)}
+                          </Text>
+                          <Ionicons name="calendar-outline" size={18} color="#94a3b8" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.inlineInputWrap}>
+                        <Text style={styles.inlineLabel}>To</Text>
+                        <TouchableOpacity
+                          style={styles.filterDateButton}
+                          activeOpacity={0.85}
+                          onPress={() => setShowDateToPicker(true)}
+                        >
+                          <Text style={draftFilters.dateTo ? styles.filterDateText : styles.filterDatePlaceholder}>
+                            {formatFilterDateLabel(draftFilters.dateTo)}
+                          </Text>
+                          <Ionicons name="calendar-outline" size={18} color="#94a3b8" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <Text style={styles.filterHint}>Packages overlapping this date range will be shown.</Text>
+                    {showDateFromPicker ? (
+                      <DateTimePicker
+                        value={parsePickerDate(draftFilters.dateFrom)}
+                        mode="date"
+                        display={Platform.OS === "android" ? "calendar" : "default"}
+                        onChange={onDateFromChange}
+                      />
+                    ) : null}
+                    {showDateFromPicker && Platform.OS === "ios" ? (
+                      <TouchableOpacity
+                        style={styles.datePickerDoneButton}
+                        activeOpacity={0.85}
+                        onPress={() => setShowDateFromPicker(false)}
+                      >
+                        <Text style={styles.datePickerDoneText}>Done</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    {showDateToPicker ? (
+                      <DateTimePicker
+                        value={parsePickerDate(draftFilters.dateTo)}
+                        mode="date"
+                        display={Platform.OS === "android" ? "calendar" : "default"}
+                        onChange={onDateToChange}
+                        minimumDate={isIsoDateInput(draftFilters.dateFrom) ? parsePickerDate(draftFilters.dateFrom) : undefined}
+                      />
+                    ) : null}
+                    {showDateToPicker && Platform.OS === "ios" ? (
+                      <TouchableOpacity
+                        style={styles.datePickerDoneButton}
+                        activeOpacity={0.85}
+                        onPress={() => setShowDateToPicker(false)}
+                      >
+                        <Text style={styles.datePickerDoneText}>Done</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>Price Range</Text>
+                    <View style={styles.inlineInputs}>
+                      <View style={styles.inlineInputWrap}>
+                        <Text style={styles.inlineLabel}>Min Price</Text>
+                        <TextInput
+                          value={draftFilters.minPrice}
+                          onChangeText={(value) => setDraftFilters((prev) => ({ ...prev, minPrice: value.replace(/[^0-9.]/g, "") }))}
+                          placeholder="0"
+                          placeholderTextColor="#9aa0a6"
+                          keyboardType="numeric"
+                          style={styles.filterInput}
+                        />
+                      </View>
+                      <View style={styles.inlineInputWrap}>
+                        <Text style={styles.inlineLabel}>Max Price</Text>
+                        <TextInput
+                          value={draftFilters.maxPrice}
+                          onChangeText={(value) => setDraftFilters((prev) => ({ ...prev, maxPrice: value.replace(/[^0-9.]/g, "") }))}
+                          placeholder="Any"
+                          placeholderTextColor="#9aa0a6"
+                          keyboardType="numeric"
+                          style={styles.filterInput}
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>Minimum Agent Rating</Text>
+                    <View style={styles.optionWrap}>
+                      {["Any", "4.0", "4.5"].map((option) => {
+                        const active = draftFilters.minRating === option;
+                        return (
+                          <TouchableOpacity
+                            key={`rating-${option}`}
+                            style={[styles.optionChip, active && styles.optionChipActive]}
+                            activeOpacity={0.8}
+                            onPress={() => setDraftFilters((prev) => ({ ...prev, minRating: option }))}
+                          >
+                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
+                              {option === "Any" ? option : `${option}+`}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </ScrollView>
+
+                <View style={styles.filterFooter}>
+                  <TouchableOpacity
+                    style={styles.filterFooterSecondary}
+                    activeOpacity={0.85}
+                    onPress={() => setDraftFilters({ ...DEFAULT_FILTERS })}
+                  >
+                    <Text style={styles.filterFooterSecondaryText}>Reset</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.filterFooterPrimary}
+                    activeOpacity={0.85}
+                    onPress={applyFilters}
+                  >
+                    <Text style={styles.filterFooterPrimaryText}>Apply filters</Text>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Pressable>
+          </Modal>
+
           {error ? (
             <View style={styles.feedbackCardError}>
               <Text style={styles.feedbackTitleError}>Couldn't load top picks</Text>
@@ -260,17 +799,21 @@ const TopPicksScreen = ({
             </View>
           ) : null}
 
-          {!error && upcomingTopPicks.length === 0 ? (
+          {!error && filteredTopPicks.length === 0 ? (
             <View style={styles.feedbackCard}>
               <Ionicons name="airplane-outline" size={26} color="#64748b" />
-              <Text style={styles.feedbackTitle}>No upcoming top picks right now</Text>
+              <Text style={styles.feedbackTitle}>
+                {upcomingTopPicks.length === 0 ? "No upcoming top picks right now" : "No packages match your filters"}
+              </Text>
               <Text style={styles.feedbackText}>
-                New curated packages will appear here once their trip dates are ahead of today.
+                {upcomingTopPicks.length === 0
+                  ? "New curated packages will appear here once their trip dates are ahead of today."
+                  : "Try another destination or clear your search to see more packages."}
               </Text>
             </View>
           ) : null}
 
-          {upcomingTopPicks.map((item) => (
+          {filteredTopPicks.map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.card}
@@ -384,6 +927,270 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 18,
     paddingBottom: 30,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  searchBox: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#d5d9dd",
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 15,
+    color: "#1f1f1f",
+  },
+  filterButton: {
+    width: 48,
+    height: 50,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#dce4dc",
+    backgroundColor: "#f3f8f3",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterButtonActive: {
+    backgroundColor: "#1f6b2a",
+    borderColor: "#1f6b2a",
+  },
+  resultsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    gap: 10,
+  },
+  resultsText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  clearFiltersButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#edf7ed",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  clearFiltersText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1f6b2a",
+  },
+  activeFilterPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: "#edf7ed",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  activeFilterText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1f6b2a",
+  },
+  appliedFiltersWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  },
+  appliedFilterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#f3f8f3",
+    borderWidth: 1,
+    borderColor: "#dce4dc",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  appliedFilterText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1f6b2a",
+  },
+  filterOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  filterModal: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingBottom: 24,
+    maxHeight: "70%",
+  },
+  filterHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  filterList: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    maxHeight: 320,
+  },
+  filterSection: {
+    marginBottom: 18,
+  },
+  filterSectionTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 10,
+  },
+  optionWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  optionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d5d9dd",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  optionChipActive: {
+    backgroundColor: "#1f6b2a",
+    borderColor: "#1f6b2a",
+  },
+  optionChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  optionChipTextActive: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+  inlineInputs: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  inlineInputWrap: {
+    flex: 1,
+  },
+  inlineLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#64748b",
+    marginBottom: 6,
+  },
+  filterInput: {
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#d5d9dd",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: "#1f1f1f",
+  },
+  filterDateButton: {
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#d5d9dd",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  filterDateText: {
+    fontSize: 14,
+    color: "#1f1f1f",
+    fontWeight: "600",
+  },
+  filterDatePlaceholder: {
+    fontSize: 14,
+    color: "#9aa0a6",
+  },
+  filterHint: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#64748b",
+  },
+  datePickerDoneButton: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+    backgroundColor: "#edf7ed",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  datePickerDoneText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1f6b2a",
+  },
+  filterFooter: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  filterFooterSecondary: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#d5d9dd",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterFooterSecondaryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  filterFooterPrimary: {
+    flex: 1.4,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#1f6b2a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterFooterPrimaryText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#ffffff",
   },
   feedbackCard: {
     borderRadius: 18,
