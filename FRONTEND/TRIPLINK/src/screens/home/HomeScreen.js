@@ -133,7 +133,9 @@ const transformRawPackages = (rawList) => {
     title: pkg.title,
     location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
     locationName: (pkg.location || "").trim() || "Other",
-    image: pkg.main_image_url || "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
+    image:
+      pkg.main_image_url ||
+      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
     price: pkg.price_per_person,
     nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
     rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
@@ -141,11 +143,12 @@ const transformRawPackages = (rawList) => {
     perks: pkg.features?.map((f) => f.name) || [],
     description: pkg.description,
     hero: pkg.main_image_url,
-    facilities: pkg.features?.map((f, idx) => ({
-      key: `feature_${idx}`,
-      label: f.name,
-      icon: f.icon || "checkmark-circle-outline",
-    })) || defaultFacilities,
+    facilities:
+      pkg.features?.map((f, idx) => ({
+        key: `feature_${idx}`,
+        label: f.name,
+        icon: f.icon || "checkmark-circle-outline",
+      })) || defaultFacilities,
     user_has_booked: pkg.user_has_booked ?? false,
     is_bookmarked: Boolean(pkg.is_bookmarked),
     trip_start_date: pkg.trip_start_date ?? null,
@@ -153,6 +156,12 @@ const transformRawPackages = (rawList) => {
     packageData: pkg,
   }));
 };
+
+const toRawCacheList = (items) =>
+  (items || []).map((item) => ({
+    ...(item.packageData || {}),
+    is_bookmarked: Boolean(item.is_bookmarked),
+  }));
 
 const HomeScreen = ({
   session,
@@ -349,11 +358,19 @@ const HomeScreen = ({
     const packageIdStr = String(packageId);
 
     setBookmarkBusyIds((prev) => [...prev, packageIdStr]);
-    setPackages((prev) =>
-      (prev || []).map((pkg) =>
+    setPackages((prev) => {
+      const next =
+        prev || [];
+      const updated = next.map((pkg) =>
         String(pkg?.id) === packageIdStr ? { ...pkg, is_bookmarked: targetState } : pkg
-      )
-    );
+      );
+      // keep app-level cache in sync so other screens (like TopPicks) see bookmark changes
+      const rawList = toRawCacheList(updated);
+      setTimeout(() => {
+        onUpdateCachedPackages(rawList);
+      }, 0);
+      return updated;
+    });
 
     try {
       if (targetState) {
@@ -362,11 +379,18 @@ const HomeScreen = ({
         await removeBookmarkedPackage(packageId, session.access);
       }
     } catch (err) {
-      setPackages((prev) =>
-        (prev || []).map((pkg) =>
+      setPackages((prev) => {
+        const next =
+          prev || [];
+        const updated = next.map((pkg) =>
           String(pkg?.id) === packageIdStr ? { ...pkg, is_bookmarked: currentlyBookmarked } : pkg
-        )
-      );
+        );
+        const rawList = toRawCacheList(updated);
+        setTimeout(() => {
+          onUpdateCachedPackages(rawList);
+        }, 0);
+        return updated;
+      });
       Alert.alert("Bookmark Error", err?.message || "Could not update bookmark.");
     } finally {
       setBookmarkBusyIds((prev) => prev.filter((id) => id !== packageIdStr));

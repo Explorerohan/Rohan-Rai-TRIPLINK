@@ -186,6 +186,13 @@ const TopPicksScreen = ({
     onUpdateCachedPackages(rawList);
   }, [onUpdateCachedPackages]);
 
+  const scheduleCacheUpdateFromItems = useCallback((items) => {
+    const rawList = toRawCacheList(items);
+    setTimeout(() => {
+      onUpdateCachedPackages(rawList);
+    }, 0);
+  }, [onUpdateCachedPackages]);
+
   const fetchPackages = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     setError("");
@@ -417,7 +424,7 @@ const TopPicksScreen = ({
       const next = prev.map((item) =>
         String(item.id) === id ? { ...item, is_bookmarked: nextBookmarked } : item
       );
-      onUpdateCachedPackages(toRawCacheList(next));
+      scheduleCacheUpdateFromItems(next);
       return next;
     });
 
@@ -432,7 +439,7 @@ const TopPicksScreen = ({
         const next = prev.map((item) =>
           String(item.id) === id ? { ...item, is_bookmarked: currentlyBookmarked } : item
         );
-        onUpdateCachedPackages(toRawCacheList(next));
+        scheduleCacheUpdateFromItems(next);
         return next;
       });
       Alert.alert("Bookmark Error", err?.message || "Could not update bookmark.");
