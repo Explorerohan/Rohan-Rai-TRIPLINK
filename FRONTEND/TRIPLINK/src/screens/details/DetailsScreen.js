@@ -626,6 +626,17 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     ? agentRatingNumber.toFixed(1).replace(/\.0$/, "")
     : "0";
 
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const rawStartDate = packageDetail?.trip_start_date || trip.trip_start_date || null;
+  let hasTripStarted = false;
+  if (rawStartDate) {
+    const parsedStart = new Date(rawStartDate);
+    if (!Number.isNaN(parsedStart.getTime())) {
+      const startKey = parsedStart.toISOString().slice(0, 10);
+      hasTripStarted = startKey <= todayKey;
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#f2f3f5" />
@@ -869,6 +880,11 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           <View style={styles.alreadyBookedBadge}>
             <Ionicons name="checkmark-circle" size={20} color="#1f6b2a" />
             <Text style={styles.alreadyBookedText}>Already booked</Text>
+          </View>
+        ) : hasTripStarted ? (
+          <View style={styles.alreadyBookedBadge}>
+            <Ionicons name="time-outline" size={20} color="#b45309" />
+            <Text style={styles.alreadyBookedText}>Trip already started</Text>
           </View>
         ) : (
           <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={handleBookNowPress}>
