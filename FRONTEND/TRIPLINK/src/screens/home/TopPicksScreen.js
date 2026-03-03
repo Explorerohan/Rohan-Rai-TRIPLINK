@@ -480,6 +480,12 @@ const TopPicksScreen = ({
               tintColor="#1f6b2a"
             />
           }
+          scrollEventThrottle={16}
+          decelerationRate={Platform.OS === "ios" ? "fast" : 0.998}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={!filterVisible}
+          fadingEdgeLength={Platform.OS === "android" ? 40 : 0}
         >
           <View style={styles.searchRow}>
             <View style={styles.searchBox}>
@@ -513,7 +519,7 @@ const TopPicksScreen = ({
             {hasAnyFiltersApplied ? (
               <TouchableOpacity style={styles.clearFiltersButton} activeOpacity={0.85} onPress={clearAllFilters}>
                 <Ionicons name="close-circle-outline" size={14} color="#1f6b2a" />
-                <Text style={styles.clearFiltersText}>Clear all</Text>
+                <Text style={styles.clearFiltersText}>Clear</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.activeFilterPill}>
@@ -586,76 +592,89 @@ const TopPicksScreen = ({
             >
               <Pressable style={styles.filterModal} onPress={() => {}}>
                 <View style={styles.filterHeader}>
-                  <Text style={styles.filterTitle}>Filter top picks</Text>
+                  <View>
+                    <Text style={styles.filterTitle}>Filter top picks</Text>
+                    <Text style={styles.filterSubtitle}>
+                      Showing {filteredTopPicks.length} · {activeFilterCount} active filter
+                      {activeFilterCount === 1 ? "" : "s"}
+                    </Text>
+                  </View>
                   <TouchableOpacity onPress={() => setFilterVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                    <Ionicons name="close" size={24} color="#64748b" />
+                    <Ionicons name="close" size={22} color="#64748b" />
                   </TouchableOpacity>
                 </View>
                 <ScrollView
                   style={styles.filterList}
+                  contentContainerStyle={styles.filterListContent}
                   showsVerticalScrollIndicator={false}
                   nestedScrollEnabled
                   keyboardShouldPersistTaps="handled"
+                  scrollEventThrottle={16}
+                  decelerationRate={Platform.OS === "ios" ? "fast" : 0.998}
+                  bounces
+                  overScrollMode="always"
+                  fadingEdgeLength={Platform.OS === "android" ? 40 : 0}
                 >
                   <View style={styles.filterSection}>
-                    <Text style={styles.filterSectionTitle}>Location</Text>
-                    <View style={styles.optionWrap}>
-                      {locationOptions.map((option) => {
-                        const active = draftFilters.location === option;
-                        return (
-                          <TouchableOpacity
-                            key={`location-${option}`}
-                            style={[styles.optionChip, active && styles.optionChipActive]}
-                            activeOpacity={0.8}
-                            onPress={() => setDraftFilters((prev) => ({ ...prev, location: option }))}
-                          >
-                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
+                    <Text style={styles.filterSectionTitle}>Basics</Text>
+                    <View style={styles.filterRow}>
+                      <Text style={styles.filterRowLabel}>Location</Text>
+                      <View style={styles.optionWrap}>
+                        {locationOptions.map((option) => {
+                          const active = draftFilters.location === option;
+                          return (
+                            <TouchableOpacity
+                              key={`location-${option}`}
+                              style={[styles.optionChip, active && styles.optionChipActive]}
+                              activeOpacity={0.8}
+                              onPress={() => setDraftFilters((prev) => ({ ...prev, location: option }))}
+                            >
+                              <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                    <View style={styles.filterRow}>
+                      <Text style={styles.filterRowLabel}>Country</Text>
+                      <View style={styles.optionWrap}>
+                        {countryOptions.map((option) => {
+                          const active = draftFilters.country === option;
+                          return (
+                            <TouchableOpacity
+                              key={`country-${option}`}
+                              style={[styles.optionChip, active && styles.optionChipActive]}
+                              activeOpacity={0.8}
+                              onPress={() => setDraftFilters((prev) => ({ ...prev, country: option }))}
+                            >
+                              <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                    <View style={styles.filterRow}>
+                      <Text style={styles.filterRowLabel}>Agent</Text>
+                      <View style={styles.optionWrap}>
+                        {agentOptions.map((option) => {
+                          const active = draftFilters.agent === option;
+                          return (
+                            <TouchableOpacity
+                              key={`agent-${option}`}
+                              style={[styles.optionChip, active && styles.optionChipActive]}
+                              activeOpacity={0.8}
+                              onPress={() => setDraftFilters((prev) => ({ ...prev, agent: option }))}
+                            >
+                              <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
                     </View>
                   </View>
 
                   <View style={styles.filterSection}>
-                    <Text style={styles.filterSectionTitle}>Country</Text>
-                    <View style={styles.optionWrap}>
-                      {countryOptions.map((option) => {
-                        const active = draftFilters.country === option;
-                        return (
-                          <TouchableOpacity
-                            key={`country-${option}`}
-                            style={[styles.optionChip, active && styles.optionChipActive]}
-                            activeOpacity={0.8}
-                            onPress={() => setDraftFilters((prev) => ({ ...prev, country: option }))}
-                          >
-                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-
-                  <View style={styles.filterSection}>
-                    <Text style={styles.filterSectionTitle}>Agent</Text>
-                    <View style={styles.optionWrap}>
-                      {agentOptions.map((option) => {
-                        const active = draftFilters.agent === option;
-                        return (
-                          <TouchableOpacity
-                            key={`agent-${option}`}
-                            style={[styles.optionChip, active && styles.optionChipActive]}
-                            activeOpacity={0.8}
-                            onPress={() => setDraftFilters((prev) => ({ ...prev, agent: option }))}
-                          >
-                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>{option}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-
-                  <View style={styles.filterSection}>
-                    <Text style={styles.filterSectionTitle}>Trip Dates</Text>
+                    <Text style={styles.filterSectionTitle}>Trip dates</Text>
                     <View style={styles.inlineInputs}>
                       <View style={styles.inlineInputWrap}>
                         <Text style={styles.inlineLabel}>From</Text>
@@ -684,7 +703,7 @@ const TopPicksScreen = ({
                         </TouchableOpacity>
                       </View>
                     </View>
-                    <Text style={styles.filterHint}>Packages overlapping this date range will be shown.</Text>
+                    <Text style={styles.filterHint}>Only trips overlapping this date range will be shown.</Text>
                     {showDateFromPicker ? (
                       <DateTimePicker
                         value={parsePickerDate(draftFilters.dateFrom)}
@@ -723,10 +742,10 @@ const TopPicksScreen = ({
                   </View>
 
                   <View style={styles.filterSection}>
-                    <Text style={styles.filterSectionTitle}>Price Range</Text>
+                    <Text style={styles.filterSectionTitle}>Price & rating</Text>
                     <View style={styles.inlineInputs}>
                       <View style={styles.inlineInputWrap}>
-                        <Text style={styles.inlineLabel}>Min Price</Text>
+                        <Text style={styles.inlineLabel}>Min price</Text>
                         <TextInput
                           value={draftFilters.minPrice}
                           onChangeText={(value) => setDraftFilters((prev) => ({ ...prev, minPrice: value.replace(/[^0-9.]/g, "") }))}
@@ -737,7 +756,7 @@ const TopPicksScreen = ({
                         />
                       </View>
                       <View style={styles.inlineInputWrap}>
-                        <Text style={styles.inlineLabel}>Max Price</Text>
+                        <Text style={styles.inlineLabel}>Max price</Text>
                         <TextInput
                           value={draftFilters.maxPrice}
                           onChangeText={(value) => setDraftFilters((prev) => ({ ...prev, maxPrice: value.replace(/[^0-9.]/g, "") }))}
@@ -748,26 +767,25 @@ const TopPicksScreen = ({
                         />
                       </View>
                     </View>
-                  </View>
-
-                  <View style={styles.filterSection}>
-                    <Text style={styles.filterSectionTitle}>Minimum Agent Rating</Text>
-                    <View style={styles.optionWrap}>
-                      {["Any", "4.0", "4.5"].map((option) => {
-                        const active = draftFilters.minRating === option;
-                        return (
-                          <TouchableOpacity
-                            key={`rating-${option}`}
-                            style={[styles.optionChip, active && styles.optionChipActive]}
-                            activeOpacity={0.8}
-                            onPress={() => setDraftFilters((prev) => ({ ...prev, minRating: option }))}
-                          >
-                            <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
-                              {option === "Any" ? option : `${option}+`}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
+                    <View style={styles.filterRow}>
+                      <Text style={styles.inlineLabel}>Minimum agent rating</Text>
+                      <View style={styles.optionWrap}>
+                        {["Any", "4.0", "4.5"].map((option) => {
+                          const active = draftFilters.minRating === option;
+                          return (
+                            <TouchableOpacity
+                              key={`rating-${option}`}
+                              style={[styles.optionChip, active && styles.optionChipActive]}
+                              activeOpacity={0.8}
+                              onPress={() => setDraftFilters((prev) => ({ ...prev, minRating: option }))}
+                            >
+                              <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
+                                {option === "Any" ? option : `${option}+`}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
                     </View>
                   </View>
                 </ScrollView>
@@ -1052,23 +1070,39 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e2e8f0",
   },
   filterTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
     color: "#1e293b",
+  },
+  filterSubtitle: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#64748b",
   },
   filterList: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    maxHeight: 320,
+  },
+  filterListContent: {
+    paddingBottom: 24,
   },
   filterSection: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   filterSectionTitle: {
-    fontSize: 15,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
     color: "#111827",
-    marginBottom: 10,
+    marginBottom: 8,
+  },
+  filterRow: {
+    marginTop: 10,
+  },
+  filterRowLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6b7280",
+    marginBottom: 6,
   },
   optionWrap: {
     flexDirection: "row",
