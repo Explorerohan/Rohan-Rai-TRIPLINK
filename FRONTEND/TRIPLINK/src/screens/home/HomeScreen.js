@@ -168,6 +168,7 @@ const HomeScreen = ({
   onSearchPress = () => {},
   onPlusPress = () => {},
   onSeeAllTopPicksPress = () => {},
+  onSeeAllRunningNowPress = () => {},
   unreadCount = 0,
 }) => {
   const hasInitialPackages = initialPackages && initialPackages.length > 0;
@@ -582,6 +583,9 @@ const HomeScreen = ({
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Running Now</Text>
+          <TouchableOpacity activeOpacity={0.8} onPress={onSeeAllRunningNowPress}>
+            <Text style={styles.sectionLink}>See all</Text>
+          </TouchableOpacity>
         </View>
 
         {runningNowPackages.length > 0 ? (
