@@ -540,14 +540,14 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   calendarBlock: {
-    marginTop: 20,
+    marginTop: 12,
     marginBottom: 0,
   },
   calendarRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 10,
   },
   monthLabel: {
     fontSize: 22,
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   daysRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 4,
     paddingHorizontal: 2,
   },
   dayName: {
@@ -582,6 +582,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    alignContent: "flex-start",
   },
   cell: {
     width: "14.28%",
@@ -591,7 +592,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 10,
-    marginTop: 2,
+    marginTop: 0,
     marginBottom: 0,
   },
   cellSelected: {
@@ -615,7 +616,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   tripsOnDateSection: {
-    marginTop: 16,
+    marginTop: -12,
     marginBottom: 0,
   },
   tripsOnDateTitle: {
