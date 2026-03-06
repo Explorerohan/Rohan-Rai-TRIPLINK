@@ -1,21 +1,10 @@
-﻿{% extends 'base_agent.html' %}
+{% extends 'base_agent.html' %}
 
 {% block title %}Agent Dashboard - TRIPLINK{% endblock %}
 
 {% block agent_extra_css %}
 <style>
 .dash{display:grid;gap:16px}
-.header{position:fixed;top:0;left:260px;right:0;height:70px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;align-items:center;padding:0 30px;z-index:100}
-.header-left{flex:1;display:flex;align-items:center}
-.header-right{display:flex;align-items:center;gap:20px}
-.notification-icon{position:relative;cursor:pointer;font-size:20px;color:#64748b}
-.notification-badge{position:absolute;top:-5px;right:-5px;background:#3b82f6;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
-.notification-badge.red{background:#ef4444}
-.user-profile{display:flex;align-items:center;gap:10px}
-.user-greeting{color:#1e293b;font-size:14px;font-weight:500}
-.user-avatar{width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.user-avatar img{width:100%;height:100%;object-fit:cover}
-.main-content{padding-top:70px}
 .hero{background:#166534;color:#fff;border-radius:16px;padding:18px;display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
 .hero h1{font-size:24px;margin:0 0 6px;font-weight:800}.hero p{margin:0;color:rgba(255,255,255,.88);font-size:13px;line-height:1.45}
 .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.badge{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.1);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
@@ -52,42 +41,12 @@
 .alert-item{border-color:#fecaca;background:#fff1f2}
 .alert-item .irating{color:#dc2626}
 @media (max-width:1200px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:1fr}.hero{grid-template-columns:1fr}}
-@media (max-width:768px){.grid4,.grid2{grid-template-columns:1fr}.tbl{min-width:520px}.header{left:80px}}
+@media (max-width:768px){.grid4,.grid2{grid-template-columns:1fr}.tbl{min-width:520px}}
 </style>
 {% endblock agent_extra_css %}
 
 {% block main_content %}
 <div class="dash">
-  <header class="header">
-    <div class="header-left">
-      
-    </div>
-    <div class="header-right">
-      <div class="notification-icon" title="Notifications">
-        &#128276;
-        <span class="notification-badge">{{ stats.upcoming_packages }}</span>
-      </div>
-      <div class="notification-icon" title="Chat">
-        &#128172;
-        <span class="notification-badge">{{ stats.unread_traveler_messages }}</span>
-      </div>
-      <div class="notification-icon" title="Settings / Reviews">
-        &#9881;&#65039;
-        <span class="notification-badge red">{{ stats.reviews_this_month }}</span>
-      </div>
-      <div class="user-profile">
-        <span class="user-greeting">Hello, {{ display_name|default:user.email }}</span>
-        <div class="user-avatar">
-          {% if profile and profile.profile_picture %}
-            <img src="{{ profile.profile_picture.url }}" alt="{{ display_name }}">
-          {% else %}
-            <span>&#128100;</span>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </header>
-
   <section class="hero">
     <div>
       <h1>Welcome back, {{ display_name }}.</h1>

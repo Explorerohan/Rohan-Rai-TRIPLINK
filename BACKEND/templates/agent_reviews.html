@@ -4,11 +4,6 @@
 
 {% block agent_extra_css %}
 <style>
-.header{position:fixed;top:0;left:260px;right:0;height:70px;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.05);display:flex;align-items:center;padding:0 30px;z-index:100}
-.header-left{flex:1;display:flex;align-items:center}
-.header-right{display:flex;align-items:center;gap:20px}.notification-icon{position:relative;font-size:20px;color:#64748b}.notification-badge{position:absolute;top:-5px;right:-5px;background:#3b82f6;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}.notification-badge.red{background:#ef4444}
-.user-profile{display:flex;align-items:center;gap:10px}.user-greeting{color:#1e293b;font-size:14px;font-weight:500}.user-avatar{width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;overflow:hidden}.user-avatar img{width:100%;height:100%;object-fit:cover}
-.main-content{padding-top:70px}
 .reviews-page{display:grid;gap:16px}
 .hero{background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .hero h1{font-size:28px;font-weight:800;color:#0f172a;margin:0 0 5px}.hero p{margin:0;color:#64748b;font-size:13px;line-height:1.4}
@@ -36,29 +31,12 @@
 .review-rating-value{margin-left:4px;font-weight:700;color:#92400e;font-size:11px}
 .empty{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:12px;padding:14px;font-size:13px;color:#64748b}
 @media (max-width:1200px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:1fr}.hero{flex-direction:column}.hero-stat{min-width:0}}
-@media (max-width:768px){.grid4,.grid2{grid-template-columns:1fr}.header{left:80px}}
+@media (max-width:768px){.grid4,.grid2{grid-template-columns:1fr}}
 </style>
 {% endblock agent_extra_css %}
 
 {% block main_content %}
 <div class="reviews-page">
-  <header class="header">
-    <div class="header-left">
-      
-    </div>
-    <div class="header-right">
-      <div class="notification-icon" title="Notifications">&#128276;<span class="notification-badge">{{ review_stats.reviews_this_month }}</span></div>
-      <div class="notification-icon" title="Chat">&#128172;<span class="notification-badge">{{ review_stats.low_rating_reviews_30d_count }}</span></div>
-      <div class="notification-icon" title="Attention">&#9881;&#65039;<span class="notification-badge red">{{ review_stats.low_rating_reviews_30d_count }}</span></div>
-      <div class="user-profile">
-        <span class="user-greeting">Hello, {{ display_name|default:user.email }}</span>
-        <div class="user-avatar">
-          {% if profile and profile.profile_picture %}<img src="{{ profile.profile_picture.url }}" alt="{{ display_name }}">{% else %}<span>&#128100;</span>{% endif %}
-        </div>
-      </div>
-    </div>
-  </header>
-
   <section class="hero">
     <div>
       <h1>Reviews</h1>
