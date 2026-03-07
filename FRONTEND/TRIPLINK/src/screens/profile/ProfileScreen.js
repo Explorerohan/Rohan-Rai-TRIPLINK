@@ -45,6 +45,7 @@ const ProfileScreen = ({
   onProfileDetailsPress = () => {},
   onBookmarkedPress = () => {},
   onPastTripsPress = () => {},
+  onUpcomingTripsPress = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
   onMessagesPress = () => {},
@@ -186,10 +187,10 @@ const ProfileScreen = ({
             <Text style={styles.statValue}>{pastTripsCount}</Text>
           </TouchableOpacity>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity style={styles.statItem} activeOpacity={0.8} onPress={onUpcomingTripsPress}>
             <Text style={styles.statLabel}>Upcoming Trips</Text>
             <Text style={styles.statValue}>{upcomingTripsCount}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Navigation List */}

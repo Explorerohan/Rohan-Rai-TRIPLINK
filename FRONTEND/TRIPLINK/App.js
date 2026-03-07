@@ -10,7 +10,7 @@ import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import TopPicksScreen from "./src/screens/home/TopPicksScreen";
 import RunningNowScreen from "./src/screens/home/RunningNowScreen";
-import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen } from "./src/screens/profile";
+import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
@@ -470,6 +470,7 @@ export default function App() {
           onProfileDetailsPress={() => setScreen("profileDetails")}
           onBookmarkedPress={() => setScreen("bookmarked")}
           onPastTripsPress={() => setScreen("pastTrips")}
+          onUpcomingTripsPress={() => setScreen("upcomingTrips")}
           onCalendarPress={() => setScreen("schedule")}
           onMessagesPress={() => setScreen("messages")}
           onLogout={handleLogout}
@@ -497,6 +498,20 @@ export default function App() {
       )}
       {screen === "pastTrips" && (
         <PastTripsScreen
+          session={session}
+          initialBookings={cachedBookings}
+          onUpdateCachedBookings={setCachedBookings}
+          onBack={() => setScreen("profile")}
+          onTripPress={(pkg) => {
+            if (pkg?.id != null) {
+              setSelectedTrip({ id: String(pkg.id) });
+              setScreen("details");
+            }
+          }}
+        />
+      )}
+      {screen === "upcomingTrips" && (
+        <UpcomingTripsScreen
           session={session}
           initialBookings={cachedBookings}
           onUpdateCachedBookings={setCachedBookings}
