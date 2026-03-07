@@ -11,154 +11,179 @@
     }
 
     .page-head {
-        margin-bottom: 28px;
-        padding-bottom: 20px;
-        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     }
 
     .page-head h1 {
-        font-size: 28px;
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 6px;
+        font-size: 26px;
+        font-weight: 600;
+        color: #1a1d21;
+        margin-bottom: 8px;
+        letter-spacing: -0.02em;
     }
 
     .page-head p {
         font-size: 15px;
-        color: #64748b;
+        color: #5c6572;
+        line-height: 1.5;
     }
 
     .bookings-stats {
         display: flex;
         gap: 16px;
         flex-wrap: wrap;
-        margin-bottom: 24px;
-        padding: 20px 0;
-        border-top: 1px solid #e2e8f0;
-        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 28px;
+        padding: 24px 0;
+        align-items: flex-start;
     }
 
     .section-label {
         width: 100%;
-        font-size: 12px;
-        font-weight: 700;
-        color: #64748b;
+        font-size: 10px;
+        font-weight: 600;
+        color: #6b7280;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 8px;
-        padding-bottom: 4px;
+        letter-spacing: 0.12em;
+        margin-bottom: 12px;
     }
 
     .stat-card {
-        background: #ffffff;
+        background: #fff;
         border-radius: 12px;
         padding: 20px 24px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e2e8f0;
+        border: 1px solid rgba(0, 0, 0, 0.06);
         min-width: 140px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+        border-color: rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
     .stat-card .stat-value {
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 700;
-        color: #1e293b;
+        color: #1a1d21;
+        letter-spacing: -0.02em;
     }
 
     .stat-card .stat-label {
         font-size: 13px;
-        color: #64748b;
-        margin-top: 4px;
+        color: #5c6572;
+        margin-top: 6px;
+        font-weight: 500;
     }
 
-    .stat-card.confirmed .stat-value { color: #1f6b2a; }
-    .stat-card.cancelled .stat-value { color: #fceaec; }
+    .stat-card.confirmed .stat-value { color: #2d5a36; }
+    .stat-card.cancelled .stat-value { color: #9e2d2d; }
 
     .bookings-filters {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 16px 20px;
-        margin-bottom: 24px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e2e8f0;
-        border-top: 2px solid #cbd5e1;
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px 28px;
+        margin-bottom: 28px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
         display: flex;
-        gap: 16px;
+        gap: 20px;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: flex-end;
     }
 
     .bookings-filters .filter-group {
         display: flex;
         flex-direction: column;
+        gap: 8px;
     }
 
     .bookings-filters label {
-        font-size: 13px;
+        font-size: 10px;
         font-weight: 600;
-        color: #475569;
-        display: block;
-        margin-bottom: 6px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
     }
 
     .bookings-filters .filter-group-label-spacer {
         visibility: hidden;
-        font-size: 13px;
+        font-size: 10px;
         font-weight: 600;
         display: block;
-        margin-bottom: 6px;
         line-height: 1.2;
         user-select: none;
     }
 
     .bookings-filters .filter-group-apply .btn {
-        margin-top: 12px;
+        margin-top: 0;
     }
 
     .bookings-filters select {
-        padding: 10px 14px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
+        padding: 12px 14px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 10px;
         font-size: 14px;
-        min-width: 160px;
+        min-width: 200px;
+        background: #fafafa;
+        color: #1a1d21;
+        transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .bookings-filters select:hover {
+        border-color: rgba(0, 0, 0, 0.12);
+    }
+
+    .bookings-filters select:focus {
+        outline: none;
+        border-color: #2d5a36;
         background: #fff;
+        box-shadow: 0 0 0 3px rgba(45, 90, 54, 0.08);
     }
 
     .bookings-filters .btn {
-        padding: 10px 20px;
-        border-radius: 8px;
+        padding: 12px 22px;
+        border-radius: 10px;
         font-size: 14px;
         font-weight: 600;
         border: none;
         cursor: pointer;
         text-decoration: none;
         display: inline-block;
+        transition: background 0.2s ease;
     }
 
     .bookings-filters .btn-primary {
-        background: #1f6b2a;
+        background: #2d5a36;
         color: #fff;
     }
 
     .bookings-filters .btn-primary:hover {
-        background: #15803d;
+        background: #244a2d;
     }
 
     .bookings-filters .btn-secondary {
-        background: #f1f5f9;
-        color: #475569;
+        background: transparent;
+        color: #5c6572;
+        border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .bookings-filters .btn-secondary:hover {
-        background: #e2e8f0;
+        background: #f5f5f5;
+        color: #1a1d21;
+        border-color: rgba(0, 0, 0, 0.12);
     }
 
     .bookings-card {
-        background: #ffffff;
+        background: #fff;
         border-radius: 16px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e2e8f0;
-        border-top: 2px solid #cbd5e1;
+        border: 1px solid rgba(0, 0, 0, 0.06);
         overflow: hidden;
+    }
+
+    .bookings-card .section-label {
+        padding: 20px 24px 12px;
+        margin-bottom: 0;
     }
 
     .bookings-table-wrap {
@@ -173,22 +198,25 @@
 
     .bookings-table th {
         text-align: left;
-        padding: 16px 20px;
-        background: #f8fafc;
-        color: #475569;
+        padding: 14px 24px;
+        background: #fafafa;
+        color: #6b7280;
+        font-size: 11px;
         font-weight: 600;
-        border-bottom: 1px solid #e2e8f0;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     }
 
     .bookings-table td {
-        padding: 16px 20px;
-        border-bottom: 1px solid #f1f5f9;
-        color: #334155;
+        padding: 16px 24px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        color: #1a1d21;
         vertical-align: middle;
     }
 
     .bookings-table tbody tr:hover {
-        background: #f8fafc;
+        background: rgba(0, 0, 0, 0.02);
     }
 
     .bookings-table tbody tr:last-child td {
@@ -197,16 +225,16 @@
 
     .booking-traveler-name {
         font-weight: 600;
-        color: #1e293b;
+        color: #1a1d21;
     }
 
     .booking-traveler-email {
-        color: #64748b;
+        color: #5c6572;
         font-size: 13px;
     }
 
     .booking-package-link {
-        color: #1f6b2a;
+        color: #2d5a36;
         font-weight: 600;
         text-decoration: none;
     }
@@ -217,41 +245,45 @@
 
     .booking-package-location {
         font-size: 13px;
-        color: #64748b;
+        color: #5c6572;
     }
 
     .booking-status {
         display: inline-block;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 11px;
         font-weight: 600;
+        letter-spacing: 0.02em;
     }
 
     .booking-status.confirmed {
-        background: #d1fae5;
-        color: #065f46;
+        background: rgba(45, 90, 54, 0.1);
+        color: #2d5a36;
+        border: 1px solid rgba(45, 90, 54, 0.2);
     }
 
     .booking-status.cancelled {
-        background: #fee2e2;
-        color: #991b1b;
+        background: rgba(158, 45, 45, 0.08);
+        color: #9e2d2d;
+        border: 1px solid rgba(158, 45, 45, 0.2);
     }
 
     .empty-state {
         text-align: center;
-        padding: 60px 20px;
-        color: #64748b;
+        padding: 64px 24px;
+        color: #5c6572;
     }
 
     .empty-state-icon {
-        font-size: 48px;
+        font-size: 40px;
         margin-bottom: 16px;
-        opacity: 0.7;
+        opacity: 0.6;
     }
 
     .empty-state-text {
-        font-size: 16px;
+        font-size: 15px;
+        line-height: 1.6;
     }
 
     .alert {
