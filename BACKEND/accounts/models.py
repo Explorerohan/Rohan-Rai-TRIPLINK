@@ -365,6 +365,10 @@ class Booking(models.Model):
     payment_reference = models.CharField(max_length=120, blank=True)
     transaction_uuid = models.CharField(max_length=120, blank=True)
     rewards_awarded = models.BooleanField(default=False, help_text="Whether reward points (10% of total) have been credited for this completed trip")
+    reward_points_given = models.PositiveIntegerField(
+        default=0,
+        help_text="Points awarded for this booking (10% of total). Used to prevent double-award and to deduct on delete.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -1982,19 +1982,26 @@ def ensure_rewards_awarded_for_user(user):
     """For travelers: award points (10% of booking total) for confirmed bookings on completed packages that haven't been rewarded yet."""
     if user.role != Roles.TRAVELER:
         return
+    # Mark overdue packages as completed first (so we don't miss rewards for packages that haven't been loaded recently)
+    _mark_overdue_packages_completed()
+    # Use reward_points_given as source of truth - prevents double-award even if admin unchecks rewards_awarded
     unrewarded = Booking.objects.filter(
         user=user,
         status=BookingStatus.CONFIRMED,
-        rewards_awarded=False,
+        reward_points_given=0,
         package__status=PackageStatus.COMPLETED,
     ).select_related("user__user_profile")
     for booking in unrewarded:
-        points = int(float(booking.total_amount or 0) * 0.10)  # 10% of booking total
+        amount = float(booking.total_amount or 0)
+        if amount <= 0:
+            amount = float(booking.price_per_person_snapshot or 0) * (booking.traveler_count or 1)
+        points = int(amount * 0.10)  # 10% of booking total
         profile = booking.user.user_profile
         profile.reward_points = (profile.reward_points or 0) + points
         profile.save(update_fields=["reward_points", "updated_at"])
         booking.rewards_awarded = True
-        booking.save(update_fields=["rewards_awarded"])
+        booking.reward_points_given = points
+        booking.save(update_fields=["rewards_awarded", "reward_points_given"])
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):

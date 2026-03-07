@@ -44,6 +44,7 @@ const ProfileScreen = ({
   onEdit = () => {},
   onProfileDetailsPress = () => {},
   onBookmarkedPress = () => {},
+  onPastTripsPress = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
   onMessagesPress = () => {},
@@ -180,10 +181,10 @@ const ProfileScreen = ({
             <Text style={styles.statValue}>{profile?.reward_points ?? 0}</Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
+          <TouchableOpacity style={styles.statItem} activeOpacity={0.8} onPress={onPastTripsPress}>
             <Text style={styles.statLabel}>Past Trips</Text>
             <Text style={styles.statValue}>{pastTripsCount}</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Upcoming Trips</Text>
