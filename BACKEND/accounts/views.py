@@ -1978,6 +1978,25 @@ def agent_reset_password_view(request):
 
 
 # Profile Management Views
+def ensure_rewards_awarded_for_user(user):
+    """For travelers: award points (10% of booking total) for confirmed bookings on completed packages that haven't been rewarded yet."""
+    if user.role != Roles.TRAVELER:
+        return
+    unrewarded = Booking.objects.filter(
+        user=user,
+        status=BookingStatus.CONFIRMED,
+        rewards_awarded=False,
+        package__status=PackageStatus.COMPLETED,
+    ).select_related("user__user_profile")
+    for booking in unrewarded:
+        points = int(float(booking.total_amount or 0) * 0.10)  # 10% of booking total
+        profile = booking.user.user_profile
+        profile.reward_points = (profile.reward_points or 0) + points
+        profile.save(update_fields=["reward_points", "updated_at"])
+        booking.rewards_awarded = True
+        booking.save(update_fields=["rewards_awarded"])
+
+
 class UserProfileView(generics.RetrieveUpdateAPIView):
     """View for retrieving and updating user (traveler) profile"""
     serializer_class = UserProfileSerializer
@@ -1987,6 +2006,10 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         profile, created = UserProfile.objects.get_or_create(user=self.request.user)
         return profile
+
+    def retrieve(self, request, *args, **kwargs):
+        ensure_rewards_awarded_for_user(request.user)
+        return super().retrieve(request, *args, **kwargs)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -2014,6 +2037,11 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     """Universal profile view that returns the appropriate profile based on user role"""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def retrieve(self, request, *args, **kwargs):
+        if request.user.role == Roles.TRAVELER:
+            ensure_rewards_awarded_for_user(request.user)
+        return super().retrieve(request, *args, **kwargs)
 
     def get_serializer_class(self):
         if self.request.user.role == Roles.AGENT:

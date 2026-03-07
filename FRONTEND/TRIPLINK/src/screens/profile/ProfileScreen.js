@@ -177,7 +177,7 @@ const ProfileScreen = ({
         <View style={styles.statsCard}>
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Reward Points</Text>
-            <Text style={styles.statValue}>360</Text>
+            <Text style={styles.statValue}>{profile?.reward_points ?? 0}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>

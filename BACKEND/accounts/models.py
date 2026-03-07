@@ -88,6 +88,7 @@ class UserProfile(models.Model):
     profile_picture = models.ImageField(upload_to=user_profile_image_path, null=True, blank=True)
     # Simplified profile: single location field instead of multiple address fields
     location = models.CharField(max_length=200, blank=True, help_text="User location")
+    reward_points = models.PositiveIntegerField(default=0, help_text="Points earned from completed trips (10% of booking total)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -363,6 +364,7 @@ class Booking(models.Model):
     )
     payment_reference = models.CharField(max_length=120, blank=True)
     transaction_uuid = models.CharField(max_length=120, blank=True)
+    rewards_awarded = models.BooleanField(default=False, help_text="Whether reward points (10% of total) have been credited for this completed trip")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

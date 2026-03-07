@@ -61,10 +61,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'location',
             'profile_picture',
             'profile_picture_url',
+            'reward_points',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'reward_points', 'created_at', 'updated_at']
 
     def get_profile_picture_url(self, obj):
         if obj.profile_picture:
