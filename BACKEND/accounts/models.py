@@ -369,6 +369,10 @@ class Booking(models.Model):
         default=0,
         help_text="Points awarded for this booking (10% of total). Used to prevent double-award and to deduct on delete.",
     )
+    reward_points_used = models.PositiveIntegerField(
+        default=0,
+        help_text="Reward points redeemed/used as discount for this booking.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -411,6 +415,16 @@ class EsewaPaymentSession(models.Model):
     traveler_count = models.PositiveIntegerField(default=1)
     price_per_person_snapshot = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payable_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Amount to actually pay via eSewa after applying any reward points.",
+    )
+    reward_points_used = models.PositiveIntegerField(
+        default=0,
+        help_text="Reward points applied as discount for this payment session.",
+    )
     product_code = models.CharField(max_length=80, default="EPAYTEST")
     status = models.CharField(
         max_length=32,

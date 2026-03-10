@@ -302,15 +302,20 @@ export const createBooking = async (packageId, accessToken) => {
  * @param {number|string} packageId
  * @param {number} travelerCount
  * @param {string} accessToken
+ * @param {number} rewardPointsToUse
  * @returns {Promise<object>}
  */
-export const initiateEsewaPayment = async (packageId, travelerCount, accessToken) => {
+export const initiateEsewaPayment = async (packageId, travelerCount, accessToken, rewardPointsToUse = 0) => {
   const id = typeof packageId === "string" ? parseInt(packageId, 10) : packageId;
   return apiRequest(
     "/api/auth/payments/esewa/initiate/",
     {
       method: "POST",
-      body: JSON.stringify({ package_id: id, traveler_count: travelerCount }),
+      body: JSON.stringify({
+        package_id: id,
+        traveler_count: travelerCount,
+        reward_points_to_use: rewardPointsToUse,
+      }),
     },
     accessToken
   );

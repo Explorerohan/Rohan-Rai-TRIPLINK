@@ -106,7 +106,9 @@ def _esewa_signature(total_amount, transaction_uuid, product_code):
 def _build_esewa_form_fields(request, payment_session):
     success_url = request.build_absolute_uri(reverse("esewa_payment_success_callback"))
     failure_url = request.build_absolute_uri(reverse("esewa_payment_failure_callback"))
-    total_amount = _money(payment_session.total_amount)
+    # Use payable_amount when set (after applying any reward points), otherwise fall back to total_amount
+    base_amount = payment_session.payable_amount or payment_session.total_amount
+    total_amount = _money(base_amount)
     product_code = payment_session.product_code or _esewa_product_code()
     signature = _esewa_signature(total_amount, payment_session.transaction_uuid, product_code)
     return {
@@ -128,7 +130,8 @@ def _verify_esewa_transaction(payment_session):
     query = urlencode(
         {
             "product_code": payment_session.product_code or _esewa_product_code(),
-            "total_amount": _money_str(payment_session.total_amount),
+            # Must match the amount sent to eSewa when initiating the payment
+            "total_amount": _money_str(payment_session.payable_amount or payment_session.total_amount),
             "transaction_uuid": payment_session.transaction_uuid,
         }
     )
@@ -2733,6 +2736,7 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         package_id = request.data.get("package_id")
         traveler_count_raw = request.data.get("traveler_count", 1)
+        reward_points_raw = request.data.get("reward_points_to_use", 0)
 
         try:
             traveler_count = int(traveler_count_raw)
@@ -2763,6 +2767,21 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
 
         price_per_person = _money(package.price_per_person)
         total_amount = _money(price_per_person * traveler_count)
+
+        # Reward points: 1 point = 1 NPR. Clamp to available points and total amount.
+        try:
+            requested_points = int(reward_points_raw)
+        except (TypeError, ValueError):
+            requested_points = 0
+
+        profile = getattr(request.user, "user_profile", None)
+        available_points = int(getattr(profile, "reward_points", 0) or 0)
+        max_redeemable = min(available_points, int(total_amount))
+        reward_points_to_use = max(0, min(requested_points, max_redeemable))
+
+        payable_amount = total_amount - Decimal(reward_points_to_use)
+        if payable_amount < Decimal("0"):
+            payable_amount = Decimal("0")
         payment_session = EsewaPaymentSession.objects.create(
             user=request.user,
             package=package,
@@ -2770,6 +2789,8 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
             traveler_count=traveler_count,
             price_per_person_snapshot=price_per_person,
             total_amount=total_amount,
+            payable_amount=payable_amount,
+            reward_points_used=reward_points_to_use,
             product_code=_esewa_product_code(),
             status=EsewaPaymentSessionStatus.INITIATED,
         )
@@ -2787,6 +2808,9 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
                 "traveler_count": traveler_count,
                 "price_per_person": _money_str(price_per_person),
                 "total_amount": _money_str(total_amount),
+                "payable_amount": _money_str(payable_amount),
+                "reward_points_used": reward_points_to_use,
+                "available_reward_points": available_points,
                 "checkout_url": checkout_url,
                 "esewa_form_url": _esewa_form_url(),
                 "esewa_fields": esewa_fields,
@@ -2996,6 +3020,23 @@ class EsewaPaymentVerifyView(generics.GenericAPIView):
 
                 payment_session.booking = booking
 
+            # Deduct any reward points used for this payment session (only once, on successful verification)
+            reward_points_used = int(payment_session.reward_points_used or 0)
+            remaining_reward_points = None
+            if reward_points_used > 0:
+                profile = getattr(request.user, "user_profile", None)
+                if profile is not None:
+                    current_points = int(getattr(profile, "reward_points", 0) or 0)
+                    new_balance = max(0, current_points - reward_points_used)
+                    if new_balance != current_points:
+                        profile.reward_points = new_balance
+                        profile.save(update_fields=["reward_points", "updated_at"])
+                    remaining_reward_points = new_balance
+
+                if getattr(booking, "reward_points_used", 0) != reward_points_used:
+                    booking.reward_points_used = reward_points_used
+                    booking.save(update_fields=["reward_points_used"])
+
             payment_session.verification_payload = verification_payload if isinstance(verification_payload, dict) else {}
             payment_session.esewa_status = esewa_status_value
             payment_session.payment_reference = ref_id
@@ -3019,6 +3060,8 @@ class EsewaPaymentVerifyView(generics.GenericAPIView):
                 "esewa_status": esewa_status_value,
                 "transaction_uuid": payment_session.transaction_uuid,
                 "payment_reference": ref_id,
+                "reward_points_used": int(payment_session.reward_points_used or 0),
+                "remaining_reward_points": remaining_reward_points,
                 "booking": serialized.data,
             }
         )

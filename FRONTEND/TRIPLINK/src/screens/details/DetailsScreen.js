@@ -320,7 +320,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting, t }) => {
   );
 };
 
-const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, onBack = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
+const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, initialProfile = null, onBack = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
   const { t } = useLanguage();
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
@@ -384,6 +384,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
   const [esewaWebViewVisible, setEsewaWebViewVisible] = useState(false);
   const [esewaWebViewLoading, setEsewaWebViewLoading] = useState(false);
   const paymentCallbackHandledRef = useRef(false);
+  const [rewardPointsInput, setRewardPointsInput] = useState("");
 
   useEffect(() => {
     if (cachedDetail && !packageDetail) {
@@ -476,6 +477,22 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
   const unitPrice = parsePriceValue(packageDetail?.price_per_person ?? trip.price);
   const travelerCount = Math.max(parseInt(travelerCountInput, 10) || 1, 1);
   const computedTotal = unitPrice * travelerCount;
+  const availableRewardPoints =
+    (paymentSession?.available_reward_points ??
+      initialProfile?.reward_points ??
+      0) || 0;
+  const maxRewardPointsForBooking = Math.min(
+    availableRewardPoints,
+    Math.floor(computedTotal) || 0
+  );
+  const normalizedRewardPointsToUse = Math.max(
+    0,
+    Math.min(parseInt(rewardPointsInput, 10) || 0, maxRewardPointsForBooking)
+  );
+  const discountedTotal = Math.max(
+    0,
+    computedTotal - normalizedRewardPointsToUse
+  );
   const esewaPostSource = useMemo(
     () => buildEsewaPostSource(paymentSession),
     [paymentSession]
@@ -485,6 +502,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     setBookingStep("traveler_count");
     setTravelerCountInput("1");
     setPaymentSession(null);
+    setRewardPointsInput("");
     setInitiatingPayment(false);
     setVerifyingPayment(false);
     setEsewaWebViewVisible(false);
@@ -519,7 +537,12 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
     try {
       setInitiatingPayment(true);
-      const { data } = await initiateEsewaPayment(packageId, travelerCount, session.access);
+      const { data } = await initiateEsewaPayment(
+        packageId,
+        travelerCount,
+        session.access,
+        normalizedRewardPointsToUse
+      );
       setPaymentSession(data || null);
       paymentCallbackHandledRef.current = false;
       setBookingStep("payment");
@@ -954,6 +977,47 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                     <Text style={styles.paymentSummaryTotalLabel}>{t("totalToPay")}</Text>
                     <Text style={styles.paymentSummaryTotalValue}>{formatPrice(computedTotal)}</Text>
                   </View>
+                  <View style={styles.paymentSummaryDivider} />
+                  <View style={styles.paymentSummaryRow}>
+                    <Text style={styles.paymentSummaryLabel}>{t("availableRewardPoints")}</Text>
+                    <Text style={styles.paymentSummaryValue}>{availableRewardPoints}</Text>
+                  </View>
+                  <View style={styles.paymentSummaryRow}>
+                    <Text style={styles.paymentSummaryLabel}>{t("useRewardPoints")}</Text>
+                    <TextInput
+                      style={styles.rewardPointsInput}
+                      keyboardType="number-pad"
+                      value={rewardPointsInput}
+                      onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9]/g, "").slice(0, 7);
+                        const numeric = parseInt(cleaned || "0", 10);
+                        const clamped = Math.max(
+                          0,
+                          Math.min(numeric, maxRewardPointsForBooking)
+                        );
+                        setRewardPointsInput(clamped === 0 ? "" : String(clamped));
+                      }}
+                      placeholder="0"
+                      placeholderTextColor="#9aa0a6"
+                    />
+                  </View>
+                  <View style={styles.paymentSummaryRow}>
+                    <Text style={styles.paymentSummaryHint}>
+                      {t("maxRewardPointsNote")}: {maxRewardPointsForBooking}
+                    </Text>
+                  </View>
+                  <View style={styles.paymentSummaryRow}>
+                    <Text style={styles.paymentSummaryLabel}>{t("discountFromPoints")}</Text>
+                    <Text style={styles.paymentSummaryValue}>
+                      {normalizedRewardPointsToUse > 0
+                        ? `- ${formatPrice(normalizedRewardPointsToUse)}`
+                        : formatPrice(0)}
+                    </Text>
+                  </View>
+                  <View style={[styles.paymentSummaryRow, styles.paymentSummaryRowTotal]}>
+                    <Text style={styles.paymentSummaryTotalLabel}>{t("amountToPayWithEsewa")}</Text>
+                    <Text style={styles.paymentSummaryTotalValue}>{formatPrice(discountedTotal)}</Text>
+                  </View>
                 </View>
 
                 <TouchableOpacity
@@ -978,14 +1042,36 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                       <Ionicons name="wallet-outline" size={18} color="#166534" />
                       <Text style={styles.esewaBadgeText}>eSewa</Text>
                     </View>
-                    <Text style={styles.esewaAmount}>{formatPrice(paymentSession?.total_amount || computedTotal)}</Text>
+                    <Text style={styles.esewaAmount}>
+                      {formatPrice(
+                        parsePriceValue(
+                          paymentSession?.payable_amount ||
+                            paymentSession?.total_amount ||
+                            computedTotal
+                        )
+                      )}
+                    </Text>
                   </View>
                   <Text style={styles.esewaMetaText}>
-                    Travelers: {paymentSession?.traveler_count || travelerCount} | Per person: {formatPrice(paymentSession?.price_per_person || unitPrice)}
+                    Travelers: {paymentSession?.traveler_count || travelerCount} | Per person:{" "}
+                    {formatPrice(paymentSession?.price_per_person || unitPrice)}
                   </Text>
                   <Text style={styles.esewaMetaText}>
                     Transaction: {paymentSession?.transaction_uuid || "-"}
                   </Text>
+                  {paymentSession?.reward_points_used ? (
+                    <Text style={styles.esewaMetaText}>
+                      {t("rewardPointsApplied")}: {paymentSession.reward_points_used} ({t("amountToPayWithEsewa")}{" "}
+                      {formatPrice(
+                        parsePriceValue(
+                          paymentSession?.payable_amount ||
+                            paymentSession?.total_amount ||
+                            computedTotal
+                        )
+                      )}
+                      )
+                    </Text>
+                  ) : null}
                 </View>
 
                 <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={handleOpenEsewaCheckout}>

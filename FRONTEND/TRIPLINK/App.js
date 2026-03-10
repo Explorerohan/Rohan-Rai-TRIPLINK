@@ -196,18 +196,32 @@ export default function App() {
     setScreen("details");
   };
 
-  const handleBookTrip = useCallback((bookingResult = null) => {
-    if (bookingResult?.requiresLogin) {
-      setScreen("login");
-      return;
-    }
-    if (!bookingResult?.booking) {
-      return;
-    }
-    setPackagesRefreshKey((k) => k + 1);
-    setSelectedTrip((prev) => (prev ? { ...prev, user_has_booked: true } : prev));
-    setCachedBookings((prev) => [bookingResult.booking, ...(Array.isArray(prev) ? prev : [])]);
-  }, []);
+  const handleBookTrip = useCallback(
+    async (bookingResult = null) => {
+      if (bookingResult?.requiresLogin) {
+        setScreen("login");
+        return;
+      }
+      if (!bookingResult?.booking) {
+        return;
+      }
+      setPackagesRefreshKey((k) => k + 1);
+      setSelectedTrip((prev) => (prev ? { ...prev, user_has_booked: true } : prev));
+      setCachedBookings((prev) => [bookingResult.booking, ...(Array.isArray(prev) ? prev : [])]);
+
+      // Refresh user profile so reward_points remain accurate after redemption
+      try {
+        const token = sessionRef.current?.access;
+        if (token) {
+          const res = await getProfile(token);
+          setUserProfile(res?.data ?? null);
+        }
+      } catch (e) {
+        console.warn("Failed to refresh profile after booking:", e);
+      }
+    },
+    []
+  );
 
   const handleLogout = async () => {
     // Call logout endpoint if session exists
@@ -435,6 +449,7 @@ export default function App() {
           trip={selectedTrip}
           initialPackageFromCache={cachedPackages}
           session={session}
+          initialProfile={userProfile}
           onBack={() => setScreen("home")}
           onBook={handleBookTrip}
           onMessageAgent={async (agent) => {
