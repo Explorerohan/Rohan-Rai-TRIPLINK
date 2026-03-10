@@ -543,6 +543,38 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         session.access,
         normalizedRewardPointsToUse
       );
+      if (data?.zero_payment) {
+        const bookedTravelerCount =
+          parseInt(data?.booking?.traveler_count, 10) || travelerCount;
+        setUserHasBooked(true);
+        setPackageDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                user_has_booked: true,
+                participants_count:
+                  (prev.participants_count || 0) + bookedTravelerCount,
+              }
+            : prev
+        );
+
+        try {
+          const refreshed = await getPackageById(packageId, session.access);
+          if (refreshed?.data) {
+            setPackageDetail(refreshed.data);
+            setUserHasBooked(refreshed.data.user_has_booked ?? true);
+          }
+        } catch (_) {}
+
+        onBook(data || null);
+        closeBookingModal();
+        Alert.alert(
+          t("paymentSuccessful"),
+          t("bookingCompletedWithRewardPoints")
+        );
+        return;
+      }
+
       setPaymentSession(data || null);
       paymentCallbackHandledRef.current = false;
       setBookingStep("payment");
@@ -1029,7 +1061,11 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                   {initiatingPayment ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.submitButtonText}>{t("continueToEsewa")}</Text>
+                    <Text style={styles.submitButtonText}>
+                      {normalizedRewardPointsToUse > 0 && discountedTotal === 0
+                        ? t("bookWithRewardPoints")
+                        : t("continueToEsewa")}
+                    </Text>
                   )}
                 </TouchableOpacity>
               </>

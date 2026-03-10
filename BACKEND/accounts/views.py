@@ -2782,6 +2782,58 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
         payable_amount = total_amount - Decimal(reward_points_to_use)
         if payable_amount < Decimal("0"):
             payable_amount = Decimal("0")
+
+        # If reward points fully cover the booking cost, skip eSewa and book directly.
+        if reward_points_to_use > 0 and payable_amount == Decimal("0"):
+            if profile is None:
+                return response.Response(
+                    {"detail": "Traveler profile not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            with transaction.atomic():
+                profile = (
+                    UserProfile.objects.select_for_update()
+                    .select_related("user")
+                    .get(pk=profile.pk)
+                )
+                current_points = int(profile.reward_points or 0)
+                if current_points < reward_points_to_use:
+                    return response.Response(
+                        {"detail": "Not enough reward points."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                profile.reward_points = current_points - reward_points_to_use
+                profile.save(update_fields=["reward_points", "updated_at"])
+
+                booking = Booking.objects.create(
+                    user=request.user,
+                    package=package,
+                    status=BookingStatus.CONFIRMED,
+                    traveler_count=traveler_count,
+                    price_per_person_snapshot=price_per_person,
+                    total_amount=total_amount,
+                    payment_method=PaymentMethod.DIRECT,
+                    payment_status=PaymentStatus.PAID,
+                    payment_reference="REWARD_POINTS_ONLY",
+                    transaction_uuid="",
+                    reward_points_used=reward_points_to_use,
+                )
+
+                package.participants_count = (package.participants_count or 0) + booking.traveler_count
+                package.save(update_fields=["participants_count"])
+
+            serialized = BookingSerializer(booking, context={"request": request})
+            return response.Response(
+                {
+                    "zero_payment": True,
+                    "reward_points_used": reward_points_to_use,
+                    "remaining_reward_points": profile.reward_points,
+                    "booking": serialized.data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         payment_session = EsewaPaymentSession.objects.create(
             user=request.user,
             package=package,
