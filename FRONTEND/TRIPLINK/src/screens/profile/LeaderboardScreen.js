@@ -97,6 +97,7 @@ const LeaderboardScreen = ({ session, onBack = () => {} }) => {
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>LeaderBoard</Text>
       </View>
 
       <ScrollView
@@ -201,17 +202,25 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 8,
   },
   backButton: {
+    position: "absolute",
+    left: 18,
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: "#f3f5f7",
     alignItems: "center",
     justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1f1f1f",
   },
   loadingContainer: {
     flex: 1,
