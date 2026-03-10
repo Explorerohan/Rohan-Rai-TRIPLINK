@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   View,
   Text,
@@ -112,6 +113,7 @@ const ScheduleScreen = ({
   onPlusPress = () => {},
   unreadCount = 0,
 }) => {
+  const { t } = useLanguage();
   const hasInitialBookings = Array.isArray(initialBookings) && initialBookings.length > 0;
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -261,7 +263,7 @@ const ScheduleScreen = ({
         <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.8}>
           <Ionicons name="chevron-back" size={24} color="#1e293b" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Schedule</Text>
+        <Text style={styles.headerTitle}>{t("schedule")}</Text>
         <View style={styles.headerRightPlaceholder} />
       </View>
 
@@ -377,7 +379,7 @@ const ScheduleScreen = ({
         {/* My Schedule */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Schedule</Text>
+            <Text style={styles.sectionTitle}>{t("mySchedule")}</Text>
             {scheduleItems.length > 0 && (
               <TouchableOpacity activeOpacity={0.7}>
                 <Text style={styles.viewAll}>View all</Text>
@@ -463,7 +465,7 @@ const ScheduleScreen = ({
                 onPress={item.key === "home" ? onHomePress : undefined}
               >
                 <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
+                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -490,7 +492,7 @@ const ScheduleScreen = ({
                     </View>
                   )}
                 </View>
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
+                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
               </TouchableOpacity>
             );
           })}

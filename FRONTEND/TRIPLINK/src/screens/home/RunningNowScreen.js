@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Alert,
@@ -126,6 +127,7 @@ const RunningNowScreen = ({
   onTripPress = () => {},
   onBack = () => {},
 }) => {
+  const { t } = useLanguage();
   const hasInitialPackages = Array.isArray(initialPackages) && initialPackages.length > 0;
   const [packages, setPackages] = useState(() =>
     hasInitialPackages ? transformRawPackages(initialPackages) : []
@@ -223,7 +225,7 @@ const RunningNowScreen = ({
     async (trip) => {
       const id = String(trip?.id || "");
       if (!id || !session?.access) {
-        Alert.alert("Login Required", "Please log in to save packages to your bookmarks.");
+        Alert.alert(t("loginRequired"), t("pleaseLoginBookmarks"));
         return;
       }
       if (busyIds.includes(id)) return;
@@ -254,7 +256,7 @@ const RunningNowScreen = ({
           onUpdateCachedPackages(toRawCacheList(next));
           return next;
         });
-        Alert.alert("Bookmark Error", err?.message || "Could not update bookmark.");
+        Alert.alert(t("bookmarkError"), err?.message || t("couldNotUpdateBookmark"));
       } finally {
         setBusyIds((prev) => prev.filter((busyId) => busyId !== id));
       }
@@ -279,8 +281,8 @@ const RunningNowScreen = ({
           <Ionicons name="chevron-back" size={22} color="#1f1f1f" />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle}>Running Now</Text>
-          <Text style={styles.headerSubtitle}>Trips that are live today</Text>
+          <Text style={styles.headerTitle}>{t("runningNowHeader")}</Text>
+          <Text style={styles.headerSubtitle}>{t("tripsLiveToday")}</Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -288,7 +290,7 @@ const RunningNowScreen = ({
       {loading ? (
         <View style={styles.centerWrap}>
           <ActivityIndicator size="large" color="#1f6b2a" />
-          <Text style={styles.centerText}>Loading running trips...</Text>
+          <Text style={styles.centerText}>{t("loadingRunningTrips")}</Text>
         </View>
       ) : (
         <ScrollView

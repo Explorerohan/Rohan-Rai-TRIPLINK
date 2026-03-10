@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   Image,
   SafeAreaView,
@@ -117,7 +118,7 @@ const ParticipantAvatar = ({ participant, index }) => (
   </View>
 );
 
-const AgentProfileReviewCard = ({ review }) => (
+const AgentProfileReviewCard = ({ review, t }) => (
   <View style={styles.agentProfileReviewCard}>
     <View style={styles.agentProfileReviewHeader}>
       <Image
@@ -126,7 +127,7 @@ const AgentProfileReviewCard = ({ review }) => (
       />
       <View style={styles.agentProfileReviewMeta}>
         <Text style={styles.agentProfileReviewName} numberOfLines={1}>
-          {review?.reviewer_name || "Traveler"}
+          {review?.reviewer_name || (t ? t("traveler") : "Traveler")}
         </Text>
         <Text style={styles.agentProfileReviewDate}>{formatReviewDate(review?.created_at)}</Text>
       </View>
@@ -145,19 +146,21 @@ const AgentProfileDetailsModal = ({
   error,
   data,
   fallbackAgent,
+  t,
 }) => {
   const ratingRaw = data?.rating ?? fallbackAgent?.rating ?? 0;
   const ratingNumber = Number(ratingRaw);
   const ratingDisplayValue = Number.isFinite(ratingNumber) ? Math.max(0, Math.min(ratingNumber, 5)) : 0;
   const ratingText = Number.isFinite(ratingNumber) ? ratingNumber.toFixed(1).replace(/\.0$/, "") : "0";
   const reviews = Array.isArray(data?.reviews) ? data.reviews : [];
+  const T = t || ((k) => k);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.agentProfileModalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Agent Details</Text>
+            <Text style={styles.modalTitle}>{T("agentDetails")}</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <Ionicons name="close" size={24} color="#6b7076" />
             </TouchableOpacity>
@@ -172,12 +175,12 @@ const AgentProfileDetailsModal = ({
               <View style={styles.agentProfileHeroInfo}>
                 <View style={styles.agentNameRow}>
                   <Text style={styles.agentProfileHeroName}>
-                    {data?.full_name || fallbackAgent?.full_name || "Travel Agent"}
+                    {data?.full_name || fallbackAgent?.full_name || T("travelAgent")}
                   </Text>
                   {(data?.is_verified ?? fallbackAgent?.is_verified) ? (
                     <View style={styles.verifiedBadge}>
                       <Ionicons name="checkmark-circle" size={16} color="#1f6b2a" />
-                      <Text style={styles.verifiedText}>Verified</Text>
+                      <Text style={styles.verifiedText}>{T("verified")}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -191,7 +194,7 @@ const AgentProfileDetailsModal = ({
             {loading ? (
               <View style={styles.agentProfileLoadingWrap}>
                 <ActivityIndicator size="small" color="#1f6b2a" />
-                <Text style={styles.agentProfileLoadingText}>Loading agent details...</Text>
+                <Text style={styles.agentProfileLoadingText}>{T("loadingAgentDetails")}</Text>
               </View>
             ) : error ? (
               <View style={styles.agentProfileErrorCard}>
@@ -217,27 +220,27 @@ const AgentProfileDetailsModal = ({
                 <View style={styles.agentStatsGrid}>
                   <View style={styles.agentStatCard}>
                     <Text style={styles.agentStatValue}>{data?.reviews_count ?? 0}</Text>
-                    <Text style={styles.agentStatLabel}>Reviews</Text>
+                    <Text style={styles.agentStatLabel}>{T("reviews")}</Text>
                   </View>
                   <View style={styles.agentStatCard}>
                     <Text style={styles.agentStatValue}>{data?.total_packages_created ?? 0}</Text>
-                    <Text style={styles.agentStatLabel}>Packages</Text>
+                    <Text style={styles.agentStatLabel}>{T("packagesCount")}</Text>
                   </View>
                   <View style={styles.agentStatCard}>
                     <Text style={styles.agentStatValue}>{data?.total_bookings_handled ?? 0}</Text>
-                    <Text style={styles.agentStatLabel}>Bookings</Text>
+                    <Text style={styles.agentStatLabel}>{T("bookings")}</Text>
                   </View>
                 </View>
 
                 <View style={styles.agentProfileReviewsSection}>
-                  <Text style={styles.agentProfileReviewsTitle}>Traveler Reviews</Text>
+                  <Text style={styles.agentProfileReviewsTitle}>{T("travelerReviews")}</Text>
                   {reviews.length > 0 ? (
                     reviews.map((review, index) => (
-                      <AgentProfileReviewCard key={review?.id || index} review={review} />
+                      <AgentProfileReviewCard key={review?.id || index} review={review} t={t} />
                     ))
                   ) : (
                     <View style={styles.agentProfileEmptyReviews}>
-                      <Text style={styles.agentProfileEmptyReviewsText}>No reviews yet</Text>
+                      <Text style={styles.agentProfileEmptyReviewsText}>{T("noReviewsYet")}</Text>
                     </View>
                   )}
                 </View>
@@ -250,13 +253,14 @@ const AgentProfileDetailsModal = ({
   );
 };
 
-const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
+const ReviewModal = ({ visible, onClose, onSubmit, submitting, t }) => {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const T = t || ((k) => k);
 
   const handleSubmit = () => {
     if (rating < 1 || rating > 5) {
-      Alert.alert("Error", "Please select a rating between 1 and 5");
+      Alert.alert(T("error") || "Error", T("selectRating1To5"));
       return;
     }
     onSubmit(rating, comment);
@@ -267,13 +271,13 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Review Agent</Text>
+            <Text style={styles.modalTitle}>{T("reviewAgent")}</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <Ionicons name="close" size={24} color="#6b7076" />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.modalLabel}>Your Rating</Text>
+          <Text style={styles.modalLabel}>{T("yourRating")}</Text>
           <View style={styles.ratingSelector}>
             {[1, 2, 3, 4, 5].map((star) => (
               <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
@@ -286,10 +290,10 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
             ))}
           </View>
 
-          <Text style={styles.modalLabel}>Your Review (Optional)</Text>
+          <Text style={styles.modalLabel}>{T("yourReviewOptional")}</Text>
           <TextInput
             style={styles.reviewInput}
-            placeholder="Share your experience..."
+            placeholder={T("shareExperience")}
             placeholderTextColor="#9aa0a6"
             multiline
             numberOfLines={4}
@@ -307,7 +311,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitButtonText}>Submit Agent Review</Text>
+              <Text style={styles.submitButtonText}>{T("submitAgentReview")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -317,6 +321,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting }) => {
 };
 
 const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, onBack = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
+  const { t } = useLanguage();
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
   const [descriptionHasOverflow, setDescriptionHasOverflow] = useState(false);
@@ -419,13 +424,13 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
   const handleSubmitReview = async (rating, comment) => {
     if (!session?.access) {
-      Alert.alert("Error", "Please log in to submit a review");
+      Alert.alert(t("error"), t("pleaseLoginToReview"));
       return;
     }
 
     const agentId = packageDetail?.agent?.agent_id;
     if (!agentId) {
-      Alert.alert("Error", "Agent information not found");
+      Alert.alert(t("error"), t("agentInfoNotFound"));
       return;
     }
 
@@ -434,9 +439,9 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       await createAgentReview(agentId, rating, comment, session.access);
       setReviewModalVisible(false);
       setUserHasReviewed(true);
-      Alert.alert("Success", "Your review has been submitted!");
+      Alert.alert(t("success") || "Success", t("reviewSubmitted"));
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to submit review");
+      Alert.alert(t("error"), error.message || t("failedToSubmitReview"));
     } finally {
       setSubmittingReview(false);
     }
@@ -447,7 +452,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     setAgentProfileModalVisible(true);
 
     if (!agentId) {
-      setAgentProfileError("Agent details are not available.");
+      setAgentProfileError(t("agentDetailsNotAvailable"));
       return;
     }
 
@@ -462,7 +467,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       const response = await getAgentPublicProfile(agentId);
       setAgentProfileData(response?.data || null);
     } catch (error) {
-      setAgentProfileError(error?.message || "Failed to load agent details.");
+      setAgentProfileError(error?.message || t("failedToLoadAgentDetails") || "Failed to load agent details.");
     } finally {
       setAgentProfileLoading(false);
     }
@@ -494,7 +499,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
   const handleBookNowPress = () => {
     if (!session?.access) {
-      Alert.alert("Login Required", "Please log in to book this package.");
+      Alert.alert(t("loginRequired"), t("pleaseLoginToBook"));
       onBook({ requiresLogin: true });
       return;
     }
@@ -504,11 +509,11 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
   const handleContinueToPayment = async () => {
     if (!session?.access) {
-      Alert.alert("Login Required", "Please log in to continue.");
+      Alert.alert(t("loginRequired"), t("pleaseLoginToContinue"));
       return;
     }
     if (!packageId) {
-      Alert.alert("Error", "Invalid package.");
+      Alert.alert(t("error"), t("invalidPackage"));
       return;
     }
 
@@ -519,7 +524,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       paymentCallbackHandledRef.current = false;
       setBookingStep("payment");
     } catch (error) {
-      Alert.alert("Payment Setup Failed", error?.message || "Could not start eSewa payment.");
+      Alert.alert(t("paymentSetupFailed"), error?.message || t("couldNotStartEsewa"));
     } finally {
       setInitiatingPayment(false);
     }
@@ -528,7 +533,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
   const verifyEsewaPaymentAndBook = async ({ silent = false } = {}) => {
     const transactionUuid = paymentSession?.transaction_uuid;
     if (!session?.access || !transactionUuid) {
-      if (!silent) Alert.alert("Error", "Payment session is missing. Please restart payment.");
+      if (!silent) Alert.alert(t("error"), t("paymentSessionMissing"));
       return;
     }
 
@@ -557,11 +562,11 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
       onBook(data || null);
       closeBookingModal();
-      Alert.alert("Payment Successful", "Your payment is complete and the trip has been booked.");
+      Alert.alert(t("paymentSuccessful"), t("paymentCompleteBooked"));
       return true;
     } catch (error) {
       if (!silent) {
-        Alert.alert("Verification Failed", error?.message || "Payment not verified yet. Please try again.");
+        Alert.alert(t("verificationFailed"), error?.message || t("paymentNotVerified"));
       } else {
         // Silent mode is used for callback auto-verification. Caller may retry.
       }
@@ -583,7 +588,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     setEsewaWebViewVisible(false);
 
     if (isFailure) {
-      Alert.alert("Payment Failed", "eSewa payment was cancelled or failed.");
+      Alert.alert(t("paymentFailed"), t("esewaCancelledOrFailed"));
       return true;
     }
 
@@ -596,17 +601,14 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         const ok = await verifyEsewaPaymentAndBook({ silent: true });
         if (ok) return;
       }
-      Alert.alert(
-        "Payment Submitted",
-        "Payment was submitted successfully. Verification is taking longer than expected. Please wait a few seconds and try booking status refresh."
-      );
+      Alert.alert(t("paymentSubmitted"), t("verificationTakingLonger"));
     })();
     return true;
   };
 
   const handleOpenEsewaCheckout = async () => {
     if (!esewaPostSource) {
-      Alert.alert("Error", "Payment checkout link is missing.");
+      Alert.alert(t("error"), t("paymentCheckoutMissingError"));
       return;
     }
     paymentCallbackHandledRef.current = false;
@@ -697,7 +699,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                 activeOpacity={0.8}
                 onPress={() => setExpanded(!expanded)}
               >
-                <Text style={styles.readMoreText}>{expanded ? "Read less" : "Read more"}</Text>
+                <Text style={styles.readMoreText}>{expanded ? t("readLess") : t("readMore")}</Text>
                 <Ionicons
                   name={expanded ? "chevron-up" : "chevron-down"}
                   size={14}
@@ -709,7 +711,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           </View>
 
           {/* Facilities */}
-          <Text style={styles.sectionTitle}>Facilities</Text>
+          <Text style={styles.sectionTitle}>{t("facilities")}</Text>
           <View style={styles.facilityGrid}>
             {(() => {
               const featuresList = packageDetail?.features?.map((f, idx) => ({
@@ -748,7 +750,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           {/* Agent/Host Info */}
           {agent && (
             <>
-              <Text style={styles.sectionTitle}>Hosted by</Text>
+              <Text style={styles.sectionTitle}>{t("hostedBy")}</Text>
               <View style={styles.agentCard}>
                 <View style={styles.agentCardTop}>
                   <TouchableOpacity
@@ -762,11 +764,11 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                     />
                     <View style={styles.agentInfo}>
                       <View style={styles.agentNameRow}>
-                        <Text style={styles.agentName}>{agent.full_name || "Travel Agent"}</Text>
+                        <Text style={styles.agentName}>{agent.full_name || t("travelAgent")}</Text>
                         {agent.is_verified && (
                           <View style={styles.verifiedBadge}>
                             <Ionicons name="checkmark-circle" size={16} color="#1f6b2a" />
-                            <Text style={styles.verifiedText}>Verified</Text>
+                            <Text style={styles.verifiedText}>{t("verified")}</Text>
                           </View>
                         )}
                       </View>
@@ -781,13 +783,13 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                       style={[styles.agentReviewButton, { marginRight: 8 }]}
                       onPress={() => onMessageAgent({
                         agent_id: agent.agent_id,
-                        full_name: agent.full_name || "Travel Agent",
+                        full_name: agent.full_name || t("travelAgent"),
                         profile_picture_url: agent.profile_picture_url,
                       })}
                       activeOpacity={0.8}
                     >
                       <Ionicons name="chatbubble-ellipses-outline" size={18} color="#1f6b2a" />
-                      <Text style={styles.agentReviewButtonText}>Message</Text>
+                      <Text style={styles.agentReviewButtonText}>{t("message")}</Text>
                     </TouchableOpacity>
                   )}
                   {!userHasReviewed && (
@@ -800,8 +802,8 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                           const todayStr = new Date().toISOString().slice(0, 10);
                           if (tripEndDate > todayStr) {
                             Alert.alert(
-                              "Cannot Review Yet",
-                              "Trip hasn't completed yet. You can only provide a review once the trip date has passed."
+                              t("cannotReviewYet"),
+                              t("tripNotCompleted")
                             );
                             return;
                           }
@@ -811,13 +813,13 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                       activeOpacity={0.8}
                     >
                       <Ionicons name="create-outline" size={18} color="#1f6b2a" />
-                      <Text style={styles.agentReviewButtonText}>Review</Text>
+                      <Text style={styles.agentReviewButtonText}>{t("review")}</Text>
                     </TouchableOpacity>
                   )}
                   {userHasReviewed && (
                     <View style={styles.reviewedBadge}>
                       <Ionicons name="checkmark-circle" size={18} color="#1f6b2a" />
-                      <Text style={styles.reviewedBadgeText}>Reviewed</Text>
+                      <Text style={styles.reviewedBadgeText}>{t("reviewed")}</Text>
                     </View>
                   )}
                 </View>
@@ -828,7 +830,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           {/* Participants Section */}
           <View style={styles.participantsSectionWrap}>
           <Text style={styles.sectionTitle}>
-            Travelers Joined ({packageDetail?.participants_count || participants.length})
+            {t("travelersJoined")} ({packageDetail?.participants_count || participants.length})
           </Text>
           {loading ? (
             <View style={styles.loadingSection}>
@@ -862,8 +864,8 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           ) : (
             <View style={styles.noParticipantsCard}>
               <Ionicons name="people-outline" size={32} color="#d1d5db" />
-              <Text style={styles.noParticipantsText}>No travelers yet</Text>
-              <Text style={styles.noParticipantsSubtext}>Be the first to book this trip!</Text>
+              <Text style={styles.noParticipantsText}>{t("noTravelersYet")}</Text>
+              <Text style={styles.noParticipantsSubtext}>{t("beFirstToBook")}</Text>
             </View>
           )}
           </View>
@@ -873,22 +875,22 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       {/* Bottom Bar */}
       <View style={styles.bottomBar}>
         <View style={styles.priceWrap}>
-          <Text style={styles.priceLabel}>Price</Text>
+          <Text style={styles.priceLabel}>{t("price")}</Text>
           <Text style={styles.priceValue}>{formatPrice(packageDetail?.price_per_person || trip.price)}</Text>
         </View>
         {(userHasBooked || trip.user_has_booked) ? (
           <View style={styles.alreadyBookedBadge}>
             <Ionicons name="checkmark-circle" size={20} color="#1f6b2a" />
-            <Text style={styles.alreadyBookedText}>Already booked</Text>
+            <Text style={styles.alreadyBookedText}>{t("alreadyBooked")}</Text>
           </View>
         ) : hasTripStarted ? (
           <View style={styles.alreadyBookedBadge}>
             <Ionicons name="time-outline" size={20} color="#b45309" />
-            <Text style={styles.alreadyBookedText}>Trip already started</Text>
+            <Text style={styles.alreadyBookedText}>{t("tripAlreadyStarted")}</Text>
           </View>
         ) : (
           <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={handleBookNowPress}>
-            <Text style={styles.bookText}>Book Now</Text>
+            <Text style={styles.bookText}>{t("bookNow")}</Text>
             <Ionicons name="arrow-forward" size={18} color="#ffffff" />
           </TouchableOpacity>
         )}
@@ -899,6 +901,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         onClose={() => setReviewModalVisible(false)}
         onSubmit={handleSubmitReview}
         submitting={submittingReview}
+        t={t}
       />
 
       <AgentProfileDetailsModal
@@ -908,6 +911,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         error={agentProfileError}
         data={agentProfileData}
         fallbackAgent={agent}
+        t={t}
       />
 
       <Modal
@@ -919,7 +923,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
         <View style={styles.modalOverlay}>
           <View style={styles.bookingModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Book Trip</Text>
+              <Text style={styles.modalTitle}>{t("bookTrip")}</Text>
               <TouchableOpacity onPress={closeBookingModal} style={styles.modalClose}>
                 <Ionicons name="close" size={24} color="#6b7076" />
               </TouchableOpacity>
@@ -927,27 +931,27 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
             {bookingStep === "traveler_count" ? (
               <>
-                <Text style={styles.modalLabel}>Number of Travelers</Text>
+                <Text style={styles.modalLabel}>{t("numberOfTravelers")}</Text>
                 <TextInput
                   style={styles.travelerCountInput}
                   keyboardType="number-pad"
                   value={travelerCountInput}
                   onChangeText={(text) => setTravelerCountInput(text.replace(/[^0-9]/g, "").slice(0, 3) || "1")}
-                  placeholder="Enter travelers"
+                  placeholder={t("enterTravelers")}
                   placeholderTextColor="#9aa0a6"
                 />
 
                 <View style={styles.paymentSummaryCard}>
                   <View style={styles.paymentSummaryRow}>
-                    <Text style={styles.paymentSummaryLabel}>Price per traveler</Text>
+                    <Text style={styles.paymentSummaryLabel}>{t("pricePerTraveler")}</Text>
                     <Text style={styles.paymentSummaryValue}>{formatPrice(unitPrice)}</Text>
                   </View>
                   <View style={styles.paymentSummaryRow}>
-                    <Text style={styles.paymentSummaryLabel}>Travelers</Text>
+                    <Text style={styles.paymentSummaryLabel}>{t("travelers")}</Text>
                     <Text style={styles.paymentSummaryValue}>{travelerCount}</Text>
                   </View>
                   <View style={[styles.paymentSummaryRow, styles.paymentSummaryRowTotal]}>
-                    <Text style={styles.paymentSummaryTotalLabel}>Total to Pay</Text>
+                    <Text style={styles.paymentSummaryTotalLabel}>{t("totalToPay")}</Text>
                     <Text style={styles.paymentSummaryTotalValue}>{formatPrice(computedTotal)}</Text>
                   </View>
                 </View>
@@ -961,13 +965,13 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                   {initiatingPayment ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.submitButtonText}>Continue to eSewa</Text>
+                    <Text style={styles.submitButtonText}>{t("continueToEsewa")}</Text>
                   )}
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <Text style={styles.modalLabel}>Payment Method</Text>
+                <Text style={styles.modalLabel}>{t("paymentMethod")}</Text>
                 <View style={styles.esewaCard}>
                   <View style={styles.esewaCardHeader}>
                     <View style={styles.esewaBadge}>
@@ -985,7 +989,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                 </View>
 
                 <TouchableOpacity style={styles.bookButton} activeOpacity={0.88} onPress={handleOpenEsewaCheckout}>
-                  <Text style={styles.bookText}>Open eSewa Payment</Text>
+                  <Text style={styles.bookText}>{t("openEsewaPayment")}</Text>
                   <Ionicons name="open-outline" size={18} color="#ffffff" />
                 </TouchableOpacity>
 
@@ -994,12 +998,12 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                     <View style={styles.autoVerifyInfoRow}>
                       <ActivityIndicator size="small" color="#1f6b2a" />
                       <Text style={styles.autoVerifyInfoText}>
-                        Verifying payment and booking your trip...
+                        {t("verifyingPayment")}
                       </Text>
                     </View>
                   ) : (
                     <Text style={styles.autoVerifyInfoText}>
-                      After successful eSewa payment, your booking will be confirmed automatically.
+                      {t("afterEsewaSuccess")}
                     </Text>
                   )}
                 </View>
@@ -1009,7 +1013,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                   onPress={() => setBookingStep("traveler_count")}
                   activeOpacity={0.75}
                 >
-                  <Text style={styles.bookingBackLinkText}>Edit traveler count</Text>
+                  <Text style={styles.bookingBackLinkText}>{t("editTravelerCount")}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -1033,9 +1037,9 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
               <Ionicons name="close" size={22} color="#1f1f1f" />
             </TouchableOpacity>
             <View style={styles.esewaWebViewHeaderCenter}>
-              <Text style={styles.esewaWebViewTitle}>eSewa Payment</Text>
+              <Text style={styles.esewaWebViewTitle}>{t("esewaPayment")}</Text>
               <Text style={styles.esewaWebViewSubtitle}>
-                Complete payment inside app
+                {t("completePaymentInside")}
               </Text>
             </View>
             <View style={{ width: 36 }} />
@@ -1044,7 +1048,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           {esewaWebViewLoading ? (
             <View style={styles.esewaWebViewLoadingBar}>
               <ActivityIndicator size="small" color="#1f6b2a" />
-              <Text style={styles.esewaWebViewLoadingText}>Loading secure payment page...</Text>
+              <Text style={styles.esewaWebViewLoadingText}>{t("loadingSecurePayment")}</Text>
             </View>
           ) : null}
 
@@ -1069,13 +1073,13 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
               }}
               onError={(event) => {
                 setEsewaWebViewLoading(false);
-                const msg = event?.nativeEvent?.description || "Failed to load eSewa payment page.";
-                Alert.alert("Payment Page Error", msg);
+                const msg = event?.nativeEvent?.description || t("failedToLoadEsewaPage");
+                Alert.alert(t("paymentPageError"), msg);
               }}
               onHttpError={(event) => {
                 setEsewaWebViewLoading(false);
                 const statusCode = event?.nativeEvent?.statusCode;
-                Alert.alert("Payment Page Error", `eSewa page returned HTTP ${statusCode || "error"}.`);
+                Alert.alert(t("paymentPageError"), `${t("esewaPageReturnedHttp")} ${statusCode || "error"}.`);
               }}
               onNavigationStateChange={(navState) => {
                 const url = String(navState?.url || "");

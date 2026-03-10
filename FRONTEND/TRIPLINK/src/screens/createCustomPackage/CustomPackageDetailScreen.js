@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../../context/LanguageContext";
 import { getCustomPackageById, updateCustomPackage, deleteCustomPackage } from "../../utils/api";
 
 const PLACEHOLDER_IMAGE =
@@ -30,6 +31,7 @@ const formatTripDate = (dateStr) => {
 };
 
 const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess, onDeleteSuccess }) => {
+  const { t } = useLanguage();
   const { width: windowWidth } = useWindowDimensions();
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
     setError(null);
     getCustomPackageById(packageId, session.access)
       .then((res) => setPkg(res?.data ?? null))
-      .catch(() => setError("Could not load package"))
+      .catch(() => setError(t("couldntLoadPackage")))
       .finally(() => setLoading(false));
   }, [packageId, session?.access]);
 
@@ -75,7 +77,7 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
         </View>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#1f6b2a" />
-          <Text style={styles.loadingText}>Loading your package...</Text>
+          <Text style={styles.loadingText}>{t("loadingYourPackage")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -93,8 +95,8 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
         </View>
         <View style={styles.errorCard}>
           <Ionicons name="alert-circle-outline" size={48} color="#94a3b8" />
-          <Text style={styles.errorTitle}>Couldn't load package</Text>
-          <Text style={styles.errorSubtext}>{error || "Package not found"}</Text>
+          <Text style={styles.errorTitle}>{t("couldntLoadPackage")}</Text>
+          <Text style={styles.errorSubtext}>{error || t("packageNotFound")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -132,12 +134,12 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
 
   const handleCancelPackage = () => {
     Alert.alert(
-      "Cancel package",
-      "Are you sure you want to cancel this trip request? You can still delete it later if needed.",
+      t("cancelPackage"),
+      t("cancelPackageConfirm"),
       [
-        { text: "Keep it", style: "cancel" },
+        { text: t("keepIt"), style: "cancel" },
         {
-          text: "Cancel package",
+          text: t("cancelPackage"),
           style: "destructive",
           onPress: async () => {
             if (!session?.access || !pkg?.id) return;
@@ -149,9 +151,9 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
                 setPkg(updated);
                 onCancelSuccess?.(updated);
               }
-              Alert.alert("Done", "Your package has been cancelled.");
+              Alert.alert(t("doneTitle"), t("packageCancelled"));
             } catch (err) {
-              Alert.alert("Error", err?.message || "Could not cancel package.");
+              Alert.alert(t("error"), err?.message || t("couldNotCancelPackage"));
             } finally {
               setActionLoading(false);
             }
@@ -163,12 +165,12 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
 
   const handleDeletePackage = () => {
     Alert.alert(
-      "Delete package",
-      "Permanently delete this custom package? This cannot be undone.",
+      t("deletePackage"),
+      t("deletePackageConfirm"),
       [
-        { text: "Keep it", style: "cancel" },
+        { text: t("keepIt"), style: "cancel" },
         {
-          text: "Delete",
+          text: t("delete"),
           style: "destructive",
           onPress: async () => {
             if (!session?.access || !pkg?.id) return;
@@ -176,9 +178,9 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
             try {
               await deleteCustomPackage(pkg.id, session.access);
               onDeleteSuccess?.(pkg.id);
-              Alert.alert("Deleted", "Your package has been removed.", [{ text: "OK" }]);
+              Alert.alert(t("deleted"), t("packageDeleted"), [{ text: "OK" }]);
             } catch (err) {
-              Alert.alert("Error", err?.message || "Could not delete package.");
+              Alert.alert(t("error"), err?.message || t("couldNotDeletePackage"));
             } finally {
               setActionLoading(false);
             }
@@ -214,7 +216,7 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
             <View style={styles.ratingRow}>
               <Ionicons name="time-outline" size={16} color="#1f6b2a" />
               <Text style={styles.ratingValue}>{pkg.duration_display}</Text>
-              <Text style={styles.ratingMeta}> Duration</Text>
+              <Text style={styles.ratingMeta}> {t("duration")}</Text>
             </View>
           ) : null}
 
@@ -226,22 +228,22 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
                 {pkg.trip_start_date && pkg.trip_end_date
                   ? `${formatTripDate(pkg.trip_start_date)} – ${formatTripDate(pkg.trip_end_date)}`
                   : pkg.trip_start_date
-                    ? `From ${formatTripDate(pkg.trip_start_date)}`
-                    : `To ${formatTripDate(pkg.trip_end_date)}`}
+                    ? `${t("from")} ${formatTripDate(pkg.trip_start_date)}`
+                    : `${t("until")} ${formatTripDate(pkg.trip_end_date)}`}
               </Text>
             </View>
           )}
 
           {/* Description with Read more - same as DetailsScreen */}
           <View style={styles.descriptionWrap}>
-            <Text style={styles.description}>{body || "No description provided."}</Text>
+            <Text style={styles.description}>{body || t("noDescriptionProvided")}</Text>
             {description.length > 140 && (
               <TouchableOpacity
                 style={styles.readMoreRow}
                 activeOpacity={0.8}
                 onPress={() => setExpanded(!expanded)}
               >
-                <Text style={styles.readMoreText}>{expanded ? "Read less" : "Read more"}</Text>
+                <Text style={styles.readMoreText}>{expanded ? t("readLess") : t("readMore")}</Text>
                 <Ionicons
                   name={expanded ? "chevron-up" : "chevron-down"}
                   size={14}
@@ -253,7 +255,7 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
           </View>
 
           {/* Facilities - same section as package details */}
-          <Text style={styles.sectionTitle}>Facilities</Text>
+          <Text style={styles.sectionTitle}>{t("facilities")}</Text>
           {facilityRows.length > 0 ? (
             <View style={styles.facilityGrid}>
               {facilityRows.map((row, rowIndex) => (
@@ -283,14 +285,14 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
           ) : (
             <View style={styles.noFacilitiesCard}>
               <Ionicons name="list-outline" size={28} color="#d1d5db" />
-              <Text style={styles.noFacilitiesText}>No facilities added</Text>
+              <Text style={styles.noFacilitiesText}>{t("noFacilitiesAdded")}</Text>
             </View>
           )}
 
           {/* Things to consider - custom package only */}
           {pkg.additional_notes ? (
             <>
-              <Text style={styles.sectionTitle}>Things to consider</Text>
+              <Text style={styles.sectionTitle}>{t("thingsToConsider")}</Text>
               <View style={styles.notesCard}>
                 <Text style={styles.notesText}>{pkg.additional_notes}</Text>
               </View>
@@ -309,7 +311,7 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
             {pkg.claimed_by_name ? (
               <View style={styles.claimedByRow}>
                 <Ionicons name="person-circle-outline" size={16} color="#1f6b2a" />
-                <Text style={styles.claimedByText}>Handled by {pkg.claimed_by_name}</Text>
+                <Text style={styles.claimedByText}>{t("handledBy")} {pkg.claimed_by_name}</Text>
               </View>
             ) : null}
           </View>
@@ -324,7 +326,7 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
                 activeOpacity={0.85}
               >
                 <Ionicons name="close-circle-outline" size={20} color="#b91c1c" />
-                <Text style={styles.actionBtnCancelText}>Cancel package</Text>
+                <Text style={styles.actionBtnCancelText}>{t("cancelPackage")}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -334,12 +336,12 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
               activeOpacity={0.85}
             >
               <Ionicons name="trash-outline" size={20} color="#64748b" />
-              <Text style={styles.actionBtnDeleteText}>Delete package</Text>
+              <Text style={styles.actionBtnDeleteText}>{t("deletePackage")}</Text>
             </TouchableOpacity>
           </View>
           {!canCancel && canCancelBase && (
             <Text style={styles.cancelInfoText}>
-              You can only cancel this request up to 2 days before the trip start date.
+              {t("cancelRequestUpTo2Days")}
             </Text>
           )}
         </View>

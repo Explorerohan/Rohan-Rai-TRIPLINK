@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Alert,
@@ -167,6 +168,7 @@ const TopPicksScreen = ({
   onTripPress = () => {},
   onBack = () => {},
 }) => {
+  const { t } = useLanguage();
   const hasInitialPackages = Array.isArray(initialPackages) && initialPackages.length > 0;
   const [packages, setPackages] = useState(() => (hasInitialPackages ? transformRawPackages(initialPackages) : []));
   const [loading, setLoading] = useState(!hasInitialPackages);
@@ -411,7 +413,7 @@ const TopPicksScreen = ({
   const handleToggleBookmark = useCallback(async (trip) => {
     const id = String(trip?.id || "");
     if (!id || !session?.access) {
-      Alert.alert("Login Required", "Please log in to save packages to your bookmarks.");
+      Alert.alert(t("loginRequired"), t("pleaseLoginBookmarks"));
       return;
     }
     if (busyIds.includes(id)) return;
@@ -442,7 +444,7 @@ const TopPicksScreen = ({
         scheduleCacheUpdateFromItems(next);
         return next;
       });
-      Alert.alert("Bookmark Error", err?.message || "Could not update bookmark.");
+      Alert.alert(t("bookmarkError"), err?.message || t("couldNotUpdateBookmark"));
     } finally {
       setBusyIds((prev) => prev.filter((busyId) => busyId !== id));
     }
@@ -465,7 +467,7 @@ const TopPicksScreen = ({
           <Ionicons name="chevron-back" size={22} color="#1f1f1f" />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle}>Top Picks for You</Text>
+          <Text style={styles.headerTitle}>{t("topPicksHeader")}</Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -473,7 +475,7 @@ const TopPicksScreen = ({
       {loading ? (
         <View style={styles.centerWrap}>
           <ActivityIndicator size="large" color="#1f6b2a" />
-          <Text style={styles.centerText}>Loading top picks...</Text>
+          <Text style={styles.centerText}>{t("loadingTopPicks")}</Text>
         </View>
       ) : (
         <ScrollView

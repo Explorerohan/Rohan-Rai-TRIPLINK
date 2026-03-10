@@ -6,6 +6,7 @@ from .views import (
     MeView,
     RefreshView,
     RegisterView,
+    LeaderboardView,
     ProfileView,
     UserProfileView,
     AgentProfileView,
@@ -40,6 +41,7 @@ urlpatterns = [
     path("me/", MeView.as_view(), name="me"),
     # Profile endpoints
     path("profile/", ProfileView.as_view(), name="profile"),
+    path("leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     path("profile/user/", UserProfileView.as_view(), name="user_profile"),
     path("profile/agent/", AgentProfileView.as_view(), name="agent_profile"),
     # Package endpoints

@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
+import { API_BASE } from "../../config";
 import {
   ActivityIndicator,
   Image,
@@ -18,7 +20,6 @@ const EMAIL_ICON = require("../../Assets/email.png");
 const LOCK_ICON = require("../../Assets/lock.png");
 const EYE_ICON = require("../../Assets/eye.png");
 
-const API_BASE = "http://192.168.18.6:8000";
 const LOGIN_ENDPOINT = `${API_BASE}/api/auth/login/`;
 
 const LoginScreen = ({
@@ -26,6 +27,7 @@ const LoginScreen = ({
   onForgotPress = () => {},
   onSignupPress = () => {},
 }) => {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +37,7 @@ const LoginScreen = ({
   const handleLogin = async () => {
     setError("");
     if (!email || !password) {
-      setError("Email and password are required.");
+      setError(t("emailPasswordRequired"));
       return;
     }
     setLoading(true);
@@ -48,15 +50,15 @@ const LoginScreen = ({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.detail || data?.message || "Invalid credentials");
+        throw new Error(data?.detail || data?.message || t("invalidCredentials"));
       }
       const role = data?.user?.role;
       if (role !== "traveler") {
-        throw new Error("Only traveler accounts can log in.");
+        throw new Error(t("onlyTravelerCanLogin"));
       }
       onLoginSuccess({ access: data.access, refresh: data.refresh, user: data.user });
     } catch (e) {
-      setError(e.message || "Login failed");
+      setError(e.message || t("loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -71,12 +73,12 @@ const LoginScreen = ({
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.heading}>Login to <Text style={styles.headingAccent}>TRIPLINK</Text></Text>
+        <Text style={styles.heading}>{t("loginToTripLink")} <Text style={styles.headingAccent}>TRIPLINK</Text></Text>
 
         <View style={styles.inputGroup}>
           <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
           <TextInput
-            placeholder="Email"
+            placeholder={t("email")}
             placeholderTextColor="#9aa0a6"
             style={[styles.input, styles.inputWithIcon]}
             keyboardType="email-address"
@@ -89,7 +91,7 @@ const LoginScreen = ({
         <View style={styles.inputGroup}>
           <Image source={LOCK_ICON} style={styles.inputIcon} resizeMode="contain" />
           <TextInput
-            placeholder="Password"
+            placeholder={t("password")}
             placeholderTextColor="#9aa0a6"
             style={[styles.input, styles.inputWithIcon]}
             secureTextEntry={!showPassword}
@@ -106,26 +108,26 @@ const LoginScreen = ({
         </View>
 
         <TouchableOpacity style={styles.forgotWrap} onPress={onForgotPress}>
-          <Text style={styles.forgot}>Forgot password ?</Text>
+          <Text style={styles.forgot}>{t("forgotPassword")}</Text>
         </TouchableOpacity>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={handleLogin} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Login</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t("login")}</Text>}
         </TouchableOpacity>
 
-        <Text style={styles.or}>or</Text>
+        <Text style={styles.or}>{t("or")}</Text>
 
         <TouchableOpacity style={styles.googleButton} activeOpacity={0.85}>
           <Image source={GOOGLE_ICON} style={styles.googleIcon} />
-          <Text style={styles.googleText}>Continue with Google</Text>
+          <Text style={styles.googleText}>{t("continueWithGoogle")}</Text>
         </TouchableOpacity>
 
         <View style={styles.footerRow}>
-          <Text style={styles.footerText}>Are you new on TRIPLINK ? </Text>
+          <Text style={styles.footerText}>{t("newOnTripLink")} </Text>
           <TouchableOpacity onPress={onSignupPress}>
-            <Text style={styles.footerLink}>signup</Text>
+            <Text style={styles.footerLink}>{t("signup")}</Text>
           </TouchableOpacity>
         </View>
       </View>

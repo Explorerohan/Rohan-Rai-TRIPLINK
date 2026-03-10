@@ -1,4 +1,4 @@
-﻿import React, { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLanguage } from "../../context/LanguageContext";
 import slideFinal from "./slides/SlideFinal";
 import slideOne from "./slides/SlideOne";
 import slideThree from "./slides/SlideThree";
@@ -24,24 +25,24 @@ const slides = [slideOne, slideTwo, slideThree, slideFinal];
 
 const Dot = ({ active }) => <View style={[styles.dot, active ? styles.dotActive : styles.dotInactive]} />;
 
-const StandardCard = ({ item, onSkip, onNext }) => (
+const StandardCard = ({ item, onSkip, onNext, t }) => (
   <View style={styles.slide}>
     <View style={styles.card}>
       <View style={styles.imageWrapper}>
         <Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
         <TouchableOpacity onPress={onSkip} style={styles.skipButton} activeOpacity={0.7}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{t("skip")}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
         <View style={styles.textBlock}>
-          <Text style={styles.title}>{item.titleTop}</Text>
+          <Text style={styles.title}>{t(item.titleTopKey)}</Text>
           <Text style={styles.title}>
-            {item.titleBottom} <Text style={styles.accent}>{item.accent}</Text>
+            {t(item.titleBottomKey)} <Text style={styles.accent}>{t(item.accentKey)}</Text>
           </Text>
           <Text style={styles.description} numberOfLines={3} ellipsizeMode="tail">
-            {item.description}
+            {t(item.descriptionKey)}
           </Text>
 
           <View style={styles.dotsRow}>
@@ -55,7 +56,7 @@ const StandardCard = ({ item, onSkip, onNext }) => (
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.cta} activeOpacity={0.8} onPress={onNext}>
-            <Text style={styles.ctaText}>{item.cta}</Text>
+            <Text style={styles.ctaText}>{t(item.ctaKey)}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -63,22 +64,22 @@ const StandardCard = ({ item, onSkip, onNext }) => (
   </View>
 );
 
-const FinalCard = ({ item, onLoginPress, onSignupPress }) => (
+const FinalCard = ({ item, onLoginPress, onSignupPress, t }) => (
   <View style={styles.finalSlide}>
     <View style={styles.header}>
       <Image source={LOGO} style={styles.logoImage} resizeMode="contain" />
     </View>
     <View style={styles.finalContent}>
-      <Text style={styles.finalTitle}>{item.titleTop}</Text>
-      <Text style={[styles.finalTitle, styles.finalAccent]}>{item.titleBottom}</Text>
+      <Text style={styles.finalTitle}>{t(item.titleTopKey)}</Text>
+      <Text style={[styles.finalTitle, styles.finalAccent]}>{t(item.titleBottomKey)}</Text>
       <Image source={FINAL_HERO} style={styles.finalImage} resizeMode="contain" />
-      <Text style={styles.finalBody}>{item.description}</Text>
+      <Text style={styles.finalBody}>{t(item.descriptionKey)}</Text>
       <View style={styles.finalActions}>
         <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={onLoginPress}>
-          <Text style={styles.primaryText}>{item.primary}</Text>
+          <Text style={styles.primaryText}>{t(item.primaryKey)}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.85} onPress={onSignupPress}>
-          <Text style={styles.secondaryText}>{item.secondary}</Text>
+          <Text style={styles.secondaryText}>{t(item.secondaryKey)}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -86,6 +87,7 @@ const FinalCard = ({ item, onLoginPress, onSignupPress }) => (
 );
 
 const OnboardingScreen = ({ onLoginPress = () => {}, onSignupPress = () => {} }) => {
+  const { t } = useLanguage();
   const listRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -111,9 +113,9 @@ const OnboardingScreen = ({ onLoginPress = () => {}, onSignupPress = () => {} })
 
   const renderItem = ({ item }) => {
     if (item.type === "final") {
-      return <FinalCard item={item} onLoginPress={onLoginPress} onSignupPress={onSignupPress} />;
+      return <FinalCard item={item} onLoginPress={onLoginPress} onSignupPress={onSignupPress} t={t} />;
     }
-    return <StandardCard item={item} onSkip={handleSkip} onNext={handleNext} />;
+    return <StandardCard item={item} onSkip={handleSkip} onNext={handleNext} t={t} />;
   };
 
   return (

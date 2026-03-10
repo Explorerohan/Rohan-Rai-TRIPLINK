@@ -2040,6 +2040,24 @@ class AgentProfileView(generics.RetrieveUpdateAPIView):
         return context
 
 
+class LeaderboardView(generics.ListAPIView):
+    """List travelers ordered by reward points descending (highest first)."""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        return (
+            UserProfile.objects.filter(user__role=Roles.TRAVELER)
+            .select_related("user")
+            .order_by("-reward_points", "id")
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
+
 class ProfileView(generics.RetrieveUpdateAPIView):
     """Universal profile view that returns the appropriate profile based on user role"""
     permission_classes = [permissions.IsAuthenticated]

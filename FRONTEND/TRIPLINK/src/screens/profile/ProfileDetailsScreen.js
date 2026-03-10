@@ -1,4 +1,5 @@
 import React from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   Image,
   Platform,
@@ -62,13 +63,14 @@ const DetailRow = ({ icon, label, value, isLast, isEmpty }) => (
 );
 
 const ProfileDetailsScreen = ({ profile = null, onBack }) => {
+  const { t } = useLanguage();
   const displayName =
     profile?.full_name ||
     (profile?.first_name && profile?.last_name
       ? `${profile.first_name} ${profile.last_name}`
       : profile?.first_name || profile?.last_name) ||
     (profile?.email ? profile.email.split("@")[0] : null) ||
-    "User";
+    t("user");
 
   const profileImageUri =
     profile?.profile_picture_url && String(profile.profile_picture_url).trim()
@@ -103,7 +105,7 @@ const ProfileDetailsScreen = ({ profile = null, onBack }) => {
         <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.8}>
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile details</Text>
+        <Text style={styles.headerTitle}>{t("profileDetails")}</Text>
         <View style={styles.headerRight} />
       </View>
 

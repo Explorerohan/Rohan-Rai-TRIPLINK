@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Image,
@@ -30,14 +31,14 @@ const formatTime = (iso) => {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-const formatDateLabel = (iso) => {
-  if (!iso) return "";
+const formatDateLabel = (iso, t) => {
+  if (!iso || !t) return "";
   const d = new Date(iso);
   const today = new Date();
-  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === today.toDateString()) return t("today");
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  if (d.toDateString() === yesterday.toDateString()) return t("yesterday");
   return d.toLocaleDateString();
 };
 
@@ -62,6 +63,7 @@ const ChatDetailScreen = ({
   onMarkRoomRead,
   onPackagePress,
 }) => {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState("");
@@ -197,7 +199,7 @@ const ChatDetailScreen = ({
   const groupedByDate = (() => {
     const map = {};
     messages.forEach((m) => {
-      const label = formatDateLabel(m.created_at) || "Today";
+      const label = formatDateLabel(m.created_at, t) || t("today");
       if (!map[label]) map[label] = [];
       map[label].push(m);
     });
@@ -218,7 +220,7 @@ const ChatDetailScreen = ({
           <Text style={styles.headerName}>{contactName}</Text>
           {isActive && (
             <Text style={styles.headerStatus}>
-              {wsConnected ? "Active Now" : "Offline"}
+              {wsConnected ? t("activeNow") : t("offline")}
             </Text>
           )}
         </View>
@@ -311,7 +313,7 @@ const ChatDetailScreen = ({
           <View style={styles.inputBox}>
             <TextInput
               style={styles.input}
-              placeholder="Type your message"
+              placeholder={t("typeMessage")}
               placeholderTextColor="#9aa0a6"
               value={inputText}
               onChangeText={setInputText}

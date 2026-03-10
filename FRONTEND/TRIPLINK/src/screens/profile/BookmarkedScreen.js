@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Alert,
@@ -61,6 +62,7 @@ const BookmarkedScreen = ({
   onBack = () => {},
   onTripPress = () => {},
 }) => {
+  const { t } = useLanguage();
   const [bookmarks, setBookmarks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,12 +80,12 @@ const BookmarkedScreen = ({
       setBookmarks(mapPackages(data));
     } catch (err) {
       if (!silent) {
-        Alert.alert("Load Failed", err?.message || "Could not load bookmarked packages.");
+        Alert.alert(t("loadFailed"), err?.message || t("couldNotLoadBookmarked"));
       }
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [session?.access]);
+  }, [session?.access, t]);
 
   useEffect(() => {
     fetchBookmarks();
@@ -109,7 +111,7 @@ const BookmarkedScreen = ({
       await removeBookmarkedPackage(id, session.access);
     } catch (err) {
       setBookmarks((prev) => [item, ...prev]);
-      Alert.alert("Bookmark Error", err?.message || "Could not remove bookmark.");
+      Alert.alert(t("bookmarkError"), err?.message || t("couldNotUpdateBookmark"));
     } finally {
       setBusyIds((prev) => prev.filter((rowId) => rowId !== id));
     }
@@ -128,7 +130,7 @@ const BookmarkedScreen = ({
           <Ionicons name="chevron-back" size={22} color="#1f1f1f" />
         </TouchableOpacity>
         <View style={styles.headerTextWrap}>
-          <Text style={styles.headerTitle}>Bookmarked</Text>
+          <Text style={styles.headerTitle}>{t("bookmarkedHeader")}</Text>
           <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
         </View>
         <View style={styles.headerSpacer} />
@@ -137,7 +139,7 @@ const BookmarkedScreen = ({
       {loading ? (
         <View style={styles.centerWrap}>
           <ActivityIndicator size="large" color="#1f6b2a" />
-          <Text style={styles.centerText}>Loading bookmarks...</Text>
+          <Text style={styles.centerText}>{t("loadingBookmarks")}</Text>
         </View>
       ) : (
         <ScrollView
@@ -155,9 +157,9 @@ const BookmarkedScreen = ({
           {bookmarks.length === 0 ? (
             <View style={styles.emptyCard}>
               <Ionicons name="bookmark-outline" size={26} color="#64748b" />
-              <Text style={styles.emptyTitle}>No bookmarks yet</Text>
+              <Text style={styles.emptyTitle}>{t("noBookmarks")}</Text>
               <Text style={styles.emptyText}>
-                Save packages from the Home screen and they will appear here.
+                {t("bookmarkHint")}
               </Text>
             </View>
           ) : (

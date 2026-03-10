@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   View,
   Text,
@@ -69,6 +70,7 @@ const transformRawPackages = (rawList) => {
 };
 
 const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) => {
+  const { t } = useLanguage();
   const hasInitial = initialPackages && initialPackages.length > 0;
   const [packages, setPackages] = useState(() => (hasInitial ? transformRawPackages(initialPackages) : []));
   const [loading, setLoading] = useState(!hasInitial);
@@ -163,9 +165,9 @@ const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) 
         <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.8}>
           <Ionicons name="chevron-back" size={24} color="#1e293b" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Search</Text>
+        <Text style={styles.headerTitle}>{t("searchHeader")}</Text>
         <TouchableOpacity onPress={onBack} style={styles.cancelBtn} activeOpacity={0.8}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{t("cancel")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -174,7 +176,7 @@ const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) 
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={20} color="#7a7f85" style={styles.searchIcon} />
           <TextInput
-            placeholder="Search Places"
+            placeholder={t("searchPlaces")}
             placeholderTextColor="#9aa0a6"
             style={styles.searchInput}
             value={searchQuery}
@@ -193,17 +195,17 @@ const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) 
       </View>
 
       {/* Section title */}
-      <Text style={styles.sectionTitle}>All Popular Trip Package</Text>
+      <Text style={styles.sectionTitle}>{t("allPopularTripPackage")}</Text>
 
       {loading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#1f6b2a" />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{t("loading")}</Text>
         </View>
       ) : filteredList.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyText}>
-            {searchQuery.trim() ? "No packages match your search" : "No packages available"}
+            {searchQuery.trim() ? t("noPackagesMatchSearch") : t("noPackagesAvailable")}
           </Text>
         </View>
       ) : (
@@ -250,7 +252,7 @@ const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) 
                     </View>
                   )}
                   <Text style={styles.cardJoinedText}>
-                    {place.participants_count ?? 0} Person Joined
+                    {place.participants_count ?? 0} {t("personJoined")}
                   </Text>
                 </View>
               </View>
@@ -273,7 +275,7 @@ const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) 
         >
           <View style={styles.filterModal} onStartShouldSetResponder={() => true}>
             <View style={styles.filterHeader}>
-              <Text style={styles.filterTitle}>Filter by location</Text>
+              <Text style={styles.filterTitle}>{t("filterByLocation")}</Text>
               <TouchableOpacity onPress={() => setFilterVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Ionicons name="close" size={24} color="#64748b" />
               </TouchableOpacity>

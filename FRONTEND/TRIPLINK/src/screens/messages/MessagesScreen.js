@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Image,
@@ -52,6 +53,7 @@ const MessagesScreen = ({
   onProfilePress = () => {},
   onChatPress = () => {},
 }) => {
+  const { t } = useLanguage();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,13 +72,13 @@ const MessagesScreen = ({
       const { data } = await getChatRooms(session.access);
       setRooms(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err?.message || "Failed to load conversations");
+      setError(err?.message || t("failedToLoadConversations"));
       setRooms([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [session?.access]);
+  }, [session?.access, t]);
 
   useEffect(() => {
     fetchRooms();
@@ -118,7 +120,7 @@ const MessagesScreen = ({
         <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8} onPress={onBack}>
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={styles.headerTitle}>{t("messagesHeader")}</Text>
         <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8}>
           <Ionicons name="ellipsis-vertical" size={22} color="#1f1f1f" />
         </TouchableOpacity>
@@ -126,7 +128,7 @@ const MessagesScreen = ({
 
       <View style={styles.content}>
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Messages</Text>
+          <Text style={styles.sectionTitle}>{t("messagesHeader")}</Text>
           <TouchableOpacity style={styles.editBtn} activeOpacity={0.8}>
             <Ionicons name="pencil" size={20} color="#1f1f1f" />
           </TouchableOpacity>
@@ -136,7 +138,7 @@ const MessagesScreen = ({
           <Ionicons name="search-outline" size={20} color="#9aa0a6" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for chats & messages"
+            placeholder={t("searchChatsMessages")}
             placeholderTextColor="#9aa0a6"
             editable={false}
           />
@@ -158,7 +160,7 @@ const MessagesScreen = ({
           {loading ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color="#1f6b2a" />
-              <Text style={styles.loadingText}>Loading conversations...</Text>
+              <Text style={styles.loadingText}>{t("loadingConversations")}</Text>
             </View>
           ) : error ? (
             <View style={styles.emptyWrap}>
@@ -168,8 +170,8 @@ const MessagesScreen = ({
           ) : rooms.length === 0 ? (
             <View style={styles.emptyWrap}>
               <Ionicons name="chatbubbles-outline" size={48} color="#94a3b8" />
-              <Text style={styles.emptyText}>No conversations yet</Text>
-              <Text style={styles.emptySubtext}>Chat with agents from your bookings</Text>
+              <Text style={styles.emptyText}>{t("noConversations")}</Text>
+              <Text style={styles.emptySubtext}>{t("conversationsHint")}</Text>
             </View>
           ) : (
             rooms.map((room) => {
@@ -232,7 +234,7 @@ const MessagesScreen = ({
                 onPress={item.key === "home" ? onHomePress : item.key === "calendar" ? onCalendarPress : undefined}
               >
                 <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
+                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -259,7 +261,7 @@ const MessagesScreen = ({
                     </View>
                   )}
                 </View>
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
+                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
               </TouchableOpacity>
             );
           })}

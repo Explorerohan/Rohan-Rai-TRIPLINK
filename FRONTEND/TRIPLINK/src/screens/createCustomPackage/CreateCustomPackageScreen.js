@@ -17,6 +17,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useLanguage } from "../../context/LanguageContext";
 import { getFeatures, createCustomPackage } from "../../utils/api";
 
 function formatDateToYYYYMMDD(date) {
@@ -38,6 +39,7 @@ function parseYYYYMMDD(str) {
 }
 
 const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
+  const { t } = useLanguage();
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [country, setCountry] = useState("");
@@ -97,7 +99,7 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission needed", "Please grant camera roll permissions to upload an image.");
+        Alert.alert(t("permissionNeeded") || "Permission needed", t("permissionNeededGallery"));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -111,43 +113,43 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
       }
     } catch (e) {
       console.error("Image picker error:", e);
-      Alert.alert("Error", "Failed to open gallery.");
+      Alert.alert(t("error"), t("failedToOpenGallery"));
     }
   };
 
   const handleSubmit = async () => {
     const trim = (s) => (typeof s === "string" ? s.trim() : "");
     if (!trim(title)) {
-      Alert.alert("Required", "Please enter a title.");
+      Alert.alert(t("required"), t("pleaseEnterTitle"));
       return;
     }
     if (!trim(location)) {
-      Alert.alert("Required", "Please enter a location.");
+      Alert.alert(t("required"), t("pleaseEnterLocation"));
       return;
     }
     if (!trim(country)) {
-      Alert.alert("Required", "Please enter a country.");
+      Alert.alert(t("required"), t("pleaseEnterCountry"));
       return;
     }
     if (!trim(description)) {
-      Alert.alert("Required", "Please enter a description.");
+      Alert.alert(t("required"), t("pleaseEnterDescription"));
       return;
     }
     const price = parseFloat(pricePerPerson);
     if (Number.isNaN(price) || price < 0) {
-      Alert.alert("Invalid price", "Please enter a valid price per person.");
+      Alert.alert(t("error"), t("pleaseEnterValidPrice"));
       return;
     }
     if (!trim(tripStartDate)) {
-      Alert.alert("Required", "Please enter trip start date (YYYY-MM-DD).");
+      Alert.alert(t("required"), t("pleaseEnterTripStartDate"));
       return;
     }
     if (!trim(tripEndDate)) {
-      Alert.alert("Required", "Please enter trip end date (YYYY-MM-DD).");
+      Alert.alert(t("required"), t("pleaseEnterTripEndDate"));
       return;
     }
     if (!session?.access) {
-      Alert.alert("Error", "You must be logged in to create a custom package.");
+      Alert.alert(t("error"), t("mustBeLoggedInToCreate"));
       return;
     }
     setSubmitting(true);
@@ -168,12 +170,12 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
       if (mainImage) payload.main_image = mainImage;
       const res = await createCustomPackage(payload, session.access);
       const createdPackage = res?.data;
-      Alert.alert("Success", "Your custom package has been created. Only you can see it.", [
+      Alert.alert(t("success"), t("customPackageCreated"), [
         { text: "OK", onPress: () => { onCreateSuccess?.(createdPackage); onBack?.(); } },
       ]);
     } catch (err) {
-      const message = err?.message || "Failed to create custom package. Please try again.";
-      Alert.alert("Could not create package", message);
+      const message = err?.message || t("couldNotCreatePackage");
+      Alert.alert(t("couldNotCreatePackageTitle"), message);
     } finally {
       setSubmitting(false);
     }
@@ -186,7 +188,7 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
         <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.8}>
           <Ionicons name="chevron-back" size={24} color="#1e293b" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create custom package</Text>
+        <Text style={styles.headerTitle}>{t("createCustomPackageHeader")}</Text>
         <View style={styles.headerRight} />
       </View>
       <KeyboardAvoidingView
@@ -200,44 +202,44 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.label}>Title *</Text>
+          <Text style={styles.label}>{t("titleRequired")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Paris City Lights"
+            placeholder={t("placeholderTitle")}
             placeholderTextColor="#94a3b8"
             value={title}
             onChangeText={setTitle}
           />
-          <Text style={styles.label}>Location *</Text>
+          <Text style={styles.label}>{t("locationRequired")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Paris"
+            placeholder={t("placeholderLocation")}
             placeholderTextColor="#94a3b8"
             value={location}
             onChangeText={setLocation}
           />
-          <Text style={styles.label}>Country *</Text>
+          <Text style={styles.label}>{t("countryRequired")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. France"
+            placeholder={t("placeholderCountry")}
             placeholderTextColor="#94a3b8"
             value={country}
             onChangeText={setCountry}
           />
-          <Text style={styles.label}>Description *</Text>
+          <Text style={styles.label}>{t("descriptionRequired")}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Describe your trip..."
+            placeholder={t("describeYourTrip")}
             placeholderTextColor="#94a3b8"
             value={description}
             onChangeText={setDescription}
             multiline
             numberOfLines={4}
           />
-          <Text style={styles.label}>Price per person (Rs.) *</Text>
+          <Text style={styles.label}>{t("pricePerPersonRs")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. 15000"
+            placeholder={t("placeholderPrice")}
             placeholderTextColor="#94a3b8"
             value={pricePerPerson}
             onChangeText={setPricePerPerson}
@@ -245,7 +247,7 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
           />
           <View style={styles.row}>
             <View style={styles.half}>
-              <Text style={styles.label}>Duration (days)</Text>
+              <Text style={styles.label}>{t("durationDays")}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="7"
@@ -256,7 +258,7 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
               />
             </View>
             <View style={styles.half}>
-              <Text style={styles.label}>Nights</Text>
+              <Text style={styles.label}>{t("nights")}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="6"
@@ -267,14 +269,14 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
               />
             </View>
           </View>
-          <Text style={styles.label}>Trip start date *</Text>
+          <Text style={styles.label}>{t("tripStartDateRequired")}</Text>
           <TouchableOpacity
             style={[styles.input, styles.dateInput]}
             onPress={() => setShowStartDatePicker(true)}
             activeOpacity={0.8}
           >
             <Text style={tripStartDate ? styles.dateText : styles.datePlaceholder}>
-              {tripStartDate || "Tap to pick date"}
+              {tripStartDate || t("tapToPickDate")}
             </Text>
             <Ionicons name="calendar-outline" size={20} color="#94a3b8" style={styles.dateIcon} />
           </TouchableOpacity>
@@ -293,17 +295,17 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
               onPress={() => setShowStartDatePicker(false)}
               activeOpacity={0.8}
             >
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>{t("done")}</Text>
             </TouchableOpacity>
           )}
-          <Text style={styles.label}>Trip end date *</Text>
+          <Text style={styles.label}>{t("tripEndDateRequired")}</Text>
           <TouchableOpacity
             style={[styles.input, styles.dateInput]}
             onPress={() => setShowEndDatePicker(true)}
             activeOpacity={0.8}
           >
             <Text style={tripEndDate ? styles.dateText : styles.datePlaceholder}>
-              {tripEndDate || "Tap to pick date"}
+              {tripEndDate || t("tapToPickDate")}
             </Text>
             <Ionicons name="calendar-outline" size={20} color="#94a3b8" style={styles.dateIcon} />
           </TouchableOpacity>
@@ -322,21 +324,21 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
               onPress={() => setShowEndDatePicker(false)}
               activeOpacity={0.8}
             >
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>{t("done")}</Text>
             </TouchableOpacity>
           )}
-          <Text style={styles.label}>Cover image (optional)</Text>
+          <Text style={styles.label}>{t("coverImageOptional")}</Text>
           <TouchableOpacity style={styles.imageButton} onPress={pickImage} activeOpacity={0.8}>
             {mainImage?.uri ? (
               <Image source={{ uri: mainImage.uri }} style={styles.imagePreview} resizeMode="cover" />
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Ionicons name="image-outline" size={40} color="#94a3b8" />
-                <Text style={styles.imagePlaceholderText}>Tap to add image</Text>
+                <Text style={styles.imagePlaceholderText}>{t("tapToAddImage")}</Text>
               </View>
             )}
           </TouchableOpacity>
-          <Text style={styles.label}>Features (optional)</Text>
+          <Text style={styles.label}>{t("featuresOptional")}</Text>
           {loadingFeatures ? (
             <ActivityIndicator size="small" color="#1f6b2a" style={styles.featureLoader} />
           ) : (
@@ -357,10 +359,10 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
               })}
             </View>
           )}
-          <Text style={styles.label}>Additional things to consider on this trip (optional)</Text>
+          <Text style={styles.label}>{t("additionalThingsOptional")}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="e.g. only flights as transportation, only 5 star hotels, any local transportation, etc."
+            placeholder={t("additionalNotesPlaceholder")}
             placeholderTextColor="#94a3b8"
             value={additionalNotes}
             onChangeText={setAdditionalNotes}
@@ -376,10 +378,10 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitButtonText}>Create custom package</Text>
+              <Text style={styles.submitButtonText}>{t("createCustomPackage")}</Text>
             )}
           </TouchableOpacity> 
-          <Text style={styles.hint}>This package is only visible to you.</Text>
+          <Text style={styles.hint}>{t("thisPackageOnlyVisibleToYou")}</Text>
           <View style={styles.bottomPad} />
         </ScrollView>
       </KeyboardAvoidingView>

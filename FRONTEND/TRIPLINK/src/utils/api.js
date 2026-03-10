@@ -1,4 +1,4 @@
-const API_BASE = "http://192.168.18.6:8000";
+import { API_BASE } from "../config";
 
 // Token refresh: when we get 401, get new access token and retry (or log out if refresh fails)
 let tokenRefreshHandler = null;
@@ -174,6 +174,15 @@ export const apiRequestMultipart = async (endpoint, formData, accessToken) => {
  */
 export const getProfile = async (accessToken) => {
   return apiRequest("/api/auth/profile/", { method: "GET" }, accessToken);
+};
+
+/**
+ * Get leaderboard: travelers ordered by reward points (highest first)
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ data: Array }>}
+ */
+export const getLeaderboard = async (accessToken) => {
+  return apiRequest("/api/auth/leaderboard/", { method: "GET" }, accessToken);
 };
 
 /**

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -23,7 +24,7 @@ const colors = {
 };
 
 const VerificationScreen = ({
-  email = "your email",
+  email = "",
   expectedCode,
   expiresAt,
   resendsUsed = 0,
@@ -32,6 +33,7 @@ const VerificationScreen = ({
   onVerify = () => {},
   onResend = () => {},
 }) => {
+  const { t } = useLanguage();
   const [digits, setDigits] = useState(Array(CODE_LENGTH).fill(""));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -63,11 +65,11 @@ const VerificationScreen = ({
   const handleVerify = () => {
     if (!isComplete) return;
     if (isExpired) {
-      setError("OTP expired. Please resend a new code.");
+      setError(t("otpExpired"));
       return;
     }
     if (expectedCode && codeValue !== expectedCode) {
-      setError("Invalid code. Try again.");
+      setError(t("invalidCode"));
       return;
     }
     setLoading(true);
@@ -79,14 +81,14 @@ const VerificationScreen = ({
 
   const handleResend = () => {
     if (resendsLeft <= 0) {
-      setError("Resend limit reached.");
+      setError(t("resendLimitReached"));
       return;
     }
     setDigits(Array(CODE_LENGTH).fill(""));
     inputsRef.current[0]?.focus();
     onResend();
     setError("");
-    setInfo("We sent a new code to your email.");
+    setInfo(t("sentNewCode"));
   };
 
   useEffect(() => {
@@ -119,18 +121,18 @@ const VerificationScreen = ({
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
           <Ionicons name="chevron-back" size={22} color="#1f1f1f" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Verification</Text>
+        <Text style={styles.headerTitle}>{t("verification")}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>OTP Verification</Text>
+        <Text style={styles.title}>{t("otpVerification")}</Text>
         <Text style={styles.subtitle}>
-          Please check your email {email}{"\n"}to see the verification code
+          {t("otpCheckEmail")} {email}
         </Text>
 
         <View style={styles.sectionLabelWrap}>
-          <Text style={styles.sectionLabel}>OTP Code</Text>
+          <Text style={styles.sectionLabel}>{t("otpCode")}</Text>
         </View>
 
         <View style={styles.codeRow}>
@@ -155,7 +157,7 @@ const VerificationScreen = ({
           onPress={handleVerify}
           disabled={!isComplete || loading}
         >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Verify</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t("verify")}</Text>}
         </TouchableOpacity>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -163,14 +165,14 @@ const VerificationScreen = ({
 
         <View style={styles.footerRow}>
           <TouchableOpacity onPress={handleResend} activeOpacity={0.8}>
-            <Text style={styles.resend}>Resend code to</Text>
+            <Text style={styles.resend}>{t("resendCodeTo")}</Text>
           </TouchableOpacity>
           <Text style={styles.timer}>
             {String(Math.floor(remaining / 60)).padStart(2, "0")}:
             {String(remaining % 60).padStart(2, "0")}
           </Text>
         </View>
-        <Text style={styles.resendMeta}>Resends left: {resendsLeft}</Text>
+        <Text style={styles.resendMeta}>{t("resendsLeft")} {resendsLeft}</Text>
       </View>
     </SafeAreaView>
   );

@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getProfile, getMyBookings } from "../../utils/api";
+import { useLanguage } from "../../context/LanguageContext";
 
 const NAV_ICON_SIZE = 22;
 
@@ -46,17 +47,18 @@ const ProfileScreen = ({
   onBookmarkedPress = () => {},
   onPastTripsPress = () => {},
   onUpcomingTripsPress = () => {},
+  onLeaderboardPress = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
   onMessagesPress = () => {},
   onPlusPress = () => {},
   unreadCount = 0,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
   const hasInitial = initialProfile != null;
   const [profile, setProfile] = useState(() => initialProfile);
   const [loading, setLoading] = useState(!hasInitial);
   const [bookings, setBookings] = useState(() => Array.isArray(initialBookings) ? initialBookings : []);
-  const [languageNepali, setLanguageNepali] = useState(false); // false = English, true = Nepali
 
   useEffect(() => {
     if (initialProfile != null && profile == null) {
@@ -118,7 +120,7 @@ const ProfileScreen = ({
       ? `${profile.first_name} ${profile.last_name}`
       : profile?.first_name || profile?.last_name) ||
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
-    "User";
+    t("user");
 
   // Only use user's image when they have set one; otherwise show default
   const profileImageUri =
@@ -131,7 +133,7 @@ const ProfileScreen = ({
       <SafeAreaView style={styles.safe}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1f6b2a" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <Text style={styles.loadingText}>{t("loadingProfile")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -154,7 +156,7 @@ const ProfileScreen = ({
           >
             <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={styles.headerTitle}>{t("profile")}</Text>
           <TouchableOpacity
             style={styles.editButton}
             activeOpacity={0.8}
@@ -178,17 +180,17 @@ const ProfileScreen = ({
         {/* Statistics Card */}
         <View style={styles.statsCard}>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Reward Points</Text>
+            <Text style={styles.statLabel}>{t("rewardPoints")}</Text>
             <Text style={styles.statValue}>{profile?.reward_points ?? 0}</Text>
           </View>
           <View style={styles.statDivider} />
           <TouchableOpacity style={styles.statItem} activeOpacity={0.8} onPress={onPastTripsPress}>
-            <Text style={styles.statLabel}>Past Trips</Text>
+            <Text style={styles.statLabel}>{t("pastTrips")}</Text>
             <Text style={styles.statValue}>{pastTripsCount}</Text>
           </TouchableOpacity>
           <View style={styles.statDivider} />
           <TouchableOpacity style={styles.statItem} activeOpacity={0.8} onPress={onUpcomingTripsPress}>
-            <Text style={styles.statLabel}>Upcoming Trips</Text>
+            <Text style={styles.statLabel}>{t("upcomingTrips")}</Text>
             <Text style={styles.statValue}>{upcomingTripsCount}</Text>
           </TouchableOpacity>
         </View>
@@ -201,15 +203,15 @@ const ProfileScreen = ({
                 <View style={styles.menuItem}>
                   <View style={styles.menuItemLeft}>
                     <Ionicons name="language-outline" size={23} color="#1f1f1f" />
-                    <Text style={styles.menuItemText}>Language</Text>
+                    <Text style={styles.menuItemText}>{t("language")}</Text>
                   </View>
                   <View style={styles.languageToggleWrap}>
-                    <Text style={styles.languageLabel}>{languageNepali ? "नेपाली" : "English"}</Text>
+                    <Text style={styles.languageLabel}>{language === "ne" ? t("nepali") : t("english")}</Text>
                     <Switch
-                      value={languageNepali}
-                      onValueChange={setLanguageNepali}
+                      value={language === "ne"}
+                      onValueChange={(val) => setLanguage(val ? "ne" : "en")}
                       trackColor={{ false: "#e3e6ea", true: "#a8d4b0" }}
-                      thumbColor={languageNepali ? "#1f6b2a" : "#f4f3f4"}
+                      thumbColor={language === "ne" ? "#1f6b2a" : "#f4f3f4"}
                     />
                   </View>
                 </View>
@@ -224,7 +226,9 @@ const ProfileScreen = ({
                       ? onProfileDetailsPress
                       : item.id === "bookmarked"
                         ? onBookmarkedPress
-                        : undefined
+                        : item.id === "leaderboard"
+                          ? onLeaderboardPress
+                          : undefined
                 }
               >
                 <View style={styles.menuItemLeft}>
@@ -239,7 +243,7 @@ const ProfileScreen = ({
                       item.id === "logout" && styles.menuItemTextLogout,
                     ]}
                   >
-                    {item.label}
+                    {t(item.id)}
                   </Text>
                 </View>
                 {item.id !== "logout" && (
@@ -266,7 +270,7 @@ const ProfileScreen = ({
                   <Text
                     style={[styles.navLabel, item.active && styles.navLabelActive]}
                   >
-                    {item.label}
+                    {t(item.key)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -299,7 +303,7 @@ const ProfileScreen = ({
                   <Text
                     style={[styles.navLabel, item.active && styles.navLabelActive]}
                   >
-                    {item.label}
+                    {t(item.key)}
                   </Text>
                 </TouchableOpacity>
               );

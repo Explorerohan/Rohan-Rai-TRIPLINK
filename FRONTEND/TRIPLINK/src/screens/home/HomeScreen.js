@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   Alert,
   Image,
@@ -112,18 +113,21 @@ const isPackageUpcoming = (pkg, todayKey) => {
   return startKey > todayKey;
 };
 
-const formatShortDateRange = (start, end) => {
+const formatShortDateRange = (start, end, t) => {
   const startDate = start ? new Date(start) : null;
   const endDate = end ? new Date(end) : null;
   const validStart = startDate && !Number.isNaN(startDate.getTime());
   const validEnd = endDate && !Number.isNaN(endDate.getTime());
   const fmt = (d) =>
     d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const fromStr = t ? t("from") : "From";
+  const untilStr = t ? t("until") : "Until";
+  const runningStr = t ? t("runningNow") : "Running now";
 
   if (validStart && validEnd) return `${fmt(startDate)} - ${fmt(endDate)}`;
-  if (validStart) return `From ${fmt(startDate)}`;
-  if (validEnd) return `Until ${fmt(endDate)}`;
-  return "Running now";
+  if (validStart) return `${fromStr} ${fmt(startDate)}`;
+  if (validEnd) return `${untilStr} ${fmt(endDate)}`;
+  return runningStr;
 };
 
 const transformRawPackages = (rawList) => {
@@ -180,6 +184,7 @@ const HomeScreen = ({
   onSeeAllRunningNowPress = () => {},
   unreadCount = 0,
 }) => {
+  const { t } = useLanguage();
   const hasInitialPackages = initialPackages && initialPackages.length > 0;
   const [activeCategory, setActiveCategory] = useState("All");
   const [packages, setPackages] = useState(() => (hasInitialPackages ? transformRawPackages(initialPackages) : []));
@@ -196,7 +201,7 @@ const HomeScreen = ({
     session?.user?.first_name ||
     session?.user?.name ||
     (session?.user?.email ? session.user.email.split("@")[0] : null) ||
-    "Traveler";
+    t("traveler");
 
   // When cache arrives from login preload, use it so we don't show loading
   useEffect(() => {
@@ -348,7 +353,7 @@ const HomeScreen = ({
     const packageId = trip?.id;
     if (!packageId) return;
     if (!session?.access) {
-      Alert.alert("Login Required", "Please log in to save packages to your bookmarks.");
+      Alert.alert(t("loginRequired"), t("pleaseLoginBookmarks"));
       return;
     }
     if (bookmarkBusyIds.includes(String(packageId))) return;
@@ -391,7 +396,7 @@ const HomeScreen = ({
         }, 0);
         return updated;
       });
-      Alert.alert("Bookmark Error", err?.message || "Could not update bookmark.");
+      Alert.alert(t("bookmarkError"), err?.message || t("couldNotUpdateBookmark"));
     } finally {
       setBookmarkBusyIds((prev) => prev.filter((id) => id !== packageIdStr));
     }
@@ -429,8 +434,8 @@ const HomeScreen = ({
             />
           )}
           <View style={styles.headerText}>
-            <Text style={styles.hello}>Hello ! {displayName}</Text>
-            <Text style={styles.prompt}>Where do you want to go ?</Text>
+            <Text style={styles.hello}>{t("hello")} {displayName}</Text>
+            <Text style={styles.prompt}>{t("whereToGo")}</Text>
           </View>
           <TouchableOpacity style={styles.alertButton} activeOpacity={0.8}>
             <Ionicons name="notifications-outline" size={22} color="#1f6b2a" />
@@ -441,7 +446,7 @@ const HomeScreen = ({
         <View style={styles.searchRow}>
           <TouchableOpacity style={styles.searchBox} activeOpacity={0.8} onPress={onSearchPress}>
             <Ionicons name="search-outline" size={20} color="#7a7f85" style={styles.searchIcon} />
-            <Text style={styles.searchPlaceholder}>Search Places</Text>
+            <Text style={styles.searchPlaceholder}>{t("searchPlaces")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.filterButton}
@@ -465,7 +470,7 @@ const HomeScreen = ({
           >
             <View style={styles.filterModal} onStartShouldSetResponder={() => true}>
               <View style={styles.filterHeader}>
-                <Text style={styles.filterTitle}>Filter by location</Text>
+                <Text style={styles.filterTitle}>{t("filterByLocation")}</Text>
                 <TouchableOpacity onPress={() => setFilterVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                   <Ionicons name="close" size={24} color="#64748b" />
                 </TouchableOpacity>
@@ -520,29 +525,29 @@ const HomeScreen = ({
         </ScrollView>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Top Picks for You</Text>
+          <Text style={styles.sectionTitle}>{t("topPicksForYou")}</Text>
           <TouchableOpacity activeOpacity={0.8} onPress={onSeeAllTopPicksPress}>
-            <Text style={styles.sectionLink}>See all</Text>
+            <Text style={styles.sectionLink}>{t("seeAll")}</Text>
           </TouchableOpacity>
         </View>
 
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#1f6b2a" />
-            <Text style={styles.loadingText}>Loading packages...</Text>
+            <Text style={styles.loadingText}>{t("loadingPackages")}</Text>
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>Error loading packages: {error}</Text>
+            <Text style={styles.errorText}>{t("errorLoadingPackages")} {error}</Text>
           </View>
         ) : upcomingTopPicks.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               {searchQuery.trim()
-                ? "No upcoming packages match your search"
+                ? t("noUpcomingSearch")
                 : activeCategory === "All"
-                  ? "No upcoming packages available"
-                  : `No upcoming packages in ${activeCategory}`}
+                  ? t("noUpcomingAll")
+                  : `${t("noUpcomingInCategory")} ${activeCategory}`}
             </Text>
           </View>
         ) : (
@@ -606,9 +611,9 @@ const HomeScreen = ({
         )}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Running Now</Text>
+          <Text style={styles.sectionTitle}>{t("runningNow")}</Text>
           <TouchableOpacity activeOpacity={0.8} onPress={onSeeAllRunningNowPress}>
-            <Text style={styles.sectionLink}>See all</Text>
+            <Text style={styles.sectionLink}>{t("seeAll")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -632,7 +637,7 @@ const HomeScreen = ({
                   />
                   <View style={styles.liveBadge}>
                     <View style={styles.liveDot} />
-                    <Text style={styles.liveBadgeText}>LIVE</Text>
+                    <Text style={styles.liveBadgeText}>{t("live")}</Text>
                   </View>
                   <View style={styles.recommendOverlay}>
                     <Text style={styles.recommendTitle} numberOfLines={2}>{place.title}</Text>
@@ -640,7 +645,7 @@ const HomeScreen = ({
                       <View style={styles.nights}>
                         <Ionicons name="time-outline" size={14} color="#e6e8ea" />
                         <Text style={styles.metaText}>
-                          {formatShortDateRange(place.trip_start_date, place.trip_end_date)}
+                          {formatShortDateRange(place.trip_start_date, place.trip_end_date, t)}
                         </Text>
                       </View>
                       <Text style={styles.recommendPrice}>{place.price}</Text>
@@ -653,7 +658,7 @@ const HomeScreen = ({
         ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              No packages are running today.
+              {t("noPackagesToday")}
             </Text>
           </View>
         )}
@@ -672,7 +677,7 @@ const HomeScreen = ({
                 onPress={item.key === "calendar" ? onCalendarPress : undefined}
               >
                 <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
+                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -701,7 +706,7 @@ const HomeScreen = ({
                     </View>
                   )}
                 </View>
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
+                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
               </TouchableOpacity>
             );
           })}

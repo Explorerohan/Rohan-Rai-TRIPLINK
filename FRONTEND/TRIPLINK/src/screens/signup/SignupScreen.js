@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
+import { API_BASE } from "../../config";
 import {
   ActivityIndicator,
   Image,
@@ -18,10 +20,10 @@ const EMAIL_ICON = require("../../Assets/email.png");
 const LOCK_ICON = require("../../Assets/lock.png");
 const EYE_ICON = require("../../Assets/eye.png");
 
-const API_BASE = "http://192.168.18.6:8000";
 const REGISTER_ENDPOINT = `${API_BASE}/api/auth/register/`;
 
 const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} }) => {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,15 +54,15 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
       clearTimeout(successTimerRef.current);
     }
     if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      setError("Please fill in all fields.");
+      setError(t("pleaseFillAllFields"));
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("passwordMinLength"));
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError(t("passwordsDoNotMatch"));
       return;
     }
 
@@ -80,14 +82,14 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
       if (!res.ok) {
         throw new Error(parseError(data));
       }
-      setInfo("Account created! Continue to login.");
+      setInfo(t("accountCreatedContinue"));
       setShowSuccess(true);
       successTimerRef.current = setTimeout(() => {
         setShowSuccess(false);
         onSignupComplete({ email: email.trim() });
       }, 3000);
     } catch (e) {
-      setError(e.message || "Signup failed");
+      setError(e.message || t("signupFailed"));
     } finally {
       setLoading(false);
     }
@@ -109,13 +111,13 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
 
         <View style={styles.content}>
           <Text style={styles.heading}>
-            Create your <Text style={styles.headingAccent}>TRIPLINK</Text> account
+            {t("createYourAccount")}<Text style={styles.headingAccent}>TRIPLINK</Text>{t("accountText")}
           </Text>
 
           <View style={styles.inputGroup}>
             <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
             <TextInput
-              placeholder="Full name"
+              placeholder={t("fullName")}
               placeholderTextColor="#9aa0a6"
               style={[styles.input, styles.inputWithIcon]}
               value={name}
@@ -126,7 +128,7 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
           <View style={styles.inputGroup}>
             <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
             <TextInput
-              placeholder="Email"
+              placeholder={t("email")}
               placeholderTextColor="#9aa0a6"
               style={[styles.input, styles.inputWithIcon]}
               keyboardType="email-address"
@@ -139,7 +141,7 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
           <View style={styles.inputGroup}>
             <Image source={LOCK_ICON} style={styles.inputIcon} resizeMode="contain" />
             <TextInput
-              placeholder="Password"
+              placeholder={t("password")}
               placeholderTextColor="#9aa0a6"
               style={[styles.input, styles.inputWithIcon]}
               secureTextEntry={!showPassword}
@@ -158,7 +160,7 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
           <View style={styles.inputGroup}>
             <Image source={LOCK_ICON} style={styles.inputIcon} resizeMode="contain" />
             <TextInput
-              placeholder="Confirm password"
+              placeholder={t("confirmPassword")}
               placeholderTextColor="#9aa0a6"
               style={[styles.input, styles.inputWithIcon]}
               secureTextEntry={!showConfirm}
@@ -174,7 +176,7 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.helper}>Use 8+ characters with a number and symbol.</Text>
+          <Text style={styles.helper}>{t("passwordHelper")}</Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           {!showSuccess && info ? <Text style={styles.success}>{info}</Text> : null}
@@ -185,20 +187,20 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
             onPress={handleSignup}
             disabled={loading}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Create account</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t("createAccount")}</Text>}
           </TouchableOpacity>
 
-          <Text style={styles.or}>or</Text>
+          <Text style={styles.or}>{t("or")}</Text>
 
           <TouchableOpacity style={styles.googleButton} activeOpacity={0.85}>
             <Image source={GOOGLE_ICON} style={styles.googleIcon} />
-            <Text style={styles.googleText}>Continue with Google</Text>
+            <Text style={styles.googleText}>{t("continueWithGoogle")}</Text>
           </TouchableOpacity>
 
           <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t("alreadyHaveAccount")} </Text>
             <TouchableOpacity onPress={onBackToLogin}>
-              <Text style={styles.footerLink}>Login</Text>
+              <Text style={styles.footerLink}>{t("login")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -210,9 +212,9 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
             <View style={styles.overlayIconWrap}>
               <Ionicons name="checkmark" size={26} color="#ffffff" />
             </View>
-            <Text style={styles.overlayTitle}>Account created</Text>
+            <Text style={styles.overlayTitle}>{t("accountCreated")}</Text>
             <Text style={styles.overlaySubtitle}>
-              Congrats {name.trim() || email.trim() || "traveler"}, your TripLink traveler account is ready.
+              {t("accountCreatedSubtitle")}
             </Text>
           </View>
         </View>

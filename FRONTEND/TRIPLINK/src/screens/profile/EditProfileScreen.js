@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +22,7 @@ const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
 
 const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) => {
+  const { t } = useLanguage();
   const hasInitial = initialProfile != null && typeof initialProfile === "object";
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!hasInitial);
@@ -99,23 +101,23 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
   const pickImage = () => {
     // Let user choose between camera and gallery
     Alert.alert(
-      "Change photo",
-      "How would you like to update your profile picture?",
+      t("changePhoto"),
+      t("howToUpdatePhoto"),
       [
         {
-          text: "Take Photo",
+          text: t("takePhoto"),
           onPress: () => {
             takePhotoWithCamera();
           },
         },
         {
-          text: "Choose from Gallery",
+          text: t("chooseFromGallery"),
           onPress: () => {
             pickFromGallery();
           },
         },
         {
-          text: "Cancel",
+          text: t("cancel"),
           style: "cancel",
         },
       ]
@@ -312,7 +314,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
           >
             <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={styles.headerTitle}>{t("editProfile")}</Text>
           <TouchableOpacity
             style={styles.saveButton}
             activeOpacity={0.8}
@@ -322,7 +324,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
             {loading ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
+              <Text style={styles.saveButtonText}>{t("save")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -372,7 +374,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
         {/* Form Fields */}
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>First Name</Text>
+            <Text style={styles.label}>{t("firstName")}</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
@@ -380,7 +382,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
                 onChangeText={(text) =>
                   setProfileData({ ...profileData, first_name: text })
                 }
-                placeholder="First name"
+                placeholder={t("firstName")}
                 placeholderTextColor="#9aa0a6"
               />
               <Ionicons
@@ -393,7 +395,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Last Name</Text>
+            <Text style={styles.label}>{t("lastName")}</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
@@ -401,7 +403,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
                 onChangeText={(text) =>
                   setProfileData({ ...profileData, last_name: text })
                 }
-                placeholder="Last name"
+                placeholder={t("lastName")}
                 placeholderTextColor="#9aa0a6"
               />
               <Ionicons
@@ -414,7 +416,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Location</Text>
+            <Text style={styles.label}>{t("locationLabel")}</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
@@ -422,7 +424,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
                 onChangeText={(text) =>
                   setProfileData({ ...profileData, location: text })
                 }
-                placeholder="City, Area"
+                placeholder={t("locationLabel")}
                 placeholderTextColor="#9aa0a6"
               />
               <Ionicons
@@ -435,7 +437,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mobile Number</Text>
+            <Text style={styles.label}>{t("phone")}</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
@@ -443,7 +445,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
                 onChangeText={(text) =>
                   setProfileData({ ...profileData, phone_number: text })
                 }
-                placeholder="+977 98XXXXXXXX"
+                placeholder={t("phone")}
                 placeholderTextColor="#9aa0a6"
                 keyboardType="phone-pad"
               />

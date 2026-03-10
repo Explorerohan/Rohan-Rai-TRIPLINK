@@ -1,11 +1,11 @@
 const slideFinal = {
   id: "final",
   type: "final",
-  titleTop: "Welcome to",
-  titleBottom: "TRIPLINK",
-  description: "Plan smarter. Travel smoother. Discover hidden gems, all with TripLink.",
-  primary: "Login",
-  secondary: "Signup",
+  titleTopKey: "welcomeToTripLink",
+  titleBottomKey: "triplink",
+  descriptionKey: "planSmarterDesc",
+  primaryKey: "login",
+  secondaryKey: "signup",
 };
 
 export default slideFinal;

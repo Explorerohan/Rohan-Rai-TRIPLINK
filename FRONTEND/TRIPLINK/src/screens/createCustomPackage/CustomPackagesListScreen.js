@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Image,
@@ -46,6 +47,7 @@ const CustomPackagesListScreen = ({
   onProfilePress,
   unreadCount = 0,
 }) => {
+  const { t } = useLanguage();
   const hasCache = initialCustomPackages !== undefined && initialCustomPackages !== null;
   const [list, setList] = useState(() => (Array.isArray(initialCustomPackages) ? initialCustomPackages : []));
   const [loading, setLoading] = useState(!hasCache);
@@ -124,7 +126,7 @@ const CustomPackagesListScreen = ({
         <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.85}>
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Custom packages</Text>
+        <Text style={styles.headerTitle}>{t("customPackages")}</Text>
         <TouchableOpacity onPress={onCreatePress} style={styles.headerAction} activeOpacity={0.85}>
           <Ionicons name="add" size={22} color="#1f6b2a" />
         </TouchableOpacity>
@@ -139,15 +141,15 @@ const CustomPackagesListScreen = ({
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1f6b2a"]} tintColor="#1f6b2a" />
           }
         >
-          <Text style={styles.sectionHeading}>All custom packages</Text>
+          <Text style={styles.sectionHeading}>{t("allCustomPackages")}</Text>
 
           {loading ? (
             <ActivityIndicator size="large" color="#1f6b2a" style={styles.loader} />
           ) : list.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="briefcase-outline" size={48} color="#cbd5e1" />
-              <Text style={styles.emptyText}>You haven't created any custom packages yet.</Text>
-              <Text style={styles.emptySubtext}>Tap the + button above to create one.</Text>
+              <Text style={styles.emptyText}>{t("noCustomPackages")}</Text>
+              <Text style={styles.emptySubtext}>{t("tapToCreateCustom")}</Text>
             </View>
           ) : (
             <View style={styles.list}>

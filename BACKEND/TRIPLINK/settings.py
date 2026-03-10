@@ -31,11 +31,15 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['192.168.18.6', 'localhost', '127.0.0.1', '10.0.2.2','10.52.7.183','192.168.40.62','192.168.47.30']
+ALLOWED_HOSTS = ['*']
 
 # Required for CSRF when accessing the site by IP or non-localhost (Django 4.0+)
 CSRF_TRUSTED_ORIGINS = [
+    "http://192.168.42.4:8000",
+    "http://10.214.6.183:8000",
     'http://192.168.18.6:8000',
+    'http://192.168.1.102:8000',
+    'http://192.168.1.112:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://10.0.2.2:8000',

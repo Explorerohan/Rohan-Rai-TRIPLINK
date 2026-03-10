@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -13,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { generateOtp, sendOtpEmail } from "../../utils/otp";
 
 const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} }) => {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,7 +33,7 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
       clearTimeout(overlayTimer.current);
     }
     if (!email.trim()) {
-      setError("Please enter your email.");
+      setError(t("pleaseEnterEmail"));
       return;
     }
     const targetEmail = email.trim();
@@ -40,7 +42,7 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
     setLoading(true);
     sendOtpEmail(targetEmail, otp)
       .then(() => {
-        setInfo("Check your inbox for reset instructions.");
+        setInfo(t("checkInboxReset"));
         setShowOverlay(true);
         overlayTimer.current = setTimeout(() => {
           setShowOverlay(false);
@@ -80,13 +82,13 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
         <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
           <Ionicons name="chevron-back" size={22} color="#1f1f1f" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Forgot Password</Text>
+        <Text style={styles.headerTitle}>{t("forgotPasswordTitle")}</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Forgot password</Text>
-        <Text style={styles.subtitle}>Enter your email account to reset your password</Text>
+        <Text style={styles.title}>{t("forgotPassword")}</Text>
+        <Text style={styles.subtitle}>{t("forgotPasswordSubtitle")}</Text>
 
         <View style={styles.inputGroup}>
           <View style={styles.inputIconWrap}>
@@ -107,7 +109,7 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
         {info ? <Text style={styles.success}>{info}</Text> : null}
 
         <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={handleReset} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Reset Password</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t("resetPassword")}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -117,9 +119,9 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
             <View style={styles.overlayIconWrap}>
               <Ionicons name="mail-unread-outline" size={26} color="#ffffff" />
             </View>
-            <Text style={styles.overlayTitle}>Check your email</Text>
+            <Text style={styles.overlayTitle}>{t("checkYourEmail")}</Text>
             <Text style={styles.overlaySubtitle}>
-              We have sent password recovery instructions to your email
+              {t("emailSentInstructions")}
             </Text>
           </View>
         </View>

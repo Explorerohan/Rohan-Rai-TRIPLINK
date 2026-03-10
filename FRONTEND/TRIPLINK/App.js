@@ -10,13 +10,15 @@ import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import TopPicksScreen from "./src/screens/home/TopPicksScreen";
 import RunningNowScreen from "./src/screens/home/RunningNowScreen";
-import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen } from "./src/screens/profile";
+import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen, LeaderboardScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
+import { LanguageProvider } from "./src/context/LanguageContext";
+import { API_BASE } from "./src/config";
 
 const SESSION_STORAGE_KEY = "@triplink_session";
 
@@ -211,7 +213,6 @@ export default function App() {
     // Call logout endpoint if session exists
     if (session?.access) {
       try {
-        const API_BASE = "http://192.168.18.6:8000";
         const LOGOUT_ENDPOINT = `${API_BASE}/api/auth/logout/`;
         await fetch(LOGOUT_ENDPOINT, {
           method: "POST",
@@ -261,6 +262,7 @@ export default function App() {
   }
 
   return (
+    <LanguageProvider>
     <SafeAreaView style={{ flex: 1 }}>
       {screen === "onboarding" && (
         <OnboardingScreen onLoginPress={goToLogin} onSignupPress={goToSignup} />
@@ -471,6 +473,7 @@ export default function App() {
           onBookmarkedPress={() => setScreen("bookmarked")}
           onPastTripsPress={() => setScreen("pastTrips")}
           onUpcomingTripsPress={() => setScreen("upcomingTrips")}
+          onLeaderboardPress={() => setScreen("leaderboard")}
           onCalendarPress={() => setScreen("schedule")}
           onMessagesPress={() => setScreen("messages")}
           onLogout={handleLogout}
@@ -508,6 +511,12 @@ export default function App() {
               setScreen("details");
             }
           }}
+        />
+      )}
+      {screen === "leaderboard" && (
+        <LeaderboardScreen
+          session={session}
+          onBack={() => setScreen("profile")}
         />
       )}
       {screen === "upcomingTrips" && (
@@ -566,6 +575,7 @@ export default function App() {
         />
       )}
     </SafeAreaView>
+    </LanguageProvider>
   );
 }
 

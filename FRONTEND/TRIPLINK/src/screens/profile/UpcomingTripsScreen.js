@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
   Image,
@@ -48,6 +49,7 @@ const UpcomingTripsScreen = ({
   onBack = () => {},
   onTripPress = () => {},
 }) => {
+  const { t } = useLanguage();
   const [bookings, setBookings] = useState(() => Array.isArray(initialBookings) ? initialBookings : []);
   const [loading, setLoading] = useState(!Array.isArray(initialBookings) || initialBookings?.length === 0);
   const [refreshing, setRefreshing] = useState(false);
@@ -133,7 +135,7 @@ const UpcomingTripsScreen = ({
           <Ionicons name="chevron-back" size={22} color="#1f1f1f" />
         </TouchableOpacity>
         <View style={styles.headerTextWrap}>
-          <Text style={styles.headerTitle}>Upcoming Trips</Text>
+          <Text style={styles.headerTitle}>{t("upcomingTrips")}</Text>
           <Text style={styles.headerSubtitle}>
             {upcomingTrips.length} upcoming trip{upcomingTrips.length === 1 ? "" : "s"}
           </Text>
