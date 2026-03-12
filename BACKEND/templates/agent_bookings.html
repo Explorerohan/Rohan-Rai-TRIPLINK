@@ -50,52 +50,104 @@
     }
 
     .stat-card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 20px 24px;
-        border: 1px solid rgba(0, 0, 0, 0.06);
-        min-width: 140px;
+        position: relative;
+        background: radial-gradient(circle at top left, #eff8f1 0, #ffffff 55%);
+        border-radius: 18px;
+        padding: 18px 20px 16px;
+        border: 1px solid rgba(45, 90, 54, 0.06);
+        min-width: 190px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .stat-card:hover {
-        border-color: rgba(0, 0, 0, 0.1);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        border-color: rgba(45, 90, 54, 0.16);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .stat-card-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .stat-card-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
     }
 
     .stat-card .stat-value {
         font-size: 26px;
         font-weight: 700;
-        color: #1a1d21;
-        letter-spacing: -0.02em;
+        color: #111827;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
     }
 
     .stat-card .stat-label {
         font-size: 13px;
-        color: #5c6572;
-        margin-top: 6px;
-        font-weight: 500;
+        color: #4b5563;
+        font-weight: 600;
     }
 
-    .stat-card.confirmed .stat-value { color: #2d5a36; }
-    .stat-card.cancelled .stat-value { color: #9e2d2d; }
+    .stat-card .stat-sub {
+        font-size: 11px;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+    }
+
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        background: #ecfdf3;
+        color: #166534;
+        flex-shrink: 0;
+    }
+
+    .stat-card.confirmed .stat-icon {
+        background: #ecfdf3;
+        color: #166534;
+    }
+
+    .stat-card.cancelled .stat-icon {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .stat-card.confirmed .stat-value { color: #14532d; }
+    .stat-card.cancelled .stat-value { color: #b91c1c; }
 
     .bookings-filters {
         background: #fff;
-        border-radius: 16px;
-        padding: 24px 28px;
-        margin-bottom: 28px;
-        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 14px;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
         display: flex;
-        gap: 20px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+    }
+
+    .bookings-filters-main {
+        display: flex;
         flex-wrap: wrap;
         align-items: flex-end;
+        gap: 16px;
     }
 
     .bookings-filters .filter-group {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
+        min-width: 170px;
     }
 
     .bookings-filters label {
@@ -103,28 +155,14 @@
         font-weight: 600;
         color: #6b7280;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-    }
-
-    .bookings-filters .filter-group-label-spacer {
-        visibility: hidden;
-        font-size: 10px;
-        font-weight: 600;
-        display: block;
-        line-height: 1.2;
-        user-select: none;
-    }
-
-    .bookings-filters .filter-group-apply .btn {
-        margin-top: 0;
+        letter-spacing: 0.08em;
     }
 
     .bookings-filters select {
-        padding: 12px 14px;
+        padding: 10px 12px;
         border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 10px;
+        border-radius: 9px;
         font-size: 14px;
-        min-width: 200px;
         background: #fafafa;
         color: #1a1d21;
         transition: border-color 0.2s ease, background 0.2s ease;
@@ -142,36 +180,40 @@
     }
 
     .bookings-filters .btn {
-        padding: 12px 22px;
-        border-radius: 10px;
-        font-size: 14px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 13px;
         font-weight: 600;
-        border: none;
+        border: 1px solid transparent;
         cursor: pointer;
         text-decoration: none;
-        display: inline-block;
-        transition: background 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
     }
 
     .bookings-filters .btn-primary {
-        background: #2d5a36;
-        color: #fff;
+        background: #166534;
+        color: #f9fafb;
+        border-color: #166534;
     }
 
     .bookings-filters .btn-primary:hover {
-        background: #244a2d;
+        background: #14532d;
+        border-color: #14532d;
     }
 
     .bookings-filters .btn-secondary {
-        background: transparent;
-        color: #5c6572;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: #ffffff;
+        color: #4b5563;
+        border-color: rgba(148, 163, 184, 0.8);
     }
 
     .bookings-filters .btn-secondary:hover {
-        background: #f5f5f5;
-        color: #1a1d21;
-        border-color: rgba(0, 0, 0, 0.12);
+        background: #f9fafb;
+        color: #111827;
+        border-color: rgba(148, 163, 184, 1);
     }
 
     .bookings-card {
@@ -338,48 +380,66 @@
     <div class="bookings-stats">
         <span class="section-label">Summary</span>
         <div class="stat-card">
-            <div class="stat-value">{{ total_count }}</div>
-            <div class="stat-label">Total bookings</div>
+            <div class="stat-card-inner">
+                <div class="stat-card-main">
+                    <div class="stat-label">Total bookings</div>
+                    <div class="stat-sub">All time</div>
+                    <div class="stat-value">{{ total_count }}</div>
+                </div>
+                <div class="stat-icon">📦</div>
+            </div>
         </div>
         <div class="stat-card confirmed">
-            <div class="stat-value">{{ confirmed_count }}</div>
-            <div class="stat-label">Confirmed</div>
+            <div class="stat-card-inner">
+                <div class="stat-card-main">
+                    <div class="stat-label">Confirmed</div>
+                    <div class="stat-sub">Trips going ahead</div>
+                    <div class="stat-value">{{ confirmed_count }}</div>
+                </div>
+                <div class="stat-icon">✅</div>
+            </div>
         </div>
         <div class="stat-card cancelled">
-            <div class="stat-value">{{ cancelled_count }}</div>
-            <div class="stat-label">Cancelled</div>
+            <div class="stat-card-inner">
+                <div class="stat-card-main">
+                    <div class="stat-label">Cancelled</div>
+                    <div class="stat-sub">No longer active</div>
+                    <div class="stat-value">{{ cancelled_count }}</div>
+                </div>
+                <div class="stat-icon">⚠️</div>
+            </div>
         </div>
     </div>
 
     <form method="get" action="{% url 'agent_bookings' %}" class="bookings-filters">
-        <span class="section-label" style="width: 100%; margin-bottom: 12px;">Filters</span>
-        <div class="filter-group">
-            <label for="filter-status">Status</label>
-            <select name="status" id="filter-status">
-                <option value="">All</option>
-                {% for value, label in booking_status_choices %}
-                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
+        <div class="bookings-filters-main">
+            <div class="filter-group">
+                <label for="filter-status">Status</label>
+                <select name="status" id="filter-status">
+                    <option value="">All</option>
+                    {% for value, label in booking_status_choices %}
+                        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-package">Package</label>
+                <select name="package" id="filter-package">
+                    <option value="">All packages</option>
+                    {% for pkg in agent_packages %}
+                        <option value="{{ pkg.id }}" {% if package_id_filter|stringformat:"s" == pkg.id|stringformat:"s" %}selected{% endif %}>{{ pkg.title }} ({{ pkg.location }})</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
-        <div class="filter-group">
-            <label for="filter-package">Package</label>
-            <select name="package" id="filter-package">
-                <option value="">All packages</option>
-                {% for pkg in agent_packages %}
-                    <option value="{{ pkg.id }}" {% if package_id_filter|stringformat:"s" == pkg.id|stringformat:"s" %}selected{% endif %}>{{ pkg.title }} ({{ pkg.location }})</option>
-                {% endfor %}
-            </select>
+        <div class="filter-group-apply">
+            <button type="submit" class="btn btn-primary">
+                <span>Filter</span>
+            </button>
+            {% if status_filter or package_id_filter %}
+                <a href="{% url 'agent_bookings' %}" class="btn btn-secondary" style="margin-left: 6px;">Reset</a>
+            {% endif %}
         </div>
-        <div class="filter-group filter-group-apply">
-            <span class="filter-group-label-spacer" aria-hidden="true">Status</span>
-            <button type="submit" class="btn btn-primary">Apply</button>
-        </div>
-        {% if status_filter or package_id_filter %}
-        <div class="filter-group">
-            <a href="{% url 'agent_bookings' %}" class="btn btn-secondary">Clear filters</a>
-        </div>
-        {% endif %}
     </form>
 
     <div class="bookings-card">
