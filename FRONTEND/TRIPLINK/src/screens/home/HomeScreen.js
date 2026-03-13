@@ -182,6 +182,7 @@ const HomeScreen = ({
   onPlusPress = () => {},
   onSeeAllTopPicksPress = () => {},
   onSeeAllRunningNowPress = () => {},
+  onNotificationsPress = () => {},
   unreadCount = 0,
 }) => {
   const { t } = useLanguage();
@@ -437,7 +438,7 @@ const HomeScreen = ({
             <Text style={styles.hello}>{t("hello")} {displayName}</Text>
             <Text style={styles.prompt}>{t("whereToGo")}</Text>
           </View>
-          <TouchableOpacity style={styles.alertButton} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.alertButton} activeOpacity={0.8} onPress={onNotificationsPress}>
             <Ionicons name="notifications-outline" size={22} color="#1f6b2a" />
             <View style={styles.alertDot} />
           </TouchableOpacity>

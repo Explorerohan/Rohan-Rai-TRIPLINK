@@ -322,6 +322,7 @@ export default function App() {
           onUpdateCachedProfile={setUserProfile}
           onTripPress={handleTripPress}
           onProfilePress={() => setScreen("profile")}
+          onNotificationsPress={() => setScreen("notifications")}
           onCalendarPress={() => setScreen("schedule")}
           onMessagesPress={() => setScreen("messages")}
           onSearchPress={() => setScreen("search")}
