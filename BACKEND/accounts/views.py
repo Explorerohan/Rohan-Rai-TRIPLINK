@@ -1067,6 +1067,11 @@ def agent_notifications_view(request):
     my_travelers = User.objects.filter(id__in=traveler_ids, role=Roles.TRAVELER).select_related('user_profile').order_by('email')
     traveler_choices = [{'id': u.id, 'email': u.email, 'name': getattr(u.user_profile, 'full_name', u.email) or u.email} for u in my_travelers]
 
+    if request.method == 'POST' and request.POST.get('action') == 'mark_all_read':
+        NotificationRecipient.objects.filter(user=agent, notification__sender__role=Roles.ADMIN).update(is_read=True)
+        messages.success(request, 'All notifications marked as read.')
+        return redirect('agent_notifications')
+
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         message = (request.POST.get('message') or '').strip()
@@ -1101,17 +1106,24 @@ def agent_notifications_view(request):
         .order_by("-created_at")[:50]
     )
 
-    received_notifications = (
-        Notification.objects.filter(recipients__user=agent, sender__role=Roles.ADMIN)
-        .distinct()
+    received_recipients = (
+        NotificationRecipient.objects.filter(user=agent)
+        .filter(notification__sender__role=Roles.ADMIN)
+        .select_related("notification")
         .order_by("-created_at")[:50]
     )
+    received_with_read = [
+        {"notification": nr.notification, "recipient_id": nr.id, "is_read": nr.is_read}
+        for nr in received_recipients
+    ]
+    unread_count = sum(1 for r in received_with_read if not r["is_read"])
 
     context = {
         'user': request.user,
         'traveler_choices': traveler_choices,
         'sent_notifications': sent_notifications,
-        'received_notifications': received_notifications,
+        'received_with_read': received_with_read,
+        'unread_count': unread_count,
         'active_nav': 'notifications',
     }
     return render(request, 'agent_notifications.html', context)

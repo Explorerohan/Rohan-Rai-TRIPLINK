@@ -90,13 +90,45 @@
     }
     .btn-send:hover { background: #234a2b; }
     .target-hint { font-size: 13px; color: #64748b; margin-top: 6px; }
-    .sent-item, .received-item {
-        background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-        padding: 16px; margin-bottom: 10px;
+    .notif-list-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    .notif-unread { font-size: 14px; color: #64748b; }
+    .btn-mark-read {
+        background: #ecfdf5; color: #166534; border: 1px solid #bbf7d0;
+        padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
     }
-    .sent-item-title, .received-item-title { font-size: 15px; font-weight: 600; color: #1a1d21; margin-bottom: 6px; }
-    .sent-item-message, .received-item-message { font-size: 14px; color: #64748b; margin-bottom: 8px; line-height: 1.4; }
-    .sent-item-meta, .received-item-meta { font-size: 12px; color: #94a3b8; }
+    .btn-mark-read:hover { background: #dcfce7; }
+    .notif-filters { display: flex; gap: 8px; margin-bottom: 16px; }
+    .notif-filter {
+        padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600;
+        background: #fff; border: 1px solid #e2e8f0; color: #64748b; cursor: pointer;
+    }
+    .notif-filter.active { background: #2d5a36; border-color: #2d5a36; color: #fff; }
+    .notif-filter:hover { border-color: #2d5a36; color: #2d5a36; }
+    .notif-filter.active:hover { color: #fff; }
+    .notif-card {
+        display: flex; align-items: flex-start; gap: 16px;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 18px; margin-bottom: 12px;
+    }
+    .notif-card.unread { background: #f8fdf9; border-color: #bbf7d0; }
+    .notif-icon {
+        width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .notif-icon.general { background: rgba(45, 90, 54, 0.12); }
+    .notif-icon.alert { background: rgba(245, 158, 11, 0.2); }
+    .notif-icon.emergency { background: rgba(220, 38, 38, 0.15); }
+    .notif-icon.rule_violation { background: rgba(185, 28, 28, 0.15); }
+    .notif-icon.info { background: rgba(14, 165, 233, 0.15); }
+    .notif-icon.update { background: rgba(45, 90, 54, 0.15); }
+    .notif-icon.promotion { background: rgba(124, 58, 237, 0.15); }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-title { font-size: 15px; font-weight: 700; color: #1a1d21; margin-bottom: 4px; }
+    .notif-desc { font-size: 14px; color: #64748b; line-height: 1.4; margin-bottom: 0; }
+    .notif-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .notif-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+    .notif-badge.new { background: #dcfce7; color: #166534; }
+    .notif-date { font-size: 13px; color: #94a3b8; }
     .empty-state { padding: 32px; text-align: center; color: #94a3b8; font-size: 14px; background: #f8fafc; border-radius: 12px; border: 1px dashed #e2e8f0; }
 </style>
 {% endblock agent_extra_css %}
@@ -137,16 +169,32 @@
             <button type="button" class="back-btn" onclick="showMain()">←</button>
             <span class="section-title">From admin</span>
         </div>
-        {% if received_notifications %}
-            {% for n in received_notifications %}
-            <div class="received-item">
-                <div class="received-item-title">{{ n.title }}</div>
-                <div class="received-item-message">{{ n.message|truncatewords:40 }}</div>
-                <div class="received-item-meta">{{ n.created_at|timesince }} ago · {{ n.get_notification_type_display }}</div>
+        {% if received_with_read %}
+        <div class="notif-list-header">
+            <span class="notif-unread">You've {{ unread_count }} unread notification{{ unread_count|pluralize }}</span>
+            {% if unread_count %}<form method="post" style="margin:0;"><input type="hidden" name="action" value="mark_all_read">{% csrf_token %}<button type="submit" class="btn-mark-read">Mark all as read</button></form>{% endif %}
+        </div>
+        <div class="notif-filters">
+            <button type="button" class="notif-filter active" data-filter="all">All</button>
+            <button type="button" class="notif-filter" data-filter="unread">Unread</button>
+        </div>
+        <div id="receivedList">
+            {% for r in received_with_read %}
+            <div class="notif-card {% if not r.is_read %}unread{% endif %}" data-read="{{ r.is_read|yesno:'true,false' }}">
+                <div class="notif-icon {{ r.notification.notification_type }}">🔔</div>
+                <div class="notif-body">
+                    <div class="notif-title">{{ r.notification.title }}</div>
+                    <div class="notif-desc">{{ r.notification.message|truncatewords:25 }}</div>
+                </div>
+                <div class="notif-right">
+                    {% if not r.is_read %}<span class="notif-badge new">New</span>{% endif %}
+                    <span class="notif-date">{{ r.notification.created_at|date:"d/m/Y" }}</span>
+                </div>
             </div>
             {% endfor %}
+        </div>
         {% else %}
-            <div class="empty-state">No notifications from admin yet.</div>
+        <div class="empty-state">No notifications from admin yet.</div>
         {% endif %}
     </div>
 
@@ -212,14 +260,20 @@
         </div>
         {% if sent_notifications %}
             {% for n in sent_notifications %}
-            <div class="sent-item">
-                <div class="sent-item-title">{{ n.title }}</div>
-                <div class="sent-item-message">{{ n.message|truncatewords:30 }}</div>
-                <div class="sent-item-meta">{{ n.recipient_count }} recipient{{ n.recipient_count|pluralize }} · {{ n.created_at|timesince }} ago · {{ n.get_notification_type_display }}</div>
+            <div class="notif-card">
+                <div class="notif-icon {{ n.notification_type }}">📤</div>
+                <div class="notif-body">
+                    <div class="notif-title">{{ n.title }}</div>
+                    <div class="notif-desc">{{ n.message|truncatewords:25 }}</div>
+                </div>
+                <div class="notif-right">
+                    <span class="notif-date">{{ n.created_at|date:"d/m/Y" }}</span>
+                    <span class="notif-date" style="font-size:12px;">{{ n.recipient_count }} recipient{{ n.recipient_count|pluralize }}</span>
+                </div>
             </div>
             {% endfor %}
         {% else %}
-            <div class="empty-state">No notifications sent yet. Create one from the main menu.</div>
+        <div class="empty-state">No notifications sent yet. Create one from the main menu.</div>
         {% endif %}
     </div>
 </div>
@@ -266,10 +320,28 @@
         checkboxes.forEach(function(cb) { cb.addEventListener('change', updateTriggerText); });
     }
     document.addEventListener('click', function() {
-        panel.classList.remove('open');
-        trigger.classList.remove('open');
+        if (panel) { panel.classList.remove('open'); }
+        if (trigger) { trigger.classList.remove('open'); }
     });
     if (panel) panel.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    var filters = document.querySelectorAll('.notif-filter');
+    var cards = document.querySelectorAll('#receivedList .notif-card');
+    filters.forEach(function(f) {
+        f.addEventListener('click', function() {
+            filters.forEach(function(x) { x.classList.remove('active'); });
+            f.classList.add('active');
+            var filter = f.getAttribute('data-filter');
+            cards.forEach(function(c) {
+                var isUnread = c.getAttribute('data-read') === 'false';
+                if (filter === 'all' || (filter === 'unread' && isUnread)) {
+                    c.style.display = 'flex';
+                } else {
+                    c.style.display = 'none';
+                }
+            });
+        });
+    });
 })();
 </script>
 {% endblock %}
