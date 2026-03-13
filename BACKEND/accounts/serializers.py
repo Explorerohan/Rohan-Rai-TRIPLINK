@@ -2,7 +2,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Roles
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Notification, NotificationRecipient, Roles
 
 User = get_user_model()
 
@@ -799,3 +799,65 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             return 0
         user = request.user
         return obj.messages.filter(is_read=False).exclude(sender=user).count()
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for notifications received by the current user."""
+    sender_name = serializers.SerializerMethodField()
+    is_read = serializers.SerializerMethodField()
+    recipient_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = ["id", "title", "message", "sender", "sender_name", "is_read", "recipient_id", "created_at"]
+        read_only_fields = ["id", "sender", "created_at"]
+
+    def get_sender_name(self, obj):
+        try:
+            if obj.sender.role == "admin":
+                return "TRIPLINK Admin"
+            if hasattr(obj.sender, "agent_profile"):
+                return obj.sender.agent_profile.full_name or obj.sender.email
+            return obj.sender.email
+        except Exception:
+            return obj.sender.email
+
+    def get_is_read(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        try:
+            recip = NotificationRecipient.objects.get(notification=obj, user=request.user)
+            return recip.is_read
+        except NotificationRecipient.DoesNotExist:
+            return False
+
+    def get_recipient_id(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        try:
+            recip = NotificationRecipient.objects.get(notification=obj, user=request.user)
+            return recip.id
+        except NotificationRecipient.DoesNotExist:
+            return None
+
+
+class NotificationCreateSerializer(serializers.Serializer):
+    """Serializer for creating notifications (admin/agent only)."""
+    title = serializers.CharField(max_length=200)
+    message = serializers.CharField()
+    target_type = serializers.ChoiceField(
+        choices=[
+            ("all_travelers", "All travelers"),
+            ("all_users", "All users"),
+            ("my_travelers", "My travelers (agent only)"),
+            ("specific", "Specific users"),
+        ]
+    )
+    user_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        help_text="Required when target_type is 'specific'. User IDs to send to.",
+    )

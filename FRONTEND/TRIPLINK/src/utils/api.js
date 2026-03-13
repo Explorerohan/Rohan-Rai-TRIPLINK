@@ -609,3 +609,35 @@ export const sendChatMessage = async (roomId, payload, accessToken) => {
     body: JSON.stringify(payload),
   }, accessToken);
 };
+
+// ---- Notifications API ----
+
+/**
+ * Get current user's notifications
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ data: Array }>}
+ */
+export const getNotifications = async (accessToken) => {
+  return apiRequest("/api/auth/notifications/", { method: "GET" }, accessToken);
+};
+
+/**
+ * Get unread notification count
+ * @param {string} accessToken - JWT access token
+ * @returns {Promise<{ count: number }>}
+ */
+export const getNotificationUnreadCount = async (accessToken) => {
+  return apiRequest("/api/auth/notifications/unread-count/", { method: "GET" }, accessToken);
+};
+
+/**
+ * Mark a notification as read
+ * @param {{ recipient_id?: number, notification_id?: number }} payload
+ * @param {string} accessToken - JWT access token
+ */
+export const markNotificationRead = async (payload, accessToken) => {
+  return apiRequest("/api/auth/notifications/mark-read/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, accessToken);
+};

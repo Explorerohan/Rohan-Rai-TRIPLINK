@@ -45,6 +45,8 @@ from .models import (
     AgentReview,
     ChatRoom,
     ChatMessage,
+    Notification,
+    NotificationRecipient,
 )
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
@@ -63,6 +65,8 @@ from .serializers import (
     PackageFeatureSerializer,
     ChatRoomSerializer,
     ChatMessageSerializer,
+    NotificationSerializer,
+    NotificationCreateSerializer,
 )
 
 User = get_user_model()
@@ -998,6 +1002,98 @@ def admin_users_view(request):
         'active_nav': 'users',
     }
     return render(request, 'admin_users.html', context)
+
+
+def admin_notifications_view(request):
+    """Admin view to send notifications to travelers or all users."""
+    if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
+        messages.error(request, 'Access denied. Admin access required.')
+        return redirect('login')
+
+    travelers = list(User.objects.filter(role=Roles.TRAVELER).select_related('user_profile').order_by('email'))
+    traveler_choices = [{'id': u.id, 'email': u.email, 'name': getattr(u.user_profile, 'full_name', u.email) or u.email} for u in travelers]
+
+    if request.method == 'POST':
+        title = (request.POST.get('title') or '').strip()
+        message = (request.POST.get('message') or '').strip()
+        target_type = request.POST.get('target_type') or 'all_travelers'
+        selected_ids = request.POST.getlist('user_ids')
+
+        if not title or not message:
+            messages.error(request, 'Title and message are required.')
+        else:
+            if target_type == 'specific' and not selected_ids:
+                messages.error(request, 'Please select at least one user when sending to specific users.')
+            else:
+                if target_type == 'all_travelers':
+                    recipients = User.objects.filter(role=Roles.TRAVELER)
+                elif target_type == 'all_users':
+                    recipients = User.objects.all()
+                else:
+                    recipients = User.objects.filter(id__in=selected_ids)
+
+                if recipients.exists():
+                    with transaction.atomic():
+                        notification = Notification.objects.create(title=title, message=message, sender=request.user)
+                        NotificationRecipient.objects.bulk_create(
+                            [NotificationRecipient(notification=notification, user=u) for u in recipients]
+                        )
+                    messages.success(request, f'Notification sent to {recipients.count()} recipient(s).')
+                    return redirect('admin_notifications')
+                else:
+                    messages.error(request, 'No recipients found.')
+
+    context = {
+        'user': request.user,
+        'traveler_choices': traveler_choices,
+        'active_nav': 'notifications',
+    }
+    return render(request, 'admin_notifications.html', context)
+
+
+def agent_notifications_view(request):
+    """Agent view to send notifications to their travelers (bookings + chat contacts)."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    agent = request.user
+    traveler_ids = set()
+    traveler_ids.update(Booking.objects.filter(package__agent=agent).values_list('user_id', flat=True))
+    traveler_ids.update(ChatRoom.objects.filter(agent=agent).values_list('traveler_id', flat=True))
+    my_travelers = User.objects.filter(id__in=traveler_ids, role=Roles.TRAVELER).select_related('user_profile').order_by('email')
+    traveler_choices = [{'id': u.id, 'email': u.email, 'name': getattr(u.user_profile, 'full_name', u.email) or u.email} for u in my_travelers]
+
+    if request.method == 'POST':
+        title = (request.POST.get('title') or '').strip()
+        message = (request.POST.get('message') or '').strip()
+        selected_ids = request.POST.getlist('user_ids')
+
+        if not title or not message:
+            messages.error(request, 'Title and message are required.')
+        else:
+            if selected_ids:
+                recipients = User.objects.filter(role=Roles.TRAVELER, id__in=selected_ids).filter(id__in=traveler_ids)
+            else:
+                recipients = my_travelers
+
+            if recipients.exists():
+                with transaction.atomic():
+                    notification = Notification.objects.create(title=title, message=message, sender=request.user)
+                    NotificationRecipient.objects.bulk_create(
+                        [NotificationRecipient(notification=notification, user=u) for u in recipients]
+                    )
+                messages.success(request, f'Notification sent to {recipients.count()} traveler(s).')
+                return redirect('agent_notifications')
+            else:
+                messages.error(request, 'No travelers to notify.')
+
+    context = {
+        'user': request.user,
+        'traveler_choices': traveler_choices,
+        'active_nav': 'notifications',
+    }
+    return render(request, 'agent_notifications.html', context)
 
 
 def agent_dashboard_view(request):
@@ -3355,4 +3451,124 @@ class ChatRoomMarkReadView(generics.GenericAPIView):
         if user not in (room.traveler, room.agent):
             return response.Response({"detail": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
         room.messages.filter(is_read=False).exclude(sender=user).update(is_read=True)
+        return response.Response({"status": "ok"})
+
+
+# ---- Notification API views ----
+
+
+class NotificationListCreateView(generics.ListCreateAPIView):
+    """
+    GET: List notifications for the current user (recipients only).
+    POST: Create and send notification (admin or agent only). Requires target_type and optional user_ids.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return NotificationCreateSerializer
+        return NotificationSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return Notification.objects.filter(
+            recipients__user=user
+        ).select_related("sender").distinct().order_by("-created_at")
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        if user.role not in (Roles.ADMIN, Roles.AGENT):
+            return response.Response(
+                {"detail": "Only admin or agent can send notifications."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = NotificationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        target_type = data["target_type"]
+        user_ids = data.get("user_ids") or []
+
+        if target_type == "my_travelers" and user.role != Roles.AGENT:
+            return response.Response(
+                {"detail": "Only agents can use 'my_travelers' target."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if target_type == "specific" and not user_ids:
+            return response.Response(
+                {"detail": "user_ids required when target_type is 'specific'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if target_type == "my_travelers":
+            traveler_ids = set()
+            traveler_ids.update(
+                Booking.objects.filter(package__agent=user).values_list("user_id", flat=True)
+            )
+            traveler_ids.update(
+                ChatRoom.objects.filter(agent=user).values_list("traveler_id", flat=True)
+            )
+            recipients = User.objects.filter(id__in=traveler_ids, role=Roles.TRAVELER)
+        elif target_type == "all_travelers":
+            recipients = User.objects.filter(role=Roles.TRAVELER)
+        elif target_type == "all_users":
+            recipients = User.objects.all()
+        else:
+            recipients = User.objects.filter(id__in=user_ids)
+
+        if not recipients.exists():
+            return response.Response(
+                {"detail": "No recipients found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            notification = Notification.objects.create(
+                title=data["title"],
+                message=data["message"],
+                sender=user,
+            )
+            NotificationRecipient.objects.bulk_create(
+                [NotificationRecipient(notification=notification, user=u) for u in recipients]
+            )
+
+        out_serializer = NotificationSerializer(notification, context={"request": request})
+        return response.Response(out_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class NotificationUnreadCountView(generics.GenericAPIView):
+    """GET: unread notification count for current user."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        count = NotificationRecipient.objects.filter(
+            user=request.user,
+            is_read=False,
+        ).count()
+        return response.Response({"count": count})
+
+
+class NotificationMarkReadView(generics.GenericAPIView):
+    """POST: mark a notification as read for current user."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        recipient_id = kwargs.get("recipient_id") or request.data.get("recipient_id")
+        notification_id = request.data.get("notification_id")
+        if not recipient_id and not notification_id:
+            return response.Response(
+                {"detail": "recipient_id or notification_id required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user = request.user
+        if recipient_id:
+            updated = NotificationRecipient.objects.filter(
+                id=recipient_id, user=user
+            ).update(is_read=True)
+        else:
+            updated = NotificationRecipient.objects.filter(
+                notification_id=notification_id, user=user
+            ).update(is_read=True)
+        if not updated:
+            return response.Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return response.Response({"status": "ok"})

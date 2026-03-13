@@ -10,7 +10,7 @@ import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import TopPicksScreen from "./src/screens/home/TopPicksScreen";
 import RunningNowScreen from "./src/screens/home/RunningNowScreen";
-import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen, LeaderboardScreen } from "./src/screens/profile";
+import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen, LeaderboardScreen, NotificationsScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
@@ -489,6 +489,7 @@ export default function App() {
           onPastTripsPress={() => setScreen("pastTrips")}
           onUpcomingTripsPress={() => setScreen("upcomingTrips")}
           onLeaderboardPress={() => setScreen("leaderboard")}
+          onNotificationsPress={() => setScreen("notifications")}
           onCalendarPress={() => setScreen("schedule")}
           onMessagesPress={() => setScreen("messages")}
           onLogout={handleLogout}
@@ -530,6 +531,12 @@ export default function App() {
       )}
       {screen === "leaderboard" && (
         <LeaderboardScreen
+          session={session}
+          onBack={() => setScreen("profile")}
+        />
+      )}
+      {screen === "notifications" && (
+        <NotificationsScreen
           session={session}
           onBack={() => setScreen("profile")}
         />

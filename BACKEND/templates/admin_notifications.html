@@ -1,0 +1,169 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}Send Notification - TRIPLINK Admin{% endblock %}
+
+{% block admin_extra_css %}
+<style>
+    .notifications-page { max-width: 640px; margin: 0 auto; }
+    .page-head { margin-bottom: 28px; }
+    .page-head h1 { font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .page-head p { font-size: 15px; color: #64748b; }
+    .send-card {
+        background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0; padding: 28px; margin-bottom: 24px;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+        display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;
+    }
+    .form-group input[type="text"],
+    .form-group textarea {
+        width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0;
+        border-radius: 10px; font-size: 15px; box-sizing: border-box;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+        outline: none; border-color: #1f6b2a; box-shadow: 0 0 0 3px rgba(31, 107, 42, 0.1);
+    }
+    .form-group textarea { min-height: 120px; resize: vertical; }
+    .form-group select {
+        width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0;
+        border-radius: 10px; font-size: 15px; background: #fff;
+    }
+    .recipient-select { position: relative; width: 100%; }
+    .recipient-trigger {
+        display: flex; align-items: center; justify-content: space-between;
+        width: 100%; padding: 12px 16px; min-height: 48px;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+        font-size: 15px; color: #334155; cursor: pointer;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .recipient-trigger:hover { border-color: #cbd5e1; }
+    .recipient-trigger.open { border-color: #1f6b2a; box-shadow: 0 0 0 3px rgba(31, 107, 42, 0.12); }
+    .recipient-trigger-text { flex: 1; color: #94a3b8; }
+    .recipient-trigger-text.has-selection { color: #334155; font-weight: 500; }
+    .recipient-chevron { margin-left: 8px; font-size: 10px; color: #94a3b8; transition: transform 0.2s; }
+    .recipient-trigger.open .recipient-chevron { transform: rotate(180deg); color: #1f6b2a; }
+    .recipient-panel {
+        display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+        max-height: 220px; overflow-y: auto;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 100;
+    }
+    .recipient-panel.open { display: block; }
+    .recipient-option {
+        display: flex; align-items: center; gap: 12px;
+        padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+        font-size: 14px; color: #334155; transition: background 0.15s;
+    }
+    .recipient-option:last-child { border-bottom: none; }
+    .recipient-option:hover { background: #f8fafc; }
+    .recipient-option input { margin: 0; width: 18px; height: 18px; cursor: pointer; accent-color: #1f6b2a; }
+    .btn-send {
+        background: #1f6b2a; color: #fff; padding: 12px 24px; border-radius: 10px;
+        font-size: 15px; font-weight: 600; border: none; cursor: pointer;
+    }
+    .btn-send:hover { background: #166534; }
+    .btn-send:disabled { opacity: 0.6; cursor: not-allowed; }
+    .target-hint { font-size: 13px; color: #64748b; margin-top: 6px; }
+</style>
+{% endblock admin_extra_css %}
+
+{% block main_content %}
+<div class="notifications-page">
+    <div class="page-head">
+        <h1>Send Notification</h1>
+        <p>Send a notification to travelers or all users. They will see it in the TRIPLINK app.</p>
+    </div>
+    <div class="send-card">
+        <form method="post" action="">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="title">Title *</label>
+                <input type="text" id="title" name="title" required maxlength="200" placeholder="e.g. New Destinations Available" value="">
+            </div>
+            <div class="form-group">
+                <label for="message">Message *</label>
+                <textarea id="message" name="message" required placeholder="Write your notification message..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="target_type">Send to</label>
+                <select id="target_type" name="target_type">
+                    <option value="all_travelers">All travelers</option>
+                    <option value="all_users">All users (travelers + agents)</option>
+                    <option value="specific">Specific users</option>
+                </select>
+                <p class="target-hint" id="target-hint">Every traveler registered on the platform will receive this notification.</p>
+            </div>
+            <div class="form-group" id="specific-users-wrap" style="display: none;">
+                <label>Select users</label>
+                <p class="target-hint">Click to open and choose specific travelers.</p>
+                <div class="recipient-select" id="recipientSelect">
+                    <div class="recipient-trigger" id="recipientTrigger" tabindex="0">
+                        <span class="recipient-trigger-text" id="recipientTriggerText">Select users...</span>
+                        <span class="recipient-chevron">▼</span>
+                    </div>
+                    <div class="recipient-panel" id="recipientPanel">
+                        {% for t in traveler_choices %}
+                        <label class="recipient-option">
+                            <input type="checkbox" name="user_ids" value="{{ t.id }}">
+                            <span>{{ t.name }} ({{ t.email }})</span>
+                        </label>
+                        {% empty %}
+                        <div class="recipient-option" style="cursor: default; color: #94a3b8;">No travelers found.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 24px;">
+                <button type="submit" class="btn-send">Send Notification</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function() {
+    var sel = document.getElementById('target_type');
+    var wrap = document.getElementById('specific-users-wrap');
+    var hint = document.getElementById('target-hint');
+    var trigger = document.getElementById('recipientTrigger');
+    var panel = document.getElementById('recipientPanel');
+    var triggerText = document.getElementById('recipientTriggerText');
+    var checkboxes = document.querySelectorAll('#recipientPanel input[name="user_ids"]');
+    var hints = {
+        all_travelers: 'Every traveler registered on the platform will receive this notification.',
+        all_users: 'Every user (travelers and agents) will receive this notification.',
+        specific: 'Only the selected users below will receive this notification.'
+    };
+    function updateHint() {
+        var v = sel.value;
+        wrap.style.display = v === 'specific' ? 'block' : 'none';
+        hint.textContent = hints[v] || '';
+    }
+    function updateTriggerText() {
+        var checked = Array.from(checkboxes).filter(function(cb) { return cb.checked; });
+        if (checked.length === 0) {
+            triggerText.textContent = 'Select users...';
+            triggerText.classList.remove('has-selection');
+        } else {
+            triggerText.textContent = checked.length + ' user' + (checked.length === 1 ? '' : 's') + ' selected';
+            triggerText.classList.add('has-selection');
+        }
+    }
+    function openPanel() { if (trigger) { trigger.classList.add('open'); panel.classList.add('open'); } }
+    function closePanel() { if (trigger) { trigger.classList.remove('open'); panel.classList.remove('open'); } }
+    function togglePanel() { if (panel.classList.contains('open')) closePanel(); else openPanel(); }
+    sel.addEventListener('change', updateHint);
+    updateHint();
+    if (trigger) {
+        trigger.addEventListener('click', function(e) { e.stopPropagation(); togglePanel(); });
+        checkboxes.forEach(function(cb) {
+            cb.addEventListener('change', function(e) { e.stopPropagation(); updateTriggerText(); });
+        });
+        document.addEventListener('click', function() { closePanel(); });
+        if (panel) panel.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+})();
+</script>
+{% endblock %}

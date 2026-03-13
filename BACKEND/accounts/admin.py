@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.urls import reverse
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile, Package, PackageFeature, CustomPackage, Booking, AgentReview, Roles
+from .models import User, UserProfile, AgentProfile, Package, PackageFeature, CustomPackage, Booking, AgentReview, Notification, NotificationRecipient, Roles
 from .emailjs_utils import send_agent_credentials_email
 
 
@@ -123,3 +123,18 @@ class AgentReviewAdmin(admin.ModelAdmin):
     list_filter = ['rating', 'created_at']
     search_fields = ['user__email', 'agent__email', 'comment']
     readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['title', 'sender', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['title', 'message', 'sender__email']
+    readonly_fields = ['created_at']
+
+
+@admin.register(NotificationRecipient)
+class NotificationRecipientAdmin(admin.ModelAdmin):
+    list_display = ['notification', 'user', 'is_read', 'created_at']
+    list_filter = ['is_read', 'created_at']
+    search_fields = ['notification__title', 'user__email']

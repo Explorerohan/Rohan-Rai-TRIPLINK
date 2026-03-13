@@ -561,3 +561,49 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"{self.sender.email}: {self.text[:50]}..."
+
+
+class Notification(models.Model):
+    """Notification sent by admin or agent to users."""
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications_sent",
+        help_text="Admin or agent who sent this notification.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Notification"
+        verbose_name_plural = "Notifications"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} from {self.sender.email}"
+
+
+class NotificationRecipient(models.Model):
+    """Maps notifications to recipients and tracks read status."""
+    notification = models.ForeignKey(
+        Notification,
+        on_delete=models.CASCADE,
+        related_name="recipients",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notification_recipients",
+    )
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Notification Recipient"
+        verbose_name_plural = "Notification Recipients"
+        ordering = ["-created_at"]
+        unique_together = ["notification", "user"]
+
+    def __str__(self):
+        return f"{self.notification.title} -> {self.user.email}"

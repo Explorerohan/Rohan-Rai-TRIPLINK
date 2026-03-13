@@ -32,6 +32,7 @@ const menuItems = [
   { id: "bookmarked", label: "Bookmarked", icon: "bookmark-outline" },
   { id: "settings", label: "Settings", icon: "settings-outline" },
   { id: "leaderboard", label: "LeaderBoard", icon: "trophy-outline" },
+  { id: "notifications", label: "Notifications", icon: "notifications-outline" },
   { id: "logout", label: "Logout", icon: "log-out-outline" },
 ];
 
@@ -48,6 +49,7 @@ const ProfileScreen = ({
   onPastTripsPress = () => {},
   onUpcomingTripsPress = () => {},
   onLeaderboardPress = () => {},
+  onNotificationsPress = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
   onMessagesPress = () => {},
@@ -228,7 +230,9 @@ const ProfileScreen = ({
                         ? onBookmarkedPress
                         : item.id === "leaderboard"
                           ? onLeaderboardPress
-                          : undefined
+                          : item.id === "notifications"
+                            ? onNotificationsPress
+                            : undefined
                 }
               >
                 <View style={styles.menuItemLeft}>

@@ -31,6 +31,9 @@ from .views import (
     ChatMessageListCreateView,
     ChatUnreadCountView,
     ChatRoomMarkReadView,
+    NotificationListCreateView,
+    NotificationUnreadCountView,
+    NotificationMarkReadView,
 )
 
 urlpatterns = [
@@ -75,4 +78,9 @@ urlpatterns = [
     path("chat/rooms/<int:room_id>/messages/", ChatMessageListCreateView.as_view(), name="chat_message_list_create"),
     path("chat/unread-count/", ChatUnreadCountView.as_view(), name="chat_unread_count"),
     path("chat/rooms/<int:room_id>/mark-read/", ChatRoomMarkReadView.as_view(), name="chat_room_mark_read"),
+    # Notifications
+    path("notifications/", NotificationListCreateView.as_view(), name="notification_list_create"),
+    path("notifications/unread-count/", NotificationUnreadCountView.as_view(), name="notification_unread_count"),
+    path("notifications/mark-read/<int:recipient_id>/", NotificationMarkReadView.as_view(), name="notification_mark_read"),
+    path("notifications/mark-read/", NotificationMarkReadView.as_view(), name="notification_mark_read_post"),
 ]
