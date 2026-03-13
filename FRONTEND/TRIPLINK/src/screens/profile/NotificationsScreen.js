@@ -66,38 +66,38 @@ const NotificationsScreen = ({
     }
   };
 
+  const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={[styles.notificationCard, !item.is_read && styles.notificationCardUnread]}
       activeOpacity={0.8}
       onPress={() => handleMarkRead(item)}
     >
-      <View style={styles.notificationIconWrap}>
-        <Ionicons
-          name={item.is_read ? "mail-open-outline" : "mail-unread-outline"}
-          size={24}
-          color={item.is_read ? "#94a3b8" : "#1f6b2a"}
-        />
-      </View>
-      <View style={styles.notificationContent}>
-        <Text style={styles.notificationTitle}>{item.title}</Text>
-        <Text style={styles.notificationMessage} numberOfLines={3}>
-          {item.message}
-        </Text>
-        <View style={styles.notificationMeta}>
-          <Text style={styles.notificationSender}>{item.sender_name || "TRIPLINK"}</Text>
-          <Text style={styles.notificationDate}>
-            {item.created_at
-              ? new Date(item.created_at).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : ""}
-          </Text>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardHeaderLeft}>
+          <View style={styles.notificationIconWrap}>
+            <Ionicons name="notifications" size={18} color="#ffffff" />
+          </View>
+          <Text style={styles.notificationLabel}>Notification</Text>
         </View>
+        <Text style={styles.notificationTime}>{formatTimeAgo(item.created_at)}</Text>
       </View>
+      <View style={styles.cardDivider} />
+      <Text style={styles.notificationMessage}>{item.message}</Text>
     </TouchableOpacity>
   );
 
@@ -138,7 +138,7 @@ const NotificationsScreen = ({
             <Ionicons name="notifications-off-outline" size={48} color="#cbd5e1" />
             <Text style={styles.emptyText}>No notifications yet</Text>
             <Text style={styles.emptySubtext}>
-              You'll see updates from agents and TRIPLINK here
+              You'll see updates and alerts here
             </Text>
           </View>
         }
@@ -159,62 +159,61 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+    position: "relative",
   },
-  backButton: { padding: 4, marginRight: 8 },
+  backButton: {
+    position: "absolute",
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f3f5f7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headerTitle: { fontSize: 18, fontWeight: "600", color: "#1e293b" },
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
   listContent: { padding: 16, paddingBottom: 32 },
   notificationCard: {
-    flexDirection: "row",
     backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   notificationCardUnread: {
-    backgroundColor: "#f0fdf4",
     borderLeftWidth: 4,
-    borderLeftColor: "#1f6b2a",
+    borderLeftColor: "#f59e0b",
   },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cardHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   notificationIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#ecfdf5",
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#f59e0b",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
   },
-  notificationContent: { flex: 1, minWidth: 0 },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
+  notificationLabel: { fontSize: 15, fontWeight: "600", color: "#1e293b" },
+  notificationTime: { fontSize: 13, color: "#94a3b8" },
+  cardDivider: { height: 1, backgroundColor: "#e2e8f0", marginVertical: 12 },
   notificationMessage: {
     fontSize: 14,
-    color: "#64748b",
-    lineHeight: 20,
-    marginBottom: 8,
+    color: "#334155",
+    lineHeight: 21,
   },
-  notificationMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  notificationSender: { fontSize: 12, color: "#94a3b8", fontWeight: "500" },
-  notificationDate: { fontSize: 12, color: "#94a3b8" },
   emptyState: {
     alignItems: "center",
     paddingVertical: 60,
