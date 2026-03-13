@@ -1016,6 +1016,7 @@ def admin_notifications_view(request):
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         message = (request.POST.get('message') or '').strip()
+        notification_type = request.POST.get('notification_type') or 'general'
         target_type = request.POST.get('target_type') or 'all_travelers'
         selected_ids = request.POST.getlist('user_ids')
 
@@ -1034,7 +1035,9 @@ def admin_notifications_view(request):
 
                 if recipients.exists():
                     with transaction.atomic():
-                        notification = Notification.objects.create(title=title, message=message, sender=request.user)
+                        notification = Notification.objects.create(
+                            title=title, message=message, notification_type=notification_type, sender=request.user
+                        )
                         NotificationRecipient.objects.bulk_create(
                             [NotificationRecipient(notification=notification, user=u) for u in recipients]
                         )
@@ -1067,6 +1070,7 @@ def agent_notifications_view(request):
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         message = (request.POST.get('message') or '').strip()
+        notification_type = request.POST.get('notification_type') or 'general'
         selected_ids = request.POST.getlist('user_ids')
 
         if not title or not message:
@@ -1079,7 +1083,9 @@ def agent_notifications_view(request):
 
             if recipients.exists():
                 with transaction.atomic():
-                    notification = Notification.objects.create(title=title, message=message, sender=request.user)
+                    notification = Notification.objects.create(
+                        title=title, message=message, notification_type=notification_type, sender=request.user
+                    )
                     NotificationRecipient.objects.bulk_create(
                         [NotificationRecipient(notification=notification, user=u) for u in recipients]
                     )
@@ -3522,10 +3528,12 @@ class NotificationListCreateView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        notification_type = data.get("notification_type") or "general"
         with transaction.atomic():
             notification = Notification.objects.create(
                 title=data["title"],
                 message=data["message"],
+                notification_type=notification_type,
                 sender=user,
             )
             NotificationRecipient.objects.bulk_create(

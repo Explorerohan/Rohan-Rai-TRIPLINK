@@ -88,6 +88,18 @@
                 <textarea id="message" name="message" required placeholder="Write your notification message..."></textarea>
             </div>
             <div class="form-group">
+                <label for="notification_type">Notification Type (icon shown to user)</label>
+                <select id="notification_type" name="notification_type">
+                    <option value="general">General</option>
+                    <option value="alert">Alert</option>
+                    <option value="emergency">Emergency</option>
+                    <option value="rule_violation">Rule Violation</option>
+                    <option value="info">Information</option>
+                    <option value="update">Update</option>
+                    <option value="promotion">Promotion</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="target_type">Send to</label>
                 <select id="target_type" name="target_type">
                     <option value="all_travelers">All travelers</option>

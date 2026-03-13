@@ -27,6 +27,10 @@
         outline: none; border-color: #2d5a36; box-shadow: 0 0 0 3px rgba(45, 90, 54, 0.1);
     }
     .form-group textarea { min-height: 120px; resize: vertical; }
+    .form-group select {
+        width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0;
+        border-radius: 10px; font-size: 15px; background: #fff;
+    }
     .recipient-select { position: relative; width: 100%; }
     .recipient-trigger {
         display: flex; align-items: center; justify-content: space-between;
@@ -84,6 +88,18 @@
             <div class="form-group">
                 <label for="message">Message *</label>
                 <textarea id="message" name="message" required placeholder="Write your notification message..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="notification_type">Notification Type (icon shown to user)</label>
+                <select id="notification_type" name="notification_type">
+                    <option value="general">General</option>
+                    <option value="alert">Alert</option>
+                    <option value="emergency">Emergency</option>
+                    <option value="rule_violation">Rule Violation</option>
+                    <option value="info">Information</option>
+                    <option value="update">Update</option>
+                    <option value="promotion">Promotion</option>
+                </select>
             </div>
             <div class="form-group">
                 <label>Recipients</label>

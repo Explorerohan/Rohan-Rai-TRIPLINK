@@ -809,7 +809,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Notification
-        fields = ["id", "title", "message", "sender", "sender_name", "is_read", "recipient_id", "created_at"]
+        fields = ["id", "title", "message", "notification_type", "sender", "sender_name", "is_read", "recipient_id", "created_at"]
         read_only_fields = ["id", "sender", "created_at"]
 
     def get_sender_name(self, obj):
@@ -847,6 +847,19 @@ class NotificationCreateSerializer(serializers.Serializer):
     """Serializer for creating notifications (admin/agent only)."""
     title = serializers.CharField(max_length=200)
     message = serializers.CharField()
+    notification_type = serializers.ChoiceField(
+        choices=[
+            ("alert", "Alert"),
+            ("emergency", "Emergency"),
+            ("rule_violation", "Rule Violation"),
+            ("info", "Information"),
+            ("update", "Update"),
+            ("promotion", "Promotion"),
+            ("general", "General"),
+        ],
+        default="general",
+        required=False,
+    )
     target_type = serializers.ChoiceField(
         choices=[
             ("all_travelers", "All travelers"),

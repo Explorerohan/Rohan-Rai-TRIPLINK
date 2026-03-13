@@ -13,6 +13,18 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { getNotifications, markNotificationRead } from "../../utils/api";
 
+const NOTIFICATION_ICONS = {
+  alert: { icon: "alert-circle", color: "#f59e0b" },
+  emergency: { icon: "warning", color: "#dc2626" },
+  rule_violation: { icon: "close-circle", color: "#b91c1c" },
+  info: { icon: "information-circle", color: "#0ea5e9" },
+  update: { icon: "megaphone", color: "#1f6b2a" },
+  promotion: { icon: "gift", color: "#7c3aed" },
+  general: { icon: "notifications", color: "#f59e0b" },
+};
+
+const getNotificationIcon = (type) => NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.general;
+
 const NotificationsScreen = ({
   session,
   onBack = () => {},
@@ -81,7 +93,9 @@ const NotificationsScreen = ({
     return d.toLocaleDateString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }) => {
+    const { icon, color } = getNotificationIcon(item.notification_type);
+    return (
     <TouchableOpacity
       style={[styles.notificationCard, !item.is_read && styles.notificationCardUnread]}
       activeOpacity={0.8}
@@ -89,8 +103,8 @@ const NotificationsScreen = ({
     >
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
-          <View style={styles.notificationIconWrap}>
-            <Ionicons name="notifications" size={18} color="#ffffff" />
+          <View style={[styles.notificationIconWrap, { backgroundColor: color }]}>
+            <Ionicons name={icon} size={18} color="#ffffff" />
           </View>
           <Text style={styles.notificationLabel}>Notification</Text>
         </View>
@@ -99,7 +113,8 @@ const NotificationsScreen = ({
       <View style={styles.cardDivider} />
       <Text style={styles.notificationMessage}>{item.message}</Text>
     </TouchableOpacity>
-  );
+    );
+  };
 
   const keyExtractor = (item) => `${item.id}-${item.recipient_id ?? ""}`;
 

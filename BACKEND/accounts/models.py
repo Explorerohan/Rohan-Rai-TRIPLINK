@@ -563,10 +563,26 @@ class ChatMessage(models.Model):
         return f"{self.sender.email}: {self.text[:50]}..."
 
 
+class NotificationType(models.TextChoices):
+    ALERT = "alert", "Alert"
+    EMERGENCY = "emergency", "Emergency"
+    RULE_VIOLATION = "rule_violation", "Rule Violation"
+    INFO = "info", "Information"
+    UPDATE = "update", "Update"
+    PROMOTION = "promotion", "Promotion"
+    GENERAL = "general", "General"
+
+
 class Notification(models.Model):
     """Notification sent by admin or agent to users."""
     title = models.CharField(max_length=200)
     message = models.TextField()
+    notification_type = models.CharField(
+        max_length=32,
+        choices=NotificationType.choices,
+        default=NotificationType.GENERAL,
+        help_text="Type of notification - determines icon shown to user.",
+    )
     sender = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
