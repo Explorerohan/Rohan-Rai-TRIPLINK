@@ -1094,9 +1094,24 @@ def agent_notifications_view(request):
             else:
                 messages.error(request, 'No travelers to notify.')
 
+    sent_notifications = (
+        Notification.objects.filter(sender=agent)
+        .annotate(recipient_count=Count("recipients"))
+        .select_related("sender")
+        .order_by("-created_at")[:50]
+    )
+
+    received_notifications = (
+        Notification.objects.filter(recipients__user=agent, sender__role=Roles.ADMIN)
+        .distinct()
+        .order_by("-created_at")[:50]
+    )
+
     context = {
         'user': request.user,
         'traveler_choices': traveler_choices,
+        'sent_notifications': sent_notifications,
+        'received_notifications': received_notifications,
         'active_nav': 'notifications',
     }
     return render(request, 'agent_notifications.html', context)
