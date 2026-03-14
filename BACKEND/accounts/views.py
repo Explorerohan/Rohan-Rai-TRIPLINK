@@ -1005,7 +1005,7 @@ def admin_users_view(request):
 
 
 def admin_notifications_view(request):
-    """Admin view to send notifications to travelers or all users."""
+    """Admin view to send notifications to agents or travelers."""
     if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
         messages.error(request, 'Access denied. Admin access required.')
         return redirect('login')
@@ -1013,25 +1013,36 @@ def admin_notifications_view(request):
     travelers = list(User.objects.filter(role=Roles.TRAVELER).select_related('user_profile').order_by('email'))
     traveler_choices = [{'id': u.id, 'email': u.email, 'name': getattr(u.user_profile, 'full_name', u.email) or u.email} for u in travelers]
 
+    agents = list(User.objects.filter(role=Roles.AGENT).select_related('agent_profile').order_by('email'))
+    agent_choices = [{'id': u.id, 'email': u.email, 'name': getattr(getattr(u, 'agent_profile', None), 'full_name', None) or u.email} for u in agents]
+
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         message = (request.POST.get('message') or '').strip()
         notification_type = request.POST.get('notification_type') or 'general'
-        target_type = request.POST.get('target_type') or 'all_travelers'
+        audience = request.POST.get('audience') or 'travelers'
+        target_type = request.POST.get('target_type') or ('all_travelers' if audience == 'travelers' else 'all_agents')
         selected_ids = request.POST.getlist('user_ids')
 
         if not title or not message:
             messages.error(request, 'Title and message are required.')
         else:
             if target_type == 'specific' and not selected_ids:
-                messages.error(request, 'Please select at least one user when sending to specific users.')
+                label = 'agents' if audience == 'agents' else 'users'
+                messages.error(request, f'Please select at least one {label[:-1]} when sending to specific {label}.')
             else:
-                if target_type == 'all_travelers':
-                    recipients = User.objects.filter(role=Roles.TRAVELER)
-                elif target_type == 'all_users':
-                    recipients = User.objects.all()
+                if audience == 'agents':
+                    if target_type == 'all_agents':
+                        recipients = User.objects.filter(role=Roles.AGENT)
+                    else:
+                        recipients = User.objects.filter(role=Roles.AGENT, id__in=selected_ids)
                 else:
-                    recipients = User.objects.filter(id__in=selected_ids)
+                    if target_type == 'all_travelers':
+                        recipients = User.objects.filter(role=Roles.TRAVELER)
+                    elif target_type == 'all_users':
+                        recipients = User.objects.all()
+                    else:
+                        recipients = User.objects.filter(id__in=selected_ids, role=Roles.TRAVELER)
 
                 if recipients.exists():
                     with transaction.atomic():
@@ -1049,6 +1060,7 @@ def admin_notifications_view(request):
     context = {
         'user': request.user,
         'traveler_choices': traveler_choices,
+        'agent_choices': agent_choices,
         'active_nav': 'notifications',
     }
     return render(request, 'admin_notifications.html', context)

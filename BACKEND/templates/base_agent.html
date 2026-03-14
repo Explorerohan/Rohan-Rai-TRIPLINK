@@ -390,6 +390,7 @@
             <a href="{% url 'agent_notifications' %}" class="nav-item{% if active_nav == 'notifications' %} active{% endif %}">
                 <i>&#128276;</i>
                 <span>Notifications</span>
+                <span class="nav-badge" id="agentNotificationUnreadBadge"></span>
             </a>
             <a href="#" class="nav-item">
                 <i>&#127919;</i>
@@ -450,9 +451,32 @@
         }).catch(function(_) {});
     }
 
+    function updateAgentNotificationBadge() {
+        fetch('/api/auth/notifications/unread-count/', {
+            credentials: 'same-origin',
+        }).then(function(res) {
+            if (!res.ok) return null;
+            return res.json();
+        }).then(function(data) {
+            if (!data) return;
+            var badge = document.getElementById('agentNotificationUnreadBadge');
+            if (!badge) return;
+            var count = typeof data.count === 'number' ? data.count : 0;
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.textContent = '';
+                badge.style.display = 'none';
+            }
+        }).catch(function(_) {});
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         updateAgentChatBadge();
+        updateAgentNotificationBadge();
         setInterval(updateAgentChatBadge, 3000);
+        setInterval(updateAgentNotificationBadge, 3000);
     });
 })();
 </script>

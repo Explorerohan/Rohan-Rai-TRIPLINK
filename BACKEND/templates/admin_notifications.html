@@ -1,30 +1,55 @@
 {% extends 'base_admin.html' %}
 {% load static %}
 
-{% block title %}Send Notification - TRIPLINK Admin{% endblock %}
+{% block title %}Notifications - TRIPLINK Admin{% endblock %}
 
 {% block admin_extra_css %}
 <style>
-    .notifications-page { max-width: 640px; margin: 0 auto; }
+    .notifications-page { max-width: 100%; }
     .page-head { margin-bottom: 28px; }
-    .page-head h1 { font-size: 28px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .page-head h1 { font-size: 28px; font-weight: 700; color: #1a1d21; margin-bottom: 6px; }
     .page-head p { font-size: 15px; color: #64748b; }
+    .nav-buttons { display: flex; flex-direction: row; flex-wrap: wrap; gap: 16px; }
+    .nav-btn {
+        flex: 1; min-width: 200px;
+        display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+        padding: 24px; cursor: pointer; transition: all 0.2s;
+        text-align: left;
+    }
+    .nav-btn:hover { border-color: #1f6b2a; background: #f0fdf4; box-shadow: 0 2px 8px rgba(31, 107, 42, 0.08); }
+    .nav-btn-icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        background: rgba(31, 107, 42, 0.1); color: #1f6b2a;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px; flex-shrink: 0;
+    }
+    .nav-btn-text { width: 100%; }
+    .nav-btn-title { font-size: 16px; font-weight: 600; color: #1a1d21; margin-bottom: 2px; }
+    .nav-btn-desc { font-size: 13px; color: #64748b; }
+    .section-view { display: none; }
+    .section-view.active { display: block; }
+    .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .back-btn {
+        width: 40px; height: 40px; border-radius: 10px;
+        background: #f3f5f7; border: 1px solid #e2e8f0;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: #334155; font-size: 18px;
+    }
+    .back-btn:hover { background: #e2e8f0; }
+    .section-title { font-size: 18px; font-weight: 700; color: #1a1d21; }
     .send-card {
         background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         border: 1px solid #e2e8f0; padding: 28px; margin-bottom: 24px;
     }
     .form-group { margin-bottom: 20px; }
-    .form-group label {
-        display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;
-    }
-    .form-group input[type="text"],
-    .form-group textarea {
+    .form-group label { display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+    .form-group input[type="text"], .form-group textarea {
         width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0;
         border-radius: 10px; font-size: 15px; box-sizing: border-box;
     }
-    .form-group input:focus,
-    .form-group textarea:focus {
-        outline: none; border-color: #1f6b2a; box-shadow: 0 0 0 3px rgba(31, 107, 42, 0.1);
+    .form-group input:focus, .form-group textarea:focus {
+        outline: none; border-color: #1f6b2a; box-shadow: 0 0 0 3px rgba(31, 107, 42, 0.12);
     }
     .form-group textarea { min-height: 120px; resize: vertical; }
     .form-group select {
@@ -37,13 +62,12 @@
         width: 100%; padding: 12px 16px; min-height: 48px;
         background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
         font-size: 15px; color: #334155; cursor: pointer;
-        transition: border-color 0.2s, box-shadow 0.2s;
     }
     .recipient-trigger:hover { border-color: #cbd5e1; }
     .recipient-trigger.open { border-color: #1f6b2a; box-shadow: 0 0 0 3px rgba(31, 107, 42, 0.12); }
     .recipient-trigger-text { flex: 1; color: #94a3b8; }
     .recipient-trigger-text.has-selection { color: #334155; font-weight: 500; }
-    .recipient-chevron { margin-left: 8px; font-size: 10px; color: #94a3b8; transition: transform 0.2s; }
+    .recipient-chevron { margin-left: 8px; font-size: 10px; color: #94a3b8; }
     .recipient-trigger.open .recipient-chevron { transform: rotate(180deg); color: #1f6b2a; }
     .recipient-panel {
         display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
@@ -55,7 +79,7 @@
     .recipient-option {
         display: flex; align-items: center; gap: 12px;
         padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
-        font-size: 14px; color: #334155; transition: background 0.15s;
+        font-size: 14px; color: #334155;
     }
     .recipient-option:last-child { border-bottom: none; }
     .recipient-option:hover { background: #f8fafc; }
@@ -73,109 +97,223 @@
 {% block main_content %}
 <div class="notifications-page">
     <div class="page-head">
-        <h1>Send Notification</h1>
-        <p>Send a notification to travelers or all users. They will see it in the TRIPLINK app.</p>
+        <h1>Notifications</h1>
+        <p>Send notifications to travelers or agents.</p>
     </div>
-    <div class="send-card">
-        <form method="post" action="">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="title">Title *</label>
-                <input type="text" id="title" name="title" required maxlength="200" placeholder="e.g. New Destinations Available" value="">
+
+    <div id="mainNav" class="nav-buttons">
+        <div class="nav-btn" data-show="sendToTravelers">
+            <div class="nav-btn-icon">🧳</div>
+            <div class="nav-btn-text">
+                <div class="nav-btn-title">Send to travelers</div>
+                <div class="nav-btn-desc">Send a notification to travelers in the mobile app</div>
             </div>
-            <div class="form-group">
-                <label for="message">Message *</label>
-                <textarea id="message" name="message" required placeholder="Write your notification message..."></textarea>
+        </div>
+        <div class="nav-btn" data-show="sendToAgents">
+            <div class="nav-btn-icon">🏢</div>
+            <div class="nav-btn-text">
+                <div class="nav-btn-title">Send to agents</div>
+                <div class="nav-btn-desc">Send a notification to agents in the web panel</div>
             </div>
-            <div class="form-group">
-                <label for="notification_type">Notification Type (icon shown to user)</label>
-                <select id="notification_type" name="notification_type">
-                    <option value="general">General</option>
-                    <option value="alert">Alert</option>
-                    <option value="emergency">Emergency</option>
-                    <option value="rule_violation">Rule Violation</option>
-                    <option value="info">Information</option>
-                    <option value="update">Update</option>
-                    <option value="promotion">Promotion</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="target_type">Send to</label>
-                <select id="target_type" name="target_type">
-                    <option value="all_travelers">All travelers</option>
-                    <option value="all_users">All users (travelers + agents)</option>
-                    <option value="specific">Specific users</option>
-                </select>
-                <p class="target-hint" id="target-hint">Every traveler registered on the platform will receive this notification.</p>
-            </div>
-            <div class="form-group" id="specific-users-wrap" style="display: none;">
-                <label>Select users</label>
-                <p class="target-hint">Click to open and choose specific travelers.</p>
-                <div class="recipient-select" id="recipientSelect">
-                    <div class="recipient-trigger" id="recipientTrigger" tabindex="0">
-                        <span class="recipient-trigger-text" id="recipientTriggerText">Select users...</span>
-                        <span class="recipient-chevron">▼</span>
-                    </div>
-                    <div class="recipient-panel" id="recipientPanel">
-                        {% for t in traveler_choices %}
-                        <label class="recipient-option">
-                            <input type="checkbox" name="user_ids" value="{{ t.id }}">
-                            <span>{{ t.name }} ({{ t.email }})</span>
-                        </label>
-                        {% empty %}
-                        <div class="recipient-option" style="cursor: default; color: #94a3b8;">No travelers found.</div>
-                        {% endfor %}
+        </div>
+    </div>
+
+    <div id="sendToTravelers" class="section-view">
+        <div class="section-header">
+            <button type="button" class="back-btn" onclick="showMain()">←</button>
+            <span class="section-title">Send to travelers</span>
+        </div>
+        <div class="send-card">
+            <form method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="audience" value="travelers">
+                <div class="form-group">
+                    <label for="title1">Title *</label>
+                    <input type="text" id="title1" name="title" required maxlength="200" placeholder="e.g. New Destinations Available" value="">
+                </div>
+                <div class="form-group">
+                    <label for="message1">Message *</label>
+                    <textarea id="message1" name="message" required placeholder="Write your notification message..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="notification_type1">Notification Type (icon shown to user)</label>
+                    <select id="notification_type1" name="notification_type">
+                        <option value="general">General</option>
+                        <option value="alert">Alert</option>
+                        <option value="emergency">Emergency</option>
+                        <option value="rule_violation">Rule Violation</option>
+                        <option value="info">Information</option>
+                        <option value="update">Update</option>
+                        <option value="promotion">Promotion</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="target_type1">Send to</label>
+                    <select id="target_type1" name="target_type">
+                        <option value="all_travelers">All travelers</option>
+                        <option value="all_users">All users (travelers + agents)</option>
+                        <option value="specific">Specific travelers</option>
+                    </select>
+                    <p class="target-hint" id="hint1">Every traveler registered on the platform will receive this notification.</p>
+                </div>
+                <div class="form-group" id="specific-travelers-wrap" style="display: none;">
+                    <label>Select travelers</label>
+                    <p class="target-hint">Click to open and choose specific travelers.</p>
+                    <div class="recipient-select" id="recipientSelect1">
+                        <div class="recipient-trigger" id="recipientTrigger1" tabindex="0">
+                            <span class="recipient-trigger-text" id="recipientTriggerText1">Select travelers...</span>
+                            <span class="recipient-chevron">▼</span>
+                        </div>
+                        <div class="recipient-panel" id="recipientPanel1">
+                            {% for t in traveler_choices %}
+                            <label class="recipient-option">
+                                <input type="checkbox" name="user_ids" value="{{ t.id }}">
+                                <span>{{ t.name }} ({{ t.email }})</span>
+                            </label>
+                            {% empty %}
+                            <div class="recipient-option" style="cursor: default; color: #94a3b8;">No travelers found.</div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div style="margin-top: 24px;">
-                <button type="submit" class="btn-send">Send Notification</button>
-            </div>
-        </form>
+                <div style="margin-top: 24px;">
+                    <button type="submit" class="btn-send">Send Notification</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="sendToAgents" class="section-view">
+        <div class="section-header">
+            <button type="button" class="back-btn" onclick="showMain()">←</button>
+            <span class="section-title">Send to agents</span>
+        </div>
+        <div class="send-card">
+            <form method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="audience" value="agents">
+                <div class="form-group">
+                    <label for="title2">Title *</label>
+                    <input type="text" id="title2" name="title" required maxlength="200" placeholder="e.g. Policy Update" value="">
+                </div>
+                <div class="form-group">
+                    <label for="message2">Message *</label>
+                    <textarea id="message2" name="message" required placeholder="Write your notification message..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="notification_type2">Notification Type (icon shown to user)</label>
+                    <select id="notification_type2" name="notification_type">
+                        <option value="general">General</option>
+                        <option value="alert">Alert</option>
+                        <option value="emergency">Emergency</option>
+                        <option value="rule_violation">Rule Violation</option>
+                        <option value="info">Information</option>
+                        <option value="update">Update</option>
+                        <option value="promotion">Promotion</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="target_type2">Send to</label>
+                    <select id="target_type2" name="target_type">
+                        <option value="all_agents">All agents</option>
+                        <option value="specific">Specific agents</option>
+                    </select>
+                    <p class="target-hint" id="hint2">Every agent on the platform will receive this notification.</p>
+                </div>
+                <div class="form-group" id="specific-agents-wrap" style="display: none;">
+                    <label>Select agents</label>
+                    <p class="target-hint">Click to open and choose specific agents.</p>
+                    <div class="recipient-select" id="recipientSelect2">
+                        <div class="recipient-trigger" id="recipientTrigger2" tabindex="0">
+                            <span class="recipient-trigger-text" id="recipientTriggerText2">Select agents...</span>
+                            <span class="recipient-chevron">▼</span>
+                        </div>
+                        <div class="recipient-panel" id="recipientPanel2">
+                            {% for a in agent_choices %}
+                            <label class="recipient-option">
+                                <input type="checkbox" name="user_ids" value="{{ a.id }}">
+                                <span>{{ a.name }} ({{ a.email }})</span>
+                            </label>
+                            {% empty %}
+                            <div class="recipient-option" style="cursor: default; color: #94a3b8;">No agents found.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 24px;">
+                    <button type="submit" class="btn-send" {% if not agent_choices %}disabled{% endif %}>Send Notification</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 <script>
 (function() {
-    var sel = document.getElementById('target_type');
-    var wrap = document.getElementById('specific-users-wrap');
-    var hint = document.getElementById('target-hint');
-    var trigger = document.getElementById('recipientTrigger');
-    var panel = document.getElementById('recipientPanel');
-    var triggerText = document.getElementById('recipientTriggerText');
-    var checkboxes = document.querySelectorAll('#recipientPanel input[name="user_ids"]');
-    var hints = {
-        all_travelers: 'Every traveler registered on the platform will receive this notification.',
-        all_users: 'Every user (travelers and agents) will receive this notification.',
-        specific: 'Only the selected users below will receive this notification.'
-    };
-    function updateHint() {
-        var v = sel.value;
-        wrap.style.display = v === 'specific' ? 'block' : 'none';
-        hint.textContent = hints[v] || '';
+    var mainNav = document.getElementById('mainNav');
+    var sections = document.querySelectorAll('.section-view');
+
+    function showMain() {
+        mainNav.style.display = 'flex';
+        sections.forEach(function(s) { s.classList.remove('active'); });
     }
-    function updateTriggerText() {
-        var checked = Array.from(checkboxes).filter(function(cb) { return cb.checked; });
-        if (checked.length === 0) {
-            triggerText.textContent = 'Select users...';
-            triggerText.classList.remove('has-selection');
-        } else {
-            triggerText.textContent = checked.length + ' user' + (checked.length === 1 ? '' : 's') + ' selected';
-            triggerText.classList.add('has-selection');
-        }
+    window.showMain = showMain;
+
+    function showSection(id) {
+        mainNav.style.display = 'none';
+        sections.forEach(function(s) { s.classList.toggle('active', s.id === id); });
     }
-    function openPanel() { if (trigger) { trigger.classList.add('open'); panel.classList.add('open'); } }
-    function closePanel() { if (trigger) { trigger.classList.remove('open'); panel.classList.remove('open'); } }
-    function togglePanel() { if (panel.classList.contains('open')) closePanel(); else openPanel(); }
-    sel.addEventListener('change', updateHint);
-    updateHint();
-    if (trigger) {
-        trigger.addEventListener('click', function(e) { e.stopPropagation(); togglePanel(); });
-        checkboxes.forEach(function(cb) {
-            cb.addEventListener('change', function(e) { e.stopPropagation(); updateTriggerText(); });
+
+    document.querySelectorAll('.nav-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var id = btn.getAttribute('data-show');
+            if (id) showSection(id);
         });
-        document.addEventListener('click', function() { closePanel(); });
+    });
+
+    var sel1 = document.getElementById('target_type1');
+    var wrap1 = document.getElementById('specific-travelers-wrap');
+    var hints1 = { all_travelers: 'Every traveler registered on the platform will receive this notification.', all_users: 'Every user (travelers and agents) will receive this notification.', specific: 'Only the selected travelers below will receive this notification.' };
+    function update1() {
+        wrap1.style.display = sel1.value === 'specific' ? 'block' : 'none';
+        document.getElementById('hint1').textContent = hints1[sel1.value] || '';
+    }
+    sel1.addEventListener('change', update1);
+    update1();
+
+    var sel2 = document.getElementById('target_type2');
+    var wrap2 = document.getElementById('specific-agents-wrap');
+    var hints2 = { all_agents: 'Every agent on the platform will receive this notification.', specific: 'Only the selected agents below will receive this notification.' };
+    function update2() {
+        wrap2.style.display = sel2.value === 'specific' ? 'block' : 'none';
+        document.getElementById('hint2').textContent = hints2[sel2.value] || '';
+    }
+    sel2.addEventListener('change', update2);
+    update2();
+
+    function setupRecipient(name) {
+        var trigger = document.getElementById('recipientTrigger' + name);
+        var panel = document.getElementById('recipientPanel' + name);
+        var triggerText = document.getElementById('recipientTriggerText' + name);
+        var checkboxes = (panel || {}).querySelectorAll ? panel.querySelectorAll('input[name="user_ids"]') : [];
+        function updateText() {
+            var checked = Array.from(checkboxes).filter(function(c) { return c.checked; });
+            var label = name === '1' ? 'traveler' : 'agent';
+            triggerText.textContent = checked.length === 0 ? 'Select ' + label + 's...' : checked.length + ' ' + label + (checked.length === 1 ? '' : 's') + ' selected';
+            triggerText.classList.toggle('has-selection', checked.length > 0);
+        }
+        function toggle() { panel.classList.toggle('open'); trigger.classList.toggle('open', panel.classList.contains('open')); }
+        if (trigger) {
+            trigger.addEventListener('click', function(e) { e.stopPropagation(); toggle(); });
+            checkboxes.forEach(function(cb) { cb.addEventListener('change', updateText); });
+        }
+        document.addEventListener('click', function() {
+            if (panel) panel.classList.remove('open');
+            if (trigger) trigger.classList.remove('open');
+        });
         if (panel) panel.addEventListener('click', function(e) { e.stopPropagation(); });
     }
+    setupRecipient('1');
+    setupRecipient('2');
 })();
 </script>
 {% endblock %}

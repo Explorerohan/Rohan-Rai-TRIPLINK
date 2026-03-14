@@ -27,6 +27,14 @@
     .nav-btn-text { width: 100%; }
     .nav-btn-title { font-size: 16px; font-weight: 600; color: #1a1d21; margin-bottom: 2px; }
     .nav-btn-desc { font-size: 13px; color: #64748b; }
+    .nav-btn { position: relative; }
+    .nav-btn .nav-btn-count {
+        position: absolute; top: 12px; right: 12px;
+        min-width: 22px; height: 22px; border-radius: 11px;
+        background: #dc2626; color: #fff; font-size: 11px; font-weight: 700;
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 0 6px;
+    }
     .section-view { display: none; }
     .section-view.active { display: block; }
     .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
@@ -147,6 +155,7 @@
                 <div class="nav-btn-title">From admin</div>
                 <div class="nav-btn-desc">Notifications sent to you by admin</div>
             </div>
+            {% if unread_count %}<span class="nav-btn-count">{{ unread_count }}</span>{% endif %}
         </div>
         <div class="nav-btn" data-show="create">
             <div class="nav-btn-icon">✏️</div>
