@@ -57,6 +57,8 @@
   "whereToGo": "Where do you want to go ?",
   "searchPlaces": "Search Places",
   "filterByLocation": "Filter by location",
+  "hotDeals": "Hot Deals",
+  "noDealsAtMoment": "No deals at the moment. Check back soon!",
   "topPicksForYou": "Top Picks for You",
   "seeAll": "See all",
   "loadingPackages": "Loading packages...",

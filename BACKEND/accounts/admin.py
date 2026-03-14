@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.urls import reverse
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile, Package, PackageFeature, CustomPackage, Booking, AgentReview, Notification, NotificationRecipient, Roles
+from .models import User, UserProfile, AgentProfile, Package, PackageFeature, Deal, CustomPackage, Booking, AgentReview, Notification, NotificationRecipient, Roles
 from .emailjs_utils import send_agent_credentials_email
 
 
@@ -98,6 +98,14 @@ class PackageAdmin(admin.ModelAdmin):
     search_fields = ['title', 'location', 'country', 'agent__email']
     readonly_fields = ['created_at', 'updated_at']
     filter_horizontal = ['features']
+
+
+@admin.register(Deal)
+class DealAdmin(admin.ModelAdmin):
+    list_display = ['package', 'agent', 'discount_percent', 'valid_from', 'valid_until', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['package__title', 'agent__email', 'title']
+    readonly_fields = ['created_at']
 
 
 @admin.register(CustomPackage)

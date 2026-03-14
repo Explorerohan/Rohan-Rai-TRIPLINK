@@ -474,7 +474,9 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     }
   };
 
-  const unitPrice = parsePriceValue(packageDetail?.price_per_person ?? trip.price);
+  const unitPrice = packageDetail?.has_active_deal && packageDetail?.deal_price != null
+    ? parsePriceValue(packageDetail.deal_price)
+    : parsePriceValue(packageDetail?.price_per_person ?? trip.price);
   const travelerCount = Math.max(parseInt(travelerCountInput, 10) || 1, 1);
   const computedTotal = unitPrice * travelerCount;
   const availableRewardPoints =
@@ -931,7 +933,23 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       <View style={styles.bottomBar}>
         <View style={styles.priceWrap}>
           <Text style={styles.priceLabel}>{t("price")}</Text>
-          <Text style={styles.priceValue}>{formatPrice(packageDetail?.price_per_person || trip.price)}</Text>
+          <View style={styles.priceValueRow}>
+            {packageDetail?.has_active_deal && packageDetail?.original_price != null ? (
+              <Text style={styles.priceOriginal}>{formatPrice(packageDetail.original_price)}</Text>
+            ) : null}
+            <Text style={styles.priceValue}>
+              {formatPrice(
+                (packageDetail?.has_active_deal && packageDetail?.deal_price != null)
+                  ? packageDetail.deal_price
+                  : (packageDetail?.price_per_person || trip.price)
+              )}
+            </Text>
+            {packageDetail?.has_active_deal && packageDetail?.deal_discount_percent != null ? (
+              <View style={styles.dealBadge}>
+                <Text style={styles.dealBadgeText}>{packageDetail.deal_discount_percent}% OFF</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
         {(userHasBooked || trip.user_has_booked) ? (
           <View style={styles.alreadyBookedBadge}>
@@ -1881,11 +1899,34 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginBottom: 4,
   },
+  priceValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  priceOriginal: {
+    fontSize: 18,
+    color: "#94a3b8",
+    textDecorationLine: "line-through",
+    fontWeight: "600",
+  },
   priceValue: {
     fontSize: 24,
     fontWeight: "800",
     color: "#1f6b2a",
     letterSpacing: -0.5,
+  },
+  dealBadge: {
+    backgroundColor: "#dc2626",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  dealBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
   },
   bookButton: {
     flexShrink: 0,

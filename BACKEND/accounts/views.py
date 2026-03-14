@@ -6,6 +6,7 @@ import time
 import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
 from urllib.error import URLError, HTTPError
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -35,6 +36,8 @@ from .models import (
     PackageFeature,
     PackageStatus,
     PackageBookmark,
+    Deal,
+    get_active_deal,
     CustomPackage,
     Booking,
     BookingStatus,
@@ -1139,6 +1142,104 @@ def agent_notifications_view(request):
         'active_nav': 'notifications',
     }
     return render(request, 'agent_notifications.html', context)
+
+
+def agent_deals_view(request):
+    """Agent view to create and manage deals on their packages."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    agent = request.user
+    now = timezone.now()
+    today = timezone.localdate()
+
+    package_choices = list(
+        Package.objects.filter(agent=agent, status=PackageStatus.ACTIVE)
+        .filter(Q(trip_start_date__isnull=True) | Q(trip_start_date__gt=today))
+        .order_by('title')
+        .values('id', 'title', 'price_per_person')
+    )
+
+    if request.method == 'POST':
+        title = (request.POST.get('title') or '').strip()
+        package_id = request.POST.get('package_id')
+        discount_percent = request.POST.get('discount_percent')
+        valid_from_str = request.POST.get('valid_from')
+        valid_until_str = request.POST.get('valid_until')
+
+        errors = []
+        if not package_id:
+            errors.append('Please select a package.')
+        else:
+            package = Package.objects.filter(id=package_id, agent=agent).first()
+            if not package:
+                errors.append('Invalid package.')
+            elif package.trip_start_date and package.trip_start_date <= today:
+                errors.append('Cannot create a deal for a package whose trip has already started.')
+        try:
+            discount = int(discount_percent or 0)
+            if not (1 <= discount <= 99):
+                errors.append('Discount must be between 1 and 99.')
+        except (TypeError, ValueError):
+            errors.append('Invalid discount percentage.')
+        if not valid_from_str:
+            errors.append('Valid from date is required.')
+        if not valid_until_str:
+            errors.append('Valid until date is required.')
+
+        # Interpret datetime-local values as app timezone (Nepal); stored as UTC
+        deal_tz = ZoneInfo('Asia/Kathmandu')
+        if not errors:
+            try:
+                s = valid_from_str.strip()
+                if 'T' in s:
+                    dt = datetime.strptime(s[:16], '%Y-%m-%dT%H:%M')
+                else:
+                    dt = datetime.strptime(s[:10], '%Y-%m-%d').replace(hour=0, minute=0, second=0)
+                valid_from = dt.replace(tzinfo=deal_tz)
+            except (ValueError, TypeError):
+                valid_from = None
+            try:
+                s = valid_until_str.strip()
+                if 'T' in s:
+                    dt = datetime.strptime(s[:16], '%Y-%m-%dT%H:%M')
+                else:
+                    dt = datetime.strptime(s[:10], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+                valid_until = dt.replace(tzinfo=deal_tz)
+            except (ValueError, TypeError):
+                valid_until = None
+            if valid_from and valid_until and valid_until <= valid_from:
+                errors.append('Valid until must be after valid from.')
+            if not errors:
+                Deal.objects.create(
+                    package_id=int(package_id),
+                    agent=agent,
+                    title=title or '',
+                    discount_percent=discount,
+                    valid_from=valid_from,
+                    valid_until=valid_until,
+                )
+                messages.success(request, 'Deal created successfully.')
+                return redirect('agent_deals')
+
+        for e in errors:
+            messages.error(request, e)
+
+    deals = Deal.objects.filter(agent=agent).select_related('package').order_by('-valid_until')
+    active_deals = [d for d in deals if d.valid_from <= now <= d.valid_until]
+    upcoming_deals = [d for d in deals if d.valid_from > now]
+    past_deals = [d for d in deals if d.valid_until < now]
+
+    context = {
+        'user': request.user,
+        'package_choices': package_choices,
+        'active_deals': active_deals,
+        'upcoming_deals': upcoming_deals,
+        'past_deals': past_deals,
+        'active_nav': 'deals',
+    }
+    return render(request, 'agent_deals.html', context)
 
 
 def agent_dashboard_view(request):
@@ -2906,7 +3007,11 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        price_per_person = _money(package.price_per_person)
+        active_deal = get_active_deal(package)
+        if active_deal:
+            price_per_person = _money(active_deal.effective_price())
+        else:
+            price_per_person = _money(package.price_per_person)
         total_amount = _money(price_per_person * traveler_count)
 
         # Reward points: 1 point = 1 NPR. Clamp to available points and total amount.

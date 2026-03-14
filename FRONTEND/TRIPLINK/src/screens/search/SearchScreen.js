@@ -44,13 +44,22 @@ const formatDateRange = (start, end) => {
 
 const transformRawPackages = (rawList) => {
   if (!rawList?.length) return [];
-  return rawList.filter(Boolean).map((pkg) => ({
+  return rawList.filter(Boolean).map((pkg) => {
+    const hasDeal = Boolean(pkg.has_active_deal && pkg.deal_price != null);
+    const displayPrice = hasDeal ? pkg.deal_price : pkg.price_per_person;
+    const num = typeof displayPrice === "number" ? displayPrice : parseFloat(String(displayPrice || "0")) || 0;
+    const priceStr = `Rs. ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return {
     id: pkg.id.toString(),
     title: pkg.title,
     location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
     locationName: (pkg.location || "").trim() || "Other",
     image: pkg.main_image_url || PLACEHOLDER_IMAGE,
-    price: pkg.price_per_person,
+    price: priceStr,
+    priceValue: num,
+    has_active_deal: hasDeal,
+    deal_discount_percent: pkg.deal_discount_percent,
+    original_price: pkg.original_price,
     nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
     description: pkg.description,
     hero: pkg.main_image_url,
@@ -66,7 +75,8 @@ const transformRawPackages = (rawList) => {
     })) || defaultFacilities,
     user_has_booked: pkg.user_has_booked ?? false,
     packageData: pkg,
-  }));
+  };
+  });
 };
 
 const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) => {
@@ -221,12 +231,19 @@ const SearchScreen = ({ session, initialPackages = null, onBack, onTripPress }) 
               activeOpacity={0.9}
               onPress={() => handleSelect(place)}
             >
-              <Image source={{ uri: place.image }} style={styles.cardImage} />
+              <View style={styles.cardImageWrap}>
+                <Image source={{ uri: place.image }} style={styles.cardImage} />
+                {place.has_active_deal && place.deal_discount_percent != null ? (
+                  <View style={styles.dealBadge}>
+                    <Text style={styles.dealBadgeText}>{place.deal_discount_percent}% OFF</Text>
+                  </View>
+                ) : null}
+              </View>
               <View style={styles.cardBody}>
                 <View style={styles.cardTitleRow}>
                   <Text style={styles.cardTitle} numberOfLines={2}>{place.title}</Text>
                   <View style={styles.cardPriceBadge}>
-                    <Text style={styles.cardPriceBadgeText}>{formatPrice(place.price)}</Text>
+                    <Text style={styles.cardPriceBadgeText}>{place.price}</Text>
                   </View>
                 </View>
                 <View style={styles.cardDateRow}>
@@ -418,12 +435,29 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  cardImageWrap: {
+    position: "relative",
+  },
   cardImage: {
     width: 120,
     height: 140,
     backgroundColor: "#e2e8f0",
     borderTopLeftRadius: 14,
     borderBottomLeftRadius: 14,
+  },
+  dealBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: "#dc2626",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  dealBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
   cardBody: {
     flex: 1,

@@ -132,7 +132,12 @@ const formatShortDateRange = (start, end, t) => {
 
 const transformRawPackages = (rawList) => {
   if (!rawList?.length) return [];
-  return rawList.filter(Boolean).map((pkg) => ({
+  return rawList.filter(Boolean).map((pkg) => {
+    const hasDeal = Boolean(pkg.has_active_deal && pkg.deal_price != null);
+    const displayPrice = hasDeal ? pkg.deal_price : pkg.price_per_person;
+    const num = typeof displayPrice === "number" ? displayPrice : parseFloat(String(displayPrice || "0")) || 0;
+    const priceStr = `Rs. ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return {
     id: pkg.id.toString(),
     title: pkg.title,
     location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "—",
@@ -140,7 +145,10 @@ const transformRawPackages = (rawList) => {
     image:
       pkg.main_image_url ||
       "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
-    price: pkg.price_per_person,
+    price: priceStr,
+    has_active_deal: hasDeal,
+    deal_discount_percent: pkg.deal_discount_percent,
+    original_price: pkg.original_price,
     nights: pkg.duration_display || `${pkg.duration_days}D/${pkg.duration_nights}N`,
     rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
     reviews: pkg.participants_count || 0,
@@ -158,7 +166,8 @@ const transformRawPackages = (rawList) => {
     trip_start_date: pkg.trip_start_date ?? null,
     trip_end_date: pkg.trip_end_date ?? null,
     packageData: pkg,
-  }));
+  };
+  });
 };
 
 const toRawCacheList = (items) =>
@@ -316,6 +325,10 @@ const HomeScreen = ({
         return String(aEnd).localeCompare(String(bEnd));
       });
   }, [filteredPopular]);
+
+  const hotDealsPackages = useMemo(() => {
+    return (packages || []).filter((p) => p.has_active_deal === true);
+  }, [packages]);
 
   const upcomingTopPicks = useMemo(() => {
     const todayKey = toDateOnlyKey(new Date());
@@ -526,6 +539,61 @@ const HomeScreen = ({
         </ScrollView>
 
         <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t("hotDeals")}</Text>
+        </View>
+        {hotDealsPackages.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.cardRow}
+          >
+            {hotDealsPackages.map((place) => (
+              <TouchableOpacity
+                key={place.id}
+                style={[styles.placeCard, styles.dealCard]}
+                activeOpacity={0.9}
+                onPress={() => handleTripSelect(place)}
+              >
+                <View>
+                  <Image source={{ uri: place.image }} style={styles.placeImage} />
+                  <View style={styles.dealBadge}>
+                    <Text style={styles.dealBadgeText}>{place.deal_discount_percent}% OFF</Text>
+                  </View>
+                </View>
+                <View style={styles.placeBody}>
+                  <Text style={styles.placeTitle} numberOfLines={2}>{place.title}</Text>
+                  <View style={styles.priceRow}>
+                    {place.original_price != null && (
+                      <Text style={styles.priceOriginal}>{`Rs. ${Number(place.original_price).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}</Text>
+                    )}
+                    <Text style={[styles.price, styles.priceDeal]}>{place.price}</Text>
+                  </View>
+                  <View style={styles.placeMetaRow}>
+                    <View style={styles.metaLeft}>
+                      <Ionicons name="location-outline" size={14} color="#6b7076" />
+                      <Text style={styles.placeMeta} numberOfLines={1}>{place.location}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.saveBadge, place?.is_bookmarked && styles.saveBadgeActive]}
+                      activeOpacity={0.8}
+                      onPress={(e) => { e?.stopPropagation?.(); handleToggleBookmark(place); }}
+                      disabled={bookmarkBusyIds.includes(String(place.id))}
+                    >
+                      <Ionicons name={place?.is_bookmarked ? "bookmark" : "bookmark-outline"} size={18} color={place?.is_bookmarked ? "#ffffff" : "#1f6b2a"} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.dealsEmpty}>
+            <Ionicons name="pricetag-outline" size={32} color="#cbd5e1" />
+            <Text style={styles.dealsEmptyText}>{t("noDealsAtMoment")}</Text>
+          </View>
+        )}
+
+        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
           <Text style={styles.sectionTitle}>{t("topPicksForYou")}</Text>
           <TouchableOpacity activeOpacity={0.8} onPress={onSeeAllTopPicksPress}>
             <Text style={styles.sectionLink}>{t("seeAll")}</Text>
@@ -566,6 +634,11 @@ const HomeScreen = ({
             >
               <View>
                 <Image source={{ uri: place.image }} style={styles.placeImage} />
+                {place.has_active_deal && place.deal_discount_percent != null ? (
+                  <View style={styles.dealBadge}>
+                    <Text style={styles.dealBadgeText}>{place.deal_discount_percent}% OFF</Text>
+                  </View>
+                ) : null}
               </View>
 
               <View style={styles.placeBody}>
@@ -574,7 +647,10 @@ const HomeScreen = ({
                 </View>
 
                 <View style={styles.priceRow}>
-                  <Text style={styles.price}>{place.price}</Text>
+                  {place.has_active_deal && place.original_price != null ? (
+                    <Text style={styles.priceOriginal}>{`Rs. ${Number(place.original_price).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}</Text>
+                  ) : null}
+                  <Text style={[styles.price, place.has_active_deal && styles.priceDeal]}>{place.price}</Text>
                   <View style={styles.nights}>
                     <Ionicons name="moon-outline" size={14} color="#6b7076" />
                     <Text style={styles.nightsText}>{place.nights}</Text>
@@ -641,6 +717,11 @@ const HomeScreen = ({
                     <Text style={styles.liveBadgeText}>{t("live")}</Text>
                   </View>
                   <View style={styles.recommendOverlay}>
+                    {place.has_active_deal && place.deal_discount_percent != null ? (
+                      <View style={styles.dealBadgeOverlay}>
+                        <Text style={styles.dealBadgeTextOverlay}>{place.deal_discount_percent}% OFF</Text>
+                      </View>
+                    ) : null}
                     <Text style={styles.recommendTitle} numberOfLines={2}>{place.title}</Text>
                     <View style={styles.recommendMeta}>
                       <View style={styles.nights}>
@@ -988,11 +1069,67 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 2,
+    gap: 8,
   },
   price: {
     fontSize: 18,
     fontWeight: "800",
     color: "#1f6b2a",
+  },
+  priceOriginal: {
+    fontSize: 14,
+    color: "#94a3b8",
+    textDecorationLine: "line-through",
+  },
+  priceDeal: {
+    color: "#166534",
+  },
+  dealBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: "#dc2626",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  dealBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  dealBadgeOverlay: {
+    alignSelf: "flex-start",
+    backgroundColor: "#dc2626",
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  dealBadgeTextOverlay: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  dealCard: {
+    borderColor: "#fecaca",
+    borderWidth: 1,
+  },
+  dealsEmpty: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderStyle: "dashed",
+  },
+  dealsEmptyText: {
+    fontSize: 14,
+    color: "#94a3b8",
+    marginTop: 8,
   },
   nights: {
     flexDirection: "row",

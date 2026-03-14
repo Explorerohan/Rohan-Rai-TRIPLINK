@@ -2,7 +2,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Notification, NotificationRecipient, Roles
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Notification, NotificationRecipient, Roles, get_active_deal
 
 User = get_user_model()
 
@@ -226,6 +226,10 @@ class PackageSerializer(serializers.ModelSerializer):
     user_has_booked = serializers.SerializerMethodField()
     is_bookmarked = serializers.SerializerMethodField()
     participants_preview = serializers.SerializerMethodField()
+    has_active_deal = serializers.SerializerMethodField()
+    deal_discount_percent = serializers.SerializerMethodField()
+    original_price = serializers.SerializerMethodField()
+    deal_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Package
@@ -235,6 +239,7 @@ class PackageSerializer(serializers.ModelSerializer):
             'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'status',
             'agent_rating', 'participants_count', 'participants_preview', 'agent_name', 'user_has_booked', 'is_bookmarked',
+            'has_active_deal', 'deal_discount_percent', 'original_price', 'deal_price',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -296,6 +301,24 @@ class PackageSerializer(serializers.ModelSerializer):
                 pass
         return PackageBookmark.objects.filter(user=request.user, package=obj).exists()
 
+    def _get_deal_info(self, obj):
+        deal = get_active_deal(obj)
+        if not deal:
+            return False, None, None, None
+        return True, deal.discount_percent, obj.price_per_person, deal.effective_price()
+
+    def get_has_active_deal(self, obj):
+        return self._get_deal_info(obj)[0]
+
+    def get_deal_discount_percent(self, obj):
+        return self._get_deal_info(obj)[1]
+
+    def get_original_price(self, obj):
+        return self._get_deal_info(obj)[2]
+
+    def get_deal_price(self, obj):
+        return self._get_deal_info(obj)[3]
+
 
 class BookingSerializer(serializers.ModelSerializer):
     """Serializer for Bookings - create and list. Use package_id for create (no duplicate package field)."""
@@ -344,8 +367,12 @@ class BookingSerializer(serializers.ModelSerializer):
         validated_data.pop('total_amount', None)
         if Booking.objects.filter(user=user, package=package, status=BookingStatus.CONFIRMED).exists():
             raise serializers.ValidationError({'package_id': 'You have already booked this package.'})
-        # Always create as confirmed; ignore any incoming status.
-        price_per_person = package.price_per_person or 0
+        # Always create as confirmed; ignore any incoming status. Apply deal price if active.
+        active_deal = get_active_deal(package)
+        if active_deal:
+            price_per_person = active_deal.effective_price() or 0
+        else:
+            price_per_person = package.price_per_person or 0
         total_amount = price_per_person * traveler_count
         validated_data['user'] = user
         validated_data['package'] = package
@@ -603,6 +630,10 @@ class PackageDetailSerializer(serializers.ModelSerializer):
     duration_display = serializers.ReadOnlyField()
     user_has_booked = serializers.SerializerMethodField()
     agent_rating = serializers.SerializerMethodField()
+    has_active_deal = serializers.SerializerMethodField()
+    deal_discount_percent = serializers.SerializerMethodField()
+    original_price = serializers.SerializerMethodField()
+    deal_price = serializers.SerializerMethodField()
 
     # Nested data
     agent = serializers.SerializerMethodField()
@@ -617,6 +648,7 @@ class PackageDetailSerializer(serializers.ModelSerializer):
             'main_image', 'main_image_url', 'features', 'status',
             'agent_rating', 'participants_count',
             'user_has_booked',
+            'has_active_deal', 'deal_discount_percent', 'original_price', 'deal_price',
             'agent', 'participants',
             'created_at', 'updated_at'
         ]
@@ -643,6 +675,24 @@ class PackageDetailSerializer(serializers.ModelSerializer):
             return float(obj.agent.agent_profile.rating)
         except (AgentProfile.DoesNotExist, AttributeError):
             return 0.0
+
+    def _get_deal_info_detail(self, obj):
+        deal = get_active_deal(obj)
+        if not deal:
+            return False, None, None, None
+        return True, deal.discount_percent, obj.price_per_person, deal.effective_price()
+
+    def get_has_active_deal(self, obj):
+        return self._get_deal_info_detail(obj)[0]
+
+    def get_deal_discount_percent(self, obj):
+        return self._get_deal_info_detail(obj)[1]
+
+    def get_original_price(self, obj):
+        return self._get_deal_info_detail(obj)[2]
+
+    def get_deal_price(self, obj):
+        return self._get_deal_info_detail(obj)[3]
 
     def get_agent(self, obj):
         try:

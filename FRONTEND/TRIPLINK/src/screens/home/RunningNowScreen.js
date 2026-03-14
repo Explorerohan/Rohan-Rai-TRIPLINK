@@ -86,7 +86,12 @@ const formatDateRange = (start, end) => {
 
 const transformRawPackages = (rawList) => {
   if (!Array.isArray(rawList)) return [];
-  return rawList.filter(Boolean).map((pkg) => ({
+  return rawList.filter(Boolean).map((pkg) => {
+    const hasDeal = Boolean(pkg.has_active_deal && pkg.deal_price != null);
+    const displayPrice = hasDeal ? pkg.deal_price : pkg.price_per_person;
+    const priceValue = toNumericPrice(displayPrice);
+    const priceStr = `Rs. ${priceValue.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return {
     id: String(pkg.id),
     title: pkg.title || "Package",
     location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "Location",
@@ -94,8 +99,11 @@ const transformRawPackages = (rawList) => {
     country: (pkg.country || "").trim() || "Other",
     agentName: (pkg.agent_name || "").trim() || "Travel Agent",
     image: pkg.main_image_url || FALLBACK_IMAGE,
-    price: pkg.price_per_person,
-    priceValue: toNumericPrice(pkg.price_per_person),
+    price: priceStr,
+    priceValue,
+    has_active_deal: hasDeal,
+    deal_discount_percent: pkg.deal_discount_percent,
+    original_price: pkg.original_price,
     nights: pkg.duration_display || `${pkg.duration_days || 0}D/${pkg.duration_nights || 0}N`,
     rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
     reviews: pkg.participants_count || 0,
@@ -111,7 +119,8 @@ const transformRawPackages = (rawList) => {
     trip_start_date: pkg.trip_start_date ?? null,
     trip_end_date: pkg.trip_end_date ?? null,
     packageData: pkg,
-  }));
+  };
+  });
 };
 
 const toRawCacheList = (items) =>

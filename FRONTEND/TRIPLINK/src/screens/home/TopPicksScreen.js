@@ -127,7 +127,12 @@ const countActiveFilters = (filters) => {
 
 const transformRawPackages = (rawList) => {
   if (!Array.isArray(rawList)) return [];
-  return rawList.filter(Boolean).map((pkg) => ({
+  return rawList.filter(Boolean).map((pkg) => {
+    const hasDeal = Boolean(pkg.has_active_deal && pkg.deal_price != null);
+    const displayPrice = hasDeal ? pkg.deal_price : pkg.price_per_person;
+    const priceValue = toNumericPrice(displayPrice);
+    const priceStr = `Rs. ${priceValue.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return {
     id: String(pkg.id),
     title: pkg.title || "Package",
     location: `${pkg.location || ""}, ${pkg.country || ""}`.replace(/^,\s*|,\s*$/g, "").trim() || "Location",
@@ -135,8 +140,11 @@ const transformRawPackages = (rawList) => {
     country: (pkg.country || "").trim() || "Other",
     agentName: (pkg.agent_name || "").trim() || "Travel Agent",
     image: pkg.main_image_url || FALLBACK_IMAGE,
-    price: pkg.price_per_person,
-    priceValue: toNumericPrice(pkg.price_per_person),
+    price: priceStr,
+    priceValue,
+    has_active_deal: hasDeal,
+    deal_discount_percent: pkg.deal_discount_percent,
+    original_price: pkg.original_price,
     nights: pkg.duration_display || `${pkg.duration_days || 0}D/${pkg.duration_nights || 0}N`,
     rating: parseFloat(pkg.agent_rating ?? pkg.rating) || 4.5,
     reviews: pkg.participants_count || 0,
@@ -152,7 +160,8 @@ const transformRawPackages = (rawList) => {
     trip_start_date: pkg.trip_start_date ?? null,
     trip_end_date: pkg.trip_end_date ?? null,
     packageData: pkg,
-  }));
+  };
+  });
 };
 
 const toRawCacheList = (items) =>
@@ -889,7 +898,15 @@ const TopPicksScreen = ({
                 <View style={styles.cardFooter}>
                   <View>
                     <Text style={styles.priceLabel}>Price per person</Text>
-                    <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
+                    <View style={styles.priceRow}>
+                      {item.has_active_deal && item.original_price != null ? (
+                        <Text style={styles.priceOriginal}>{formatPrice(item.original_price)}</Text>
+                      ) : null}
+                      <Text style={styles.priceText}>{item.price}</Text>
+                      {item.has_active_deal && item.deal_discount_percent != null ? (
+                        <View style={styles.dealBadge}><Text style={styles.dealBadgeText}>{item.deal_discount_percent}% OFF</Text></View>
+                      ) : null}
+                    </View>
                   </View>
                   <View style={styles.durationPill}>
                     <Ionicons name="moon-outline" size={14} color="#1f6b2a" />
@@ -1368,6 +1385,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  priceOriginal: {
+    fontSize: 14,
+    color: "#94a3b8",
+    textDecorationLine: "line-through",
+  },
+  dealBadge: {
+    backgroundColor: "#dc2626",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  dealBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
   priceLabel: {
     fontSize: 12,

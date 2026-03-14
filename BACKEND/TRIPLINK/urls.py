@@ -28,7 +28,7 @@ from accounts.views import (
     agent_edit_package_view, agent_delete_package_view,
     agent_package_detail_view, agent_travelers_view, agent_bookings_view, agent_calendar_view,
     agent_custom_packages_view, agent_custom_package_detail_view,
-    agent_chat_view, agent_reviews_view,
+    agent_chat_view, agent_reviews_view, agent_deals_view,
 )
 
 urlpatterns = [
@@ -58,6 +58,7 @@ urlpatterns = [
     path('custom-packages/agent/<int:pk>/', agent_custom_package_detail_view, name='agent_custom_package_detail'),
     path('chat/agent/', agent_chat_view, name='agent_chat'),
     path('reviews/agent/', agent_reviews_view, name='agent_reviews'),
+    path('deals/agent/', agent_deals_view, name='agent_deals'),
     # Forgot password URLs
     path('forgot-password/admin/', admin_forgot_password_view, name='admin_forgot_password'),
     path('forgot-password/agent/', agent_forgot_password_view, name='agent_forgot_password'),

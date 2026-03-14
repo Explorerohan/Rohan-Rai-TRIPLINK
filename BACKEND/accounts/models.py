@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -214,6 +215,57 @@ class Package(models.Model):
             return float(self.agent.agent_profile.rating)
         except (AgentProfile.DoesNotExist, AttributeError):
             return 0.0
+
+
+class Deal(models.Model):
+    """Time-limited percentage discount on a package. Agents create deals on their packages."""
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name='deals',
+    )
+    agent = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='deals',
+        limit_choices_to={'role': Roles.AGENT},
+    )
+    title = models.CharField(max_length=200, blank=True, help_text="Optional label, e.g. Summer Sale")
+    discount_percent = models.PositiveIntegerField(
+        help_text="Discount percentage 1-99, e.g. 20 for 20% off",
+        validators=[MinValueValidator(1), MaxValueValidator(99)],
+    )
+    valid_from = models.DateTimeField(help_text="When deal becomes active")
+    valid_until = models.DateTimeField(help_text="When deal expires")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Deal"
+        verbose_name_plural = "Deals"
+        ordering = ['-valid_until']
+
+    def __str__(self):
+        return f"{self.package.title} - {self.discount_percent}% off"
+
+    def effective_price(self, base_price=None):
+        """Compute price after discount. base_price defaults to package.price_per_person."""
+        base = base_price if base_price is not None else self.package.price_per_person
+        return (base * (100 - self.discount_percent)) / 100
+
+
+def get_active_deal(package, now=None):
+    """Return the active Deal for a package at the given time, or None."""
+    from django.utils import timezone
+    now = now or timezone.now()
+    return (
+        Deal.objects.filter(
+            package=package,
+            valid_from__lte=now,
+            valid_until__gte=now,
+        )
+        .order_by('-valid_until')
+        .first()
+    )
 
 
 class PackageBookmark(models.Model):

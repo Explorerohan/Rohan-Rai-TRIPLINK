@@ -44,18 +44,27 @@ const formatDateRange = (start, end) => {
 };
 
 const mapPackages = (rawList) =>
-  (Array.isArray(rawList) ? rawList : []).filter(Boolean).map((pkg) => ({
+  (Array.isArray(rawList) ? rawList : []).filter(Boolean).map((pkg) => {
+    const hasDeal = Boolean(pkg.has_active_deal && pkg.deal_price != null);
+    const displayPrice = hasDeal ? pkg.deal_price : pkg.price_per_person;
+    const num = typeof displayPrice === "number" ? displayPrice : parseFloat(String(displayPrice || "0")) || 0;
+    const priceStr = `Rs. ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    return {
     id: String(pkg.id),
     title: pkg.title || "Package",
     location: `${pkg.location || ""}${pkg.country ? `, ${pkg.country}` : ""}`.replace(/^,\s*/, "") || "Location",
     image: pkg.main_image_url || FALLBACK_IMAGE,
-    price: pkg.price_per_person,
+    price: priceStr,
+    has_active_deal: hasDeal,
+    deal_discount_percent: pkg.deal_discount_percent,
+    original_price: pkg.original_price,
     duration: pkg.duration_display || `${pkg.duration_days || 0}D/${pkg.duration_nights || 0}N`,
     trip_start_date: pkg.trip_start_date ?? null,
     trip_end_date: pkg.trip_end_date ?? null,
     status: pkg.status || "active",
     raw: pkg,
-  }));
+  };
+  });
 
 const BookmarkedScreen = ({
   session,

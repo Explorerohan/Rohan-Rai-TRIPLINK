@@ -392,7 +392,7 @@
                 <span>Notifications</span>
                 <span class="nav-badge" id="agentNotificationUnreadBadge"></span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="{% url 'agent_deals' %}" class="nav-item{% if active_nav == 'deals' %} active{% endif %}">
                 <i>&#127919;</i>
                 <span>Deals</span>
             </a>
