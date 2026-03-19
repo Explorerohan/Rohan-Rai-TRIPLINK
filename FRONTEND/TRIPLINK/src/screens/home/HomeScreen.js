@@ -538,62 +538,7 @@ const HomeScreen = ({
           })}
         </ScrollView>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t("hotDeals")}</Text>
-        </View>
-        {hotDealsPackages.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.cardRow}
-          >
-            {hotDealsPackages.map((place) => (
-              <TouchableOpacity
-                key={place.id}
-                style={[styles.placeCard, styles.dealCard]}
-                activeOpacity={0.9}
-                onPress={() => handleTripSelect(place)}
-              >
-                <View>
-                  <Image source={{ uri: place.image }} style={styles.placeImage} />
-                  <View style={styles.dealBadge}>
-                    <Text style={styles.dealBadgeText}>{place.deal_discount_percent}% OFF</Text>
-                  </View>
-                </View>
-                <View style={styles.placeBody}>
-                  <Text style={styles.placeTitle} numberOfLines={2}>{place.title}</Text>
-                  <View style={styles.priceRow}>
-                    {place.original_price != null && (
-                      <Text style={styles.priceOriginal}>{`Rs. ${Number(place.original_price).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}</Text>
-                    )}
-                    <Text style={[styles.price, styles.priceDeal]}>{place.price}</Text>
-                  </View>
-                  <View style={styles.placeMetaRow}>
-                    <View style={styles.metaLeft}>
-                      <Ionicons name="location-outline" size={14} color="#6b7076" />
-                      <Text style={styles.placeMeta} numberOfLines={1}>{place.location}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.saveBadge, place?.is_bookmarked && styles.saveBadgeActive]}
-                      activeOpacity={0.8}
-                      onPress={(e) => { e?.stopPropagation?.(); handleToggleBookmark(place); }}
-                      disabled={bookmarkBusyIds.includes(String(place.id))}
-                    >
-                      <Ionicons name={place?.is_bookmarked ? "bookmark" : "bookmark-outline"} size={18} color={place?.is_bookmarked ? "#ffffff" : "#1f6b2a"} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : (
-          <View style={styles.dealsEmpty}>
-            <Ionicons name="pricetag-outline" size={32} color="#cbd5e1" />
-            <Text style={styles.dealsEmptyText}>{t("noDealsAtMoment")}</Text>
-          </View>
-        )}
-
-        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+        <View style={[styles.sectionHeader]}>
           <Text style={styles.sectionTitle}>{t("topPicksForYou")}</Text>
           <TouchableOpacity activeOpacity={0.8} onPress={onSeeAllTopPicksPress}>
             <Text style={styles.sectionLink}>{t("seeAll")}</Text>
@@ -685,6 +630,61 @@ const HomeScreen = ({
             </TouchableOpacity>
           ))}
         </ScrollView>
+        )}
+
+        <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+          <View style={styles.hotDealsTitleRow}>
+            <Ionicons name="flame" size={20} color="#ea580c" />
+            <Text style={styles.hotDealsSectionTitle}>{t("hotDeals")}</Text>
+          </View>
+        </View>
+        {hotDealsPackages.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.hotDealsRow}
+          >
+            {hotDealsPackages.map((place) => (
+              <TouchableOpacity
+                key={place.id}
+                style={styles.hotDealBanner}
+                activeOpacity={0.92}
+                onPress={() => handleTripSelect(place)}
+              >
+                <Image source={{ uri: place.image }} style={styles.hotDealImage} />
+                <View style={styles.hotDealGradient} />
+                <View style={styles.hotDealContent}>
+                  <View style={styles.hotDealBadge}>
+                    <Text style={styles.hotDealBadgeText}>{place.deal_discount_percent}% OFF</Text>
+                  </View>
+                  <Text style={styles.hotDealTitle} numberOfLines={2}>{place.title}</Text>
+                  <View style={styles.hotDealMeta}>
+                    <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.hotDealLocation} numberOfLines={1}>{place.location}</Text>
+                  </View>
+                  <View style={styles.hotDealPriceRow}>
+                    {place.original_price != null && (
+                      <Text style={styles.hotDealOriginal}>{`Rs. ${Number(place.original_price).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}</Text>
+                    )}
+                    <Text style={styles.hotDealPrice}>{place.price}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.hotDealBookmark}
+                    activeOpacity={0.8}
+                    onPress={(e) => { e?.stopPropagation?.(); handleToggleBookmark(place); }}
+                    disabled={bookmarkBusyIds.includes(String(place.id))}
+                  >
+                    <Ionicons name={place?.is_bookmarked ? "bookmark" : "bookmark-outline"} size={18} color="#ffffff" />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.dealsEmpty}>
+            <Ionicons name="pricetag-outline" size={32} color="#cbd5e1" />
+            <Text style={styles.dealsEmptyText}>{t("noDealsAtMoment")}</Text>
+          </View>
         )}
 
         <View style={styles.sectionHeader}>
@@ -1114,6 +1114,108 @@ const styles = StyleSheet.create({
   dealCard: {
     borderColor: "#fecaca",
     borderWidth: 1,
+  },
+  hotDealsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  hotDealsSectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1f1f1f",
+  },
+  hotDealsRow: {
+    gap: 14,
+    paddingRight: 10,
+    marginBottom: 22,
+  },
+  hotDealBanner: {
+    width: 280,
+    height: 160,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#1f1f1f",
+    position: "relative",
+  },
+  hotDealImage: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
+  },
+  hotDealGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  hotDealContent: {
+    ...StyleSheet.absoluteFillObject,
+    padding: 14,
+    justifyContent: "flex-end",
+  },
+  hotDealBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#ea580c",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  hotDealBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  hotDealTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginBottom: 4,
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  hotDealMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 6,
+  },
+  hotDealLocation: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.9)",
+    flex: 1,
+  },
+  hotDealPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  hotDealOriginal: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.65)",
+    textDecorationLine: "line-through",
+  },
+  hotDealPrice: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#86efac",
+  },
+  hotDealBookmark: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   dealsEmpty: {
     paddingVertical: 24,
