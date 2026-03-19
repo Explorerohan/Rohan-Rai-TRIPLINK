@@ -50,6 +50,7 @@ from .models import (
     ChatMessage,
     Notification,
     NotificationRecipient,
+    ExpoPushToken,
 )
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
@@ -70,7 +71,9 @@ from .serializers import (
     ChatMessageSerializer,
     NotificationSerializer,
     NotificationCreateSerializer,
+    ExpoPushTokenRegisterSerializer,
 )
+from .push_notifications import send_expo_push_for_notification
 
 User = get_user_model()
 
@@ -1055,6 +1058,8 @@ def admin_notifications_view(request):
                         NotificationRecipient.objects.bulk_create(
                             [NotificationRecipient(notification=notification, user=u) for u in recipients]
                         )
+                    recipient_ids = list(recipients.values_list("id", flat=True))
+                    send_expo_push_for_notification(notification, recipient_ids)
                     messages.success(request, f'Notification sent to {recipients.count()} recipient(s).')
                     return redirect('admin_notifications')
                 else:
@@ -1109,6 +1114,8 @@ def agent_notifications_view(request):
                     NotificationRecipient.objects.bulk_create(
                         [NotificationRecipient(notification=notification, user=u) for u in recipients]
                     )
+                recipient_ids = list(recipients.values_list("id", flat=True))
+                send_expo_push_for_notification(notification, recipient_ids)
                 messages.success(request, f'Notification sent to {recipients.count()} traveler(s).')
                 return redirect('agent_notifications')
             else:
@@ -3684,6 +3691,9 @@ class NotificationListCreateView(generics.ListCreateAPIView):
                 [NotificationRecipient(notification=notification, user=u) for u in recipients]
             )
 
+        recipient_ids = list(recipients.values_list("id", flat=True))
+        send_expo_push_for_notification(notification, recipient_ids)
+
         out_serializer = NotificationSerializer(notification, context={"request": request})
         return response.Response(out_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -3724,3 +3734,20 @@ class NotificationMarkReadView(generics.GenericAPIView):
         if not updated:
             return response.Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return response.Response({"status": "ok"})
+
+
+class ExpoPushTokenRegisterView(generics.GenericAPIView):
+    """POST: register this device's Expo push token for the logged-in user."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ExpoPushTokenRegisterSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["expo_push_token"]
+        ExpoPushToken.objects.update_or_create(
+            token=token,
+            defaults={"user": request.user},
+        )
+        return response.Response({"status": "ok"}, status=status.HTTP_200_OK)

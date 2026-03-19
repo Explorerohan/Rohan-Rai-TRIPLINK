@@ -675,3 +675,28 @@ class NotificationRecipient(models.Model):
 
     def __str__(self):
         return f"{self.notification.title} -> {self.user.email}"
+
+
+class ExpoPushToken(models.Model):
+    """Expo push token for a user device (traveler/agent app). One row per device token."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="expo_push_tokens",
+    )
+    token = models.CharField(
+        max_length=512,
+        unique=True,
+        help_text="ExponentPushToken[...] from expo-notifications",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Expo Push Token"
+        verbose_name_plural = "Expo Push Tokens"
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.user.email} — {self.token[:40]}…"

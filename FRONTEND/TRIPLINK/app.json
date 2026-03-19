@@ -5,6 +5,11 @@
     "version": "1.0.0",
     "sdkVersion": "52.0.0",
     "newArchEnabled": true,
+    "extra": {
+      "eas": {
+        "projectId": "PUT_YOUR_EAS_PROJECT_ID_HERE"
+      }
+    },
     "ios": {
       "deploymentTarget": "15.1",
       "infoPlist": {
@@ -17,7 +22,8 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
@@ -26,6 +32,13 @@
         {
           "photosPermission": "The app accesses your photos to let you share them as your profile picture.",
           "cameraPermission": "The app accesses your camera to let you take a profile picture."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1f6b2a",
+          "defaultChannel": "default"
         }
       ]
     ]

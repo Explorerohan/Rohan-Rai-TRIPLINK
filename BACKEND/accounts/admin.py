@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.urls import reverse
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile, Package, PackageFeature, Deal, CustomPackage, Booking, AgentReview, Notification, NotificationRecipient, Roles
+from .models import User, UserProfile, AgentProfile, Package, PackageFeature, Deal, CustomPackage, Booking, AgentReview, Notification, NotificationRecipient, ExpoPushToken, Roles
 from .emailjs_utils import send_agent_credentials_email
 
 
@@ -146,3 +146,15 @@ class NotificationRecipientAdmin(admin.ModelAdmin):
     list_display = ['notification', 'user', 'is_read', 'created_at']
     list_filter = ['is_read', 'created_at']
     search_fields = ['notification__title', 'user__email']
+
+
+@admin.register(ExpoPushToken)
+class ExpoPushTokenAdmin(admin.ModelAdmin):
+    list_display = ['user', 'token_preview', 'updated_at']
+    list_filter = ['updated_at']
+    search_fields = ['user__email', 'token']
+    readonly_fields = ['created_at', 'updated_at']
+
+    @admin.display(description='Token')
+    def token_preview(self, obj):
+        return (obj.token[:48] + '…') if len(obj.token) > 48 else obj.token

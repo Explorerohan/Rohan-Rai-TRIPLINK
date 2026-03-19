@@ -16,7 +16,8 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken } from "./src/utils/api";
+import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken } from "./src/utils/api";
+import { registerForExpoPushTokenAsync, subscribeToNotificationResponse, consumeInitialNotificationResponse } from "./src/utils/pushNotifications";
 import { LanguageProvider } from "./src/context/LanguageContext";
 import { API_BASE } from "./src/config";
 
@@ -132,6 +133,46 @@ export default function App() {
     }, PROACTIVE_REFRESH_MS);
     return () => clearInterval(intervalId);
   }, [session?.refresh, handleNewAccessToken]);
+
+  // Expo push: register token when logged in; open notifications screen when user taps a push
+  useEffect(() => {
+    let cancelled = false;
+    const access = session?.access;
+    if (!access) {
+      return undefined;
+    }
+
+    consumeInitialNotificationResponse((last) => {
+      if (cancelled) return;
+      const data = last?.notification?.request?.content?.data;
+      if (data?.type === "triplink_notification") {
+        setScreen("notifications");
+      }
+    }).catch(() => {});
+
+    (async () => {
+      try {
+        const token = await registerForExpoPushTokenAsync();
+        if (!cancelled && token) {
+          await registerExpoPushToken(token, access);
+        }
+      } catch (e) {
+        console.warn("Expo push registration failed:", e);
+      }
+    })();
+
+    const sub = subscribeToNotificationResponse((response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (data?.type === "triplink_notification") {
+        setScreen("notifications");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      sub?.remove?.();
+    };
+  }, [session?.access]);
 
   // Restore session on app load so user stays logged in until they logout
   useEffect(() => {

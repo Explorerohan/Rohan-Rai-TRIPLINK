@@ -5,6 +5,11 @@ module.exports = {
     version: "1.0.0",
     sdkVersion: "52.0.0",
     newArchEnabled: true,
+    extra: {
+      eas: {
+        projectId: "6193951f-6227-4e24-be29-7651f8900c79",
+      },
+    },
     ios: {
       deploymentTarget: "15.1",
       infoPlist: {
@@ -18,6 +23,7 @@ module.exports = {
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS",
       ],
     },
     plugins: [
@@ -26,6 +32,13 @@ module.exports = {
         {
           photosPermission: "The app accesses your photos to let you share them as your profile picture.",
           cameraPermission: "The app accesses your camera to let you take a profile picture.",
+        },
+      ],
+      [
+        "expo-notifications",
+        {
+          color: "#1f6b2a",
+          defaultChannel: "default",
         },
       ],
     ],

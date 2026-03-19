@@ -641,3 +641,19 @@ export const markNotificationRead = async (payload, accessToken) => {
     body: JSON.stringify(payload),
   }, accessToken);
 };
+
+/**
+ * Register this device's Expo push token for the logged-in user.
+ * @param {string} expoPushToken - e.g. ExponentPushToken[...]
+ * @param {string} accessToken - JWT access token
+ */
+export const registerExpoPushToken = async (expoPushToken, accessToken) => {
+  return apiRequest(
+    "/api/auth/notifications/expo-token/",
+    {
+      method: "POST",
+      body: JSON.stringify({ expo_push_token: expoPushToken }),
+    },
+    accessToken
+  );
+};

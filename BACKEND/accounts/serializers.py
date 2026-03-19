@@ -924,3 +924,15 @@ class NotificationCreateSerializer(serializers.Serializer):
         allow_empty=True,
         help_text="Required when target_type is 'specific'. User IDs to send to.",
     )
+
+
+class ExpoPushTokenRegisterSerializer(serializers.Serializer):
+    """Register or update this device's Expo push token for the current user."""
+
+    expo_push_token = serializers.CharField(max_length=512, trim_whitespace=True)
+
+    def validate_expo_push_token(self, value):
+        v = (value or "").strip()
+        if not v.startswith("ExponentPushToken["):
+            raise serializers.ValidationError("Invalid Expo push token format.")
+        return v
