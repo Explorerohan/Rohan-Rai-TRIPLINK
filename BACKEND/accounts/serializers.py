@@ -2,7 +2,7 @@ from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, Notification, NotificationRecipient, Roles, get_active_deal
+from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, ItineraryItem, Notification, NotificationRecipient, Roles, get_active_deal
 
 User = get_user_model()
 
@@ -750,11 +750,20 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     sender_id = serializers.IntegerField(source="sender.id", read_only=True)
     sender_name = serializers.SerializerMethodField()
     custom_package_detail = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMessage
-        fields = ["id", "room", "sender_id", "sender_name", "text", "is_read", "created_at", "custom_package_detail"]
-        read_only_fields = ["id", "room", "sender_id", "sender_name", "is_read", "created_at", "custom_package_detail"]
+        fields = ["id", "room", "sender_id", "sender_name", "text", "is_read", "created_at", "custom_package_detail", "attachment_url"]
+        read_only_fields = ["id", "room", "sender_id", "sender_name", "is_read", "created_at", "custom_package_detail", "attachment_url"]
+
+    def get_attachment_url(self, obj):
+        if not obj.attachment:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.attachment.url)
+        return obj.attachment.url
 
     def get_sender_name(self, obj):
         return _user_display_name(obj.sender)
@@ -849,6 +858,38 @@ class ChatRoomSerializer(serializers.ModelSerializer):
             return 0
         user = request.user
         return obj.messages.filter(is_read=False).exclude(sender=user).count()
+
+
+class ItineraryItemSerializer(serializers.ModelSerializer):
+    """Serializer for chat itinerary items."""
+
+    created_by_id = serializers.IntegerField(source="created_by.id", read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ItineraryItem
+        fields = [
+            "id",
+            "room",
+            "trip",
+            "day_number",
+            "is_night",
+            "created_by_id",
+            "created_by_name",
+            "travel_date",
+            "day_label",
+            "time_label",
+            "place",
+            "activity",
+            "food_name",
+            "notes",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "room", "created_by_id", "created_by_name", "created_at", "updated_at"]
+
+    def get_created_by_name(self, obj):
+        return _user_display_name(obj.created_by)
 
 
 class NotificationSerializer(serializers.ModelSerializer):

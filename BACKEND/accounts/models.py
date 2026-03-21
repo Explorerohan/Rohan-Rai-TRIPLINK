@@ -80,6 +80,13 @@ def custom_package_image_path(instance, filename):
     return f'custom_packages/{instance.user_id}/temp/{filename}'
 
 
+def chat_attachment_path(instance, filename):
+    """Generate file path for chat message attachments (e.g. itinerary PDF)."""
+    import uuid
+    ext = filename.split('.')[-1] if '.' in filename else 'pdf'
+    return f'chat_attachments/room_{instance.room_id}/{uuid.uuid4().hex[:12]}.{ext}'
+
+
 class UserProfile(models.Model):
     """Profile model for Traveler users"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_profile')
@@ -583,7 +590,7 @@ class ChatRoom(models.Model):
 
 
 class ChatMessage(models.Model):
-    """A single message in a chat room. Optionally linked to a custom package (e.g. when agent sends about that package)."""
+    """A single message in a chat room. Optionally linked to a custom package or file attachment (e.g. itinerary PDF)."""
     room = models.ForeignKey(
         ChatRoom,
         on_delete=models.CASCADE,
@@ -605,6 +612,12 @@ class ChatMessage(models.Model):
         related_name="chat_messages",
         help_text="When set, this message is about this custom package (show package card + message).",
     )
+    attachment = models.FileField(
+        upload_to=chat_attachment_path,
+        null=True,
+        blank=True,
+        help_text="File attachment (e.g. itinerary PDF) sent with this message.",
+    )
 
     class Meta:
         verbose_name = "Chat Message"
@@ -613,6 +626,84 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"{self.sender.email}: {self.text[:50]}..."
+
+
+class ItineraryTrip(models.Model):
+    """Groups a batch of itinerary items (e.g. 3 days 2 nights) for a chat room."""
+
+    room = models.ForeignKey(
+        ChatRoom,
+        on_delete=models.CASCADE,
+        related_name="itinerary_trips",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_itinerary_trips",
+        limit_choices_to={"role": Roles.AGENT},
+    )
+    start_date = models.DateField()
+    days_count = models.PositiveSmallIntegerField(default=1)
+    nights_count = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Itinerary Trip"
+        verbose_name_plural = "Itinerary Trips"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Room {self.room_id} | {self.start_date} | {self.days_count}D/{self.nights_count}N"
+
+
+class ItineraryItem(models.Model):
+    """Structured itinerary item for a chat room, created by an agent. Can belong to an ItineraryTrip (day/night)."""
+
+    room = models.ForeignKey(
+        ChatRoom,
+        on_delete=models.CASCADE,
+        related_name="itinerary_items",
+    )
+    trip = models.ForeignKey(
+        ItineraryTrip,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="items",
+        help_text="When set, this item is part of a day/night trip batch.",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_itinerary_items",
+        limit_choices_to={"role": Roles.AGENT},
+    )
+    day_number = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="1-based day index (Day 1, Day 2, etc.).",
+    )
+    is_night = models.BooleanField(
+        default=False,
+        help_text="True = Night period (e.g. Night 1), False = Day period.",
+    )
+    travel_date = models.DateField()
+    day_label = models.CharField(max_length=50, blank=True, help_text="Day label, e.g. Day 1 / Monday")
+    time_label = models.CharField(max_length=50, help_text="Time text, e.g. 09:00 AM")
+    place = models.CharField(max_length=200)
+    activity = models.CharField(max_length=300)
+    food_name = models.CharField(max_length=150, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Itinerary Item"
+        verbose_name_plural = "Itinerary Items"
+        ordering = ["trip_id", "day_number", "is_night", "time_label", "created_at"]
+
+    def __str__(self):
+        period = f"Night {self.day_number}" if self.is_night else f"Day {self.day_number}"
+        return f"{self.room_id} | {period} | {self.travel_date} {self.time_label} - {self.place}"
 
 
 class NotificationType(models.TextChoices):

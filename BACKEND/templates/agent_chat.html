@@ -359,6 +359,14 @@
         color: inherit;
         cursor: pointer;
     }
+    .chat-msg-attachment {
+        margin-top: 8px;
+    }
+    .chat-msg-attachment a {
+        color: #0369a1;
+        text-decoration: underline;
+        font-size: 13px;
+    }
 
     .chat-input-area {
         padding: 16px 24px 20px;
@@ -406,6 +414,136 @@
     .chat-btn-send svg {
         width: 18px;
         height: 18px;
+    }
+
+    .chat-btn-itinerary {
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: #0f766e;
+        border-radius: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .chat-btn-itinerary:hover {
+        background: #0d9488;
+    }
+
+    .chat-btn-itinerary svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .itinerary-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1200;
+        padding: 16px;
+    }
+    .itinerary-modal.show {
+        display: flex;
+    }
+    .itinerary-modal-card {
+        width: 100%;
+        max-width: 560px;
+        max-height: 90vh;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(2, 6, 23, 0.18);
+        padding: 20px;
+    }
+    .itinerary-wizard-step { display: none; }
+    .itinerary-wizard-step.active { display: block; }
+    .itinerary-modal-title {
+        margin: 0 0 16px 0;
+        font-size: 17px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .itinerary-step-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+    .itinerary-btn-next, .itinerary-btn-check, .itinerary-btn-send-final {
+        background: #1f6b2a;
+        color: #fff;
+        font-weight: 600;
+    }
+    .itinerary-btn-check { background: #0369a1; margin-right: 8px; }
+    .itinerary-btn-add-entry { background: #0d9488; color: #fff; font-weight: 600; border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px; cursor: pointer; }
+    .itinerary-btn-add-entry:hover { background: #0f766e; }
+    .itinerary-entries-list { max-height: 120px; overflow-y: auto; margin-bottom: 10px; padding: 8px; background: #f8fafc; border-radius: 8px; }
+    .itinerary-entry-chip { font-size: 12px; color: #334155; padding: 4px 8px; background: #e2e8f0; border-radius: 6px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .itinerary-entry-chip span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .itinerary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .itinerary-grid .full {
+        grid-column: 1 / -1;
+    }
+    .itinerary-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .itinerary-field label {
+        font-size: 12px;
+        color: #475569;
+        font-weight: 500;
+    }
+    .itinerary-field input,
+    .itinerary-field textarea {
+        border: 1px solid #dbe3ed;
+        border-radius: 8px;
+        padding: 9px 10px;
+        font-size: 14px;
+        color: #1e293b;
+        outline: none;
+        font-family: inherit;
+    }
+    .itinerary-field textarea {
+        resize: vertical;
+        min-height: 72px;
+    }
+    .itinerary-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 14px;
+    }
+    .itinerary-btn-cancel,
+    .itinerary-btn-save {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .itinerary-btn-cancel {
+        background: #e2e8f0;
+        color: #334155;
+    }
+    .itinerary-btn-save {
+        background: #1f6b2a;
+        color: #fff;
+        font-weight: 600;
+    }
+    .itinerary-btn-save:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
     }
 
     .chat-input-area.hidden {
@@ -538,11 +676,85 @@
                 <div class="chat-input-area" id="chatInputArea">
                     <div class="chat-input-wrap">
                         <input type="text" class="chat-input-field" placeholder="Type a message..." id="chatInput" aria-label="Message">
+                        <button type="button" class="chat-btn-itinerary" id="chatItineraryBtn" aria-label="Create itinerary">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+                        </button>
                         <button type="button" class="chat-btn-send" id="chatSend" aria-label="Send">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="itinerary-modal" id="itineraryModal" aria-hidden="true">
+    <div class="itinerary-modal-card">
+        <!-- Step 0: Date + Days + Nights -->
+        <div class="itinerary-wizard-step active" id="itineraryStep0">
+            <h3 class="itinerary-modal-title">Create itinerary</h3>
+            <p class="itinerary-step-label">Select trip start date and duration</p>
+            <div class="itinerary-grid">
+                <div class="itinerary-field">
+                    <label for="itineraryStartDate">Start date</label>
+                    <input id="itineraryStartDate" type="date" required>
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryDays">Days</label>
+                    <input id="itineraryDays" type="number" min="1" value="1" required>
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryNights">Nights</label>
+                    <input id="itineraryNights" type="number" min="0" value="0" required>
+                </div>
+            </div>
+            <div class="itinerary-modal-actions">
+                <button type="button" class="itinerary-btn-cancel" id="itineraryCancelBtn">Cancel</button>
+                <button type="button" class="itinerary-btn-next" id="itineraryStep0Next">Next</button>
+            </div>
+        </div>
+        <!-- Step 1..N: Day/Night forms (injected by JS) -->
+        <div class="itinerary-wizard-step" id="itineraryStepForms">
+            <h3 class="itinerary-modal-title" id="itineraryFormTitle">Add itinerary for Day 1</h3>
+            <p class="itinerary-step-label" id="itineraryEntriesCount">0 entries added (up to 24)</p>
+            <div id="itineraryEntriesList" class="itinerary-entries-list"></div>
+            <div class="itinerary-grid" id="itineraryFormGrid">
+                <div class="itinerary-field">
+                    <label for="itineraryTime">Time</label>
+                    <input id="itineraryTime" type="text" placeholder="09:00 AM">
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryPlace">Place</label>
+                    <input id="itineraryPlace" type="text" placeholder="e.g. Kathmandu Durbar Square">
+                </div>
+                <div class="itinerary-field full">
+                    <label for="itineraryActivity">Activity</label>
+                    <input id="itineraryActivity" type="text" placeholder="e.g. Sightseeing">
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryFood">Food (optional)</label>
+                    <input id="itineraryFood" type="text" placeholder="e.g. Breakfast">
+                </div>
+                <div class="itinerary-field full">
+                    <label for="itineraryNotes">Notes (optional)</label>
+                    <textarea id="itineraryNotes" placeholder="Any extra notes..."></textarea>
+                </div>
+            </div>
+            <div class="itinerary-modal-actions">
+                <button type="button" class="itinerary-btn-cancel" id="itineraryBackBtn">Back</button>
+                <button type="button" class="itinerary-btn-add-entry" id="itineraryAddEntryBtn">Add entry</button>
+                <button type="button" class="itinerary-btn-next" id="itineraryFormNext">Next</button>
+            </div>
+        </div>
+        <!-- Final step: Check + Send -->
+        <div class="itinerary-wizard-step" id="itineraryStepFinal">
+            <h3 class="itinerary-modal-title">Itinerary ready</h3>
+            <p class="itinerary-step-label">Preview the PDF or send it to the traveler</p>
+            <div class="itinerary-modal-actions">
+                <button type="button" class="itinerary-btn-cancel" id="itineraryFinalCancelBtn">Close</button>
+                <button type="button" class="itinerary-btn-check" id="itineraryCheckBtn">Check itinerary (PDF)</button>
+                <button type="button" class="itinerary-btn-send-final" id="itinerarySendBtn">Send itinerary</button>
             </div>
         </div>
     </div>
@@ -588,10 +800,27 @@
     const chatInput = document.getElementById('chatInput');
     const chatSend = document.getElementById('chatSend');
     const chatInputArea = document.getElementById('chatInputArea');
+    const chatItineraryBtn = document.getElementById('chatItineraryBtn');
     const chatQuickReplies = document.getElementById('chatQuickReplies');
     const chatQuickRepliesPackage = document.getElementById('chatQuickRepliesPackage');
     const chatQuickRepliesTitle = document.getElementById('chatQuickRepliesTitle');
     const chatQuickRepliesList = document.getElementById('chatQuickRepliesList');
+    const itineraryModal = document.getElementById('itineraryModal');
+    const itineraryStep0 = document.getElementById('itineraryStep0');
+    const itineraryStepForms = document.getElementById('itineraryStepForms');
+    const itineraryStepFinal = document.getElementById('itineraryStepFinal');
+    const itineraryStartDate = document.getElementById('itineraryStartDate');
+    const itineraryDays = document.getElementById('itineraryDays');
+    const itineraryNights = document.getElementById('itineraryNights');
+    const itineraryFormTitle = document.getElementById('itineraryFormTitle');
+    const itineraryTime = document.getElementById('itineraryTime');
+    const itineraryPlace = document.getElementById('itineraryPlace');
+    const itineraryActivity = document.getElementById('itineraryActivity');
+    const itineraryFood = document.getElementById('itineraryFood');
+    const itineraryNotes = document.getElementById('itineraryNotes');
+    const itineraryCancelBtn = document.getElementById('itineraryCancelBtn');
+    const itineraryBackBtn = document.getElementById('itineraryBackBtn');
+    const itineraryFinalCancelBtn = document.getElementById('itineraryFinalCancelBtn');
 
     function getCookie(name) {
         const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
@@ -706,6 +935,9 @@
         }
         if (text) {
             inner += '<div class="chat-msg-pkg-text">' + escapeHtml(text) + '</div>';
+        }
+        if (data.attachment_url) {
+            inner += '<div class="chat-msg-attachment"><a href="' + escapeHtml(data.attachment_url) + '" target="_blank" rel="noopener">📎 Download itinerary PDF</a></div>';
         }
         if (!inner) inner = '<div class="chat-msg-pkg-text">' + escapeHtml(data.text || '') + '</div>';
         if (pkg && pkg.id) {
@@ -896,6 +1128,188 @@
         }
     }
 
+    let itineraryWizard = { startDate: '', daysCount: 1, nightsCount: 0, itemsBySlot: [], tripId: null };
+    const slotLabels = (days, nights) => {
+        const labels = [];
+        for (let i = 0; i < days + nights; i++) {
+            const d = Math.floor(i / 2) + 1;
+            labels.push(i % 2 === 0 ? 'Day ' + d : 'Night ' + d);
+        }
+        return labels;
+    };
+
+    function closeItineraryModal() {
+        if (!itineraryModal) return;
+        itineraryModal.classList.remove('show');
+        itineraryModal.setAttribute('aria-hidden', 'true');
+        itineraryWizard = { startDate: '', daysCount: 1, nightsCount: 0, itemsBySlot: [], tripId: null };
+    }
+
+    function showItineraryStep(stepId) {
+        [itineraryStep0, itineraryStepForms, itineraryStepFinal].forEach(el => {
+            if (el) el.classList.remove('active');
+        });
+        const el = document.getElementById(stepId);
+        if (el) el.classList.add('active');
+    }
+
+    function openItineraryModal() {
+        if (!activeRoomId) {
+            alert('Please select a conversation first.');
+            return;
+        }
+        if (!itineraryModal) return;
+        itineraryWizard = { startDate: '', daysCount: 1, nightsCount: 0, itemsBySlot: [], tripId: null };
+        itineraryModal.classList.add('show');
+        itineraryModal.setAttribute('aria-hidden', 'false');
+        if (itineraryStartDate && !itineraryStartDate.value) {
+            itineraryStartDate.value = new Date().toISOString().slice(0, 10);
+        }
+        if (itineraryDays) itineraryDays.value = 1;
+        if (itineraryNights) itineraryNights.value = 0;
+        showItineraryStep('itineraryStep0');
+        if (itineraryStartDate) itineraryStartDate.focus();
+    }
+
+    function itineraryStep0NextHandler() {
+        const days = parseInt(itineraryDays.value, 10) || 1;
+        const nights = parseInt(itineraryNights.value, 10) || 0;
+        if (days < 1) { alert('Days must be at least 1.'); return; }
+        itineraryWizard.startDate = itineraryStartDate.value;
+        itineraryWizard.daysCount = days;
+        itineraryWizard.nightsCount = nights;
+        itineraryWizard.currentSlot = 0;
+        itineraryWizard.itemsBySlot = [];
+        for (let i = 0; i < days + nights; i++) itineraryWizard.itemsBySlot.push([]);
+        showItineraryStep('itineraryStepForms');
+        itineraryFormTitle.textContent = 'Add itinerary for ' + slotLabels(days, nights)[0];
+        itineraryTime.value = '';
+        itineraryPlace.value = '';
+        itineraryActivity.value = '';
+        itineraryFood.value = '';
+        itineraryNotes.value = '';
+        renderEntriesList();
+        if (itineraryTime) itineraryTime.focus();
+    }
+
+    function renderEntriesList() {
+        const listEl = document.getElementById('itineraryEntriesList');
+        const countEl = document.getElementById('itineraryEntriesCount');
+        if (!listEl || !countEl) return;
+        const arr = itineraryWizard.itemsBySlot[itineraryWizard.currentSlot] || [];
+        countEl.textContent = arr.length + ' entries added (up to 24)';
+        listEl.innerHTML = arr.map((e, i) =>
+            '<div class="itinerary-entry-chip"><span>' + escapeHtml(e.time_label) + ' – ' + escapeHtml(e.place) + ': ' + escapeHtml(e.activity) + '</span></div>'
+        ).join('');
+    }
+
+    function itineraryAddEntryHandler() {
+        const time = (itineraryTime.value || '').trim();
+        const place = (itineraryPlace.value || '').trim();
+        const activity = (itineraryActivity.value || '').trim();
+        if (!time || !place || !activity) {
+            alert('Please fill time, place, and activity.');
+            return;
+        }
+        const labels = slotLabels(itineraryWizard.daysCount, itineraryWizard.nightsCount);
+        const idx = itineraryWizard.currentSlot;
+        const arr = itineraryWizard.itemsBySlot[idx] || [];
+        if (arr.length >= 24) {
+            alert('Maximum 24 entries per day/night.');
+            return;
+        }
+        arr.push({
+            day_number: Math.floor(idx / 2) + 1,
+            is_night: idx % 2 === 1,
+            day_label: labels[idx],
+            time_label: time,
+            place,
+            activity,
+            food_name: (itineraryFood.value || '').trim(),
+            notes: (itineraryNotes.value || '').trim(),
+        });
+        itineraryTime.value = '';
+        itineraryPlace.value = '';
+        itineraryActivity.value = '';
+        itineraryFood.value = '';
+        itineraryNotes.value = '';
+        renderEntriesList();
+        if (itineraryTime) itineraryTime.focus();
+    }
+
+    function itineraryFormNextHandler() {
+        const labels = slotLabels(itineraryWizard.daysCount, itineraryWizard.nightsCount);
+        itineraryWizard.currentSlot++;
+        if (itineraryWizard.currentSlot >= labels.length) {
+            const flat = [];
+            (itineraryWizard.itemsBySlot || []).forEach(slotArr => flat.push(...slotArr));
+            itineraryWizard.items = flat;
+            itineraryCreateTripAndShowFinal();
+            return;
+        }
+        itineraryFormTitle.textContent = 'Add itinerary for ' + labels[itineraryWizard.currentSlot];
+        itineraryTime.value = '';
+        itineraryPlace.value = '';
+        itineraryActivity.value = '';
+        itineraryFood.value = '';
+        itineraryNotes.value = '';
+        renderEntriesList();
+        if (itineraryTime) itineraryTime.focus();
+    }
+
+    async function itineraryCreateTripAndShowFinal() {
+        try {
+            const res = await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    start_date: itineraryWizard.startDate,
+                    days_count: itineraryWizard.daysCount,
+                    nights_count: itineraryWizard.nightsCount,
+                    items: itineraryWizard.items,
+                }),
+            });
+            itineraryWizard.tripId = res.id;
+            showItineraryStep('itineraryStepFinal');
+        } catch (err) {
+            console.error('Create trip failed', err);
+            alert('Could not create itinerary. Please try again.');
+        }
+    }
+
+    function itineraryBackHandler() {
+        if (itineraryWizard.currentSlot <= 0) {
+            showItineraryStep('itineraryStep0');
+            return;
+        }
+        itineraryWizard.currentSlot--;
+        const labels = slotLabels(itineraryWizard.daysCount, itineraryWizard.nightsCount);
+        itineraryFormTitle.textContent = 'Add itinerary for ' + labels[itineraryWizard.currentSlot];
+        itineraryTime.value = '';
+        itineraryPlace.value = '';
+        itineraryActivity.value = '';
+        itineraryFood.value = '';
+        itineraryNotes.value = '';
+        renderEntriesList();
+    }
+
+    function itineraryCheckHandler() {
+        if (!itineraryWizard.tripId) return;
+        const url = API_BASE + '/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/pdf/';
+        window.open(url, '_blank', 'noopener');
+    }
+
+    async function itinerarySendHandler() {
+        if (!itineraryWizard.tripId) return;
+        try {
+            await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/${itineraryWizard.tripId}/send/`, { method: 'POST' });
+            closeItineraryModal();
+            await loadMessages(activeRoomId);
+        } catch (err) {
+            console.error('Send itinerary failed', err);
+            alert('Could not send itinerary.');
+        }
+    }
+
     function buildPackagePrefix() {
         if (!initialCpTitle) return '';
         const loc = initialCpLocation ? ' – ' + initialCpLocation : '';
@@ -1003,6 +1417,20 @@
     }
 
     chatSend.addEventListener('click', sendMessage);
+    if (chatItineraryBtn) chatItineraryBtn.addEventListener('click', openItineraryModal);
+    if (itineraryCancelBtn) itineraryCancelBtn.addEventListener('click', closeItineraryModal);
+    if (itineraryFinalCancelBtn) itineraryFinalCancelBtn.addEventListener('click', closeItineraryModal);
+    if (document.getElementById('itineraryStep0Next')) document.getElementById('itineraryStep0Next').addEventListener('click', itineraryStep0NextHandler);
+    if (itineraryBackBtn) itineraryBackBtn.addEventListener('click', itineraryBackHandler);
+    if (document.getElementById('itineraryAddEntryBtn')) document.getElementById('itineraryAddEntryBtn').addEventListener('click', itineraryAddEntryHandler);
+    if (document.getElementById('itineraryFormNext')) document.getElementById('itineraryFormNext').addEventListener('click', itineraryFormNextHandler);
+    if (document.getElementById('itineraryCheckBtn')) document.getElementById('itineraryCheckBtn').addEventListener('click', itineraryCheckHandler);
+    if (document.getElementById('itinerarySendBtn')) document.getElementById('itinerarySendBtn').addEventListener('click', itinerarySendHandler);
+    if (itineraryModal) {
+        itineraryModal.addEventListener('click', (e) => {
+            if (e.target === itineraryModal) closeItineraryModal();
+        });
+    }
     chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

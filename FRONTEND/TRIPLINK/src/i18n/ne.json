@@ -278,6 +278,8 @@
   "typeMessage": "सन्देश टाइप गर्नुहोस्...",
   "activeNow": "अहिले सक्रिय",
   "offline": "अफलाइन",
+  "itineraryPdfTitle": "यात्रा कार्यक्रम",
+  "itineraryPdfSubtitle": "PDF · हेर्न वा डाउनलोड गर्न ट्याप गर्नुहोस्",
   "error": "त्रुटि",
   "success": "सफलता",
   "pleaseLoginToContinue": "कृपया जारी राख्न लगइन गर्नुहोस्।",

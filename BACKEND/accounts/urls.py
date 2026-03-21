@@ -31,6 +31,11 @@ from .views import (
     ChatMessageListCreateView,
     ChatUnreadCountView,
     ChatRoomMarkReadView,
+    ChatItineraryListCreateView,
+    ChatItineraryDetailView,
+    ChatItineraryTripCreateView,
+    ChatItineraryTripPdfView,
+    ChatItineraryTripSendView,
     NotificationListCreateView,
     NotificationUnreadCountView,
     NotificationMarkReadView,
@@ -77,6 +82,11 @@ urlpatterns = [
     # Chat
     path("chat/rooms/", ChatRoomListCreateView.as_view(), name="chat_room_list_create"),
     path("chat/rooms/<int:room_id>/messages/", ChatMessageListCreateView.as_view(), name="chat_message_list_create"),
+    path("chat/rooms/<int:room_id>/itinerary/", ChatItineraryListCreateView.as_view(), name="chat_itinerary_list_create"),
+    path("chat/rooms/<int:room_id>/itinerary/<int:pk>/", ChatItineraryDetailView.as_view(), name="chat_itinerary_detail"),
+    path("chat/rooms/<int:room_id>/itinerary-trip/", ChatItineraryTripCreateView.as_view(), name="chat_itinerary_trip_create"),
+    path("chat/rooms/<int:room_id>/itinerary-trip/<int:trip_id>/pdf/", ChatItineraryTripPdfView.as_view(), name="chat_itinerary_trip_pdf"),
+    path("chat/rooms/<int:room_id>/itinerary-trip/<int:trip_id>/send/", ChatItineraryTripSendView.as_view(), name="chat_itinerary_trip_send"),
     path("chat/unread-count/", ChatUnreadCountView.as_view(), name="chat_unread_count"),
     path("chat/rooms/<int:room_id>/mark-read/", ChatRoomMarkReadView.as_view(), name="chat_room_mark_read"),
     # Notifications

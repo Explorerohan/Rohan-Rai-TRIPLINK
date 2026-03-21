@@ -278,6 +278,8 @@
   "typeMessage": "Type a message...",
   "activeNow": "Active Now",
   "offline": "Offline",
+  "itineraryPdfTitle": "Trip itinerary",
+  "itineraryPdfSubtitle": "PDF · Tap to view or download",
   "error": "Error",
   "success": "Success",
   "pleaseLoginToContinue": "Please log in to continue.",

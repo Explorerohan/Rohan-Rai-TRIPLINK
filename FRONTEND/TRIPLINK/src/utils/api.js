@@ -610,6 +610,94 @@ export const sendChatMessage = async (roomId, payload, accessToken) => {
   }, accessToken);
 };
 
+/**
+ * Get structured itinerary items for a room
+ * @param {number|string} roomId - Room ID
+ * @param {string} accessToken - JWT access token
+ */
+export const getChatItinerary = async (roomId, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequest(`/api/auth/chat/rooms/${id}/itinerary/`, { method: "GET" }, accessToken);
+};
+
+/**
+ * Create itinerary item (agent only)
+ * @param {number|string} roomId
+ * @param {{ travel_date: string, day_label?: string, time_label: string, place: string, activity: string, food_name?: string, notes?: string }} payload
+ * @param {string} accessToken
+ */
+export const createChatItineraryItem = async (roomId, payload, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequest(`/api/auth/chat/rooms/${id}/itinerary/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, accessToken);
+};
+
+/**
+ * Update itinerary item (agent only)
+ * @param {number|string} roomId
+ * @param {number|string} itemId
+ * @param {object} payload
+ * @param {string} accessToken
+ */
+export const updateChatItineraryItem = async (roomId, itemId, payload, accessToken) => {
+  const room = typeof roomId === "string" ? roomId : String(roomId);
+  const item = typeof itemId === "string" ? itemId : String(itemId);
+  return apiRequest(`/api/auth/chat/rooms/${room}/itinerary/${item}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  }, accessToken);
+};
+
+/**
+ * Delete itinerary item (agent only)
+ * @param {number|string} roomId
+ * @param {number|string} itemId
+ * @param {string} accessToken
+ */
+export const deleteChatItineraryItem = async (roomId, itemId, accessToken) => {
+  const room = typeof roomId === "string" ? roomId : String(roomId);
+  const item = typeof itemId === "string" ? itemId : String(itemId);
+  return apiRequest(`/api/auth/chat/rooms/${room}/itinerary/${item}/`, { method: "DELETE" }, accessToken);
+};
+
+/**
+ * Create itinerary trip with bulk items (day/night wizard)
+ * @param {number|string} roomId
+ * @param {{ start_date: string, days_count: number, nights_count: number, items: Array }} payload
+ * @param {string} accessToken
+ */
+export const createChatItineraryTrip = async (roomId, payload, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequest(`/api/auth/chat/rooms/${id}/itinerary-trip/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, accessToken);
+};
+
+/**
+ * Send itinerary PDF to chat (agent only)
+ * @param {number|string} roomId
+ * @param {number|string} tripId
+ * @param {string} accessToken
+ */
+export const sendChatItineraryTrip = async (roomId, tripId, accessToken) => {
+  const room = typeof roomId === "string" ? roomId : String(roomId);
+  const trip = typeof tripId === "string" ? tripId : String(tripId);
+  return apiRequest(`/api/auth/chat/rooms/${room}/itinerary-trip/${trip}/send/`, { method: "POST" }, accessToken);
+};
+
+/** Returns PDF URL for Check itinerary (supports ?access=token for mobile) */
+export const getChatItineraryPdfUrl = (roomId, tripId, accessToken) => {
+  const room = typeof roomId === "string" ? roomId : String(roomId);
+  const trip = typeof tripId === "string" ? tripId : String(tripId);
+  const base = API_BASE.replace(/\/$/, "");
+  const path = `/api/auth/chat/rooms/${room}/itinerary-trip/${trip}/pdf/`;
+  const url = base + path;
+  return accessToken ? `${url}?access=${encodeURIComponent(accessToken)}` : url;
+};
+
 // ---- Notifications API ----
 
 /**

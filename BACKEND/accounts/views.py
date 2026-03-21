@@ -48,6 +48,8 @@ from .models import (
     AgentReview,
     ChatRoom,
     ChatMessage,
+    ItineraryTrip,
+    ItineraryItem,
     Notification,
     NotificationRecipient,
     ExpoPushToken,
@@ -69,6 +71,7 @@ from .serializers import (
     PackageFeatureSerializer,
     ChatRoomSerializer,
     ChatMessageSerializer,
+    ItineraryItemSerializer,
     NotificationSerializer,
     NotificationCreateSerializer,
     ExpoPushTokenRegisterSerializer,
@@ -3609,6 +3612,181 @@ class ChatRoomMarkReadView(generics.GenericAPIView):
             return response.Response({"detail": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
         room.messages.filter(is_read=False).exclude(sender=user).update(is_read=True)
         return response.Response({"status": "ok"})
+
+
+class ChatItineraryListCreateView(generics.ListCreateAPIView):
+    """List itinerary items for a chat room. Create is agent-only."""
+
+    serializer_class = ItineraryItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _get_room(self):
+        room_id = self.kwargs.get("room_id")
+        room = get_object_or_404(ChatRoom, pk=room_id)
+        if self.request.user not in (room.traveler, room.agent):
+            return None
+        return room
+
+    def get_queryset(self):
+        room = self._get_room()
+        if not room:
+            return ItineraryItem.objects.none()
+        return ItineraryItem.objects.filter(room=room).select_related("created_by", "trip").order_by(
+            "trip_id", "day_number", "is_night", "time_label", "created_at"
+        )
+
+    def perform_create(self, serializer):
+        room = self._get_room()
+        if not room:
+            raise permissions.PermissionDenied("Access denied.")
+        if self.request.user != room.agent or self.request.user.role != Roles.AGENT:
+            raise permissions.PermissionDenied("Only the agent can create itinerary items for this room.")
+        serializer.save(room=room, created_by=self.request.user)
+
+
+class ChatItineraryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update or delete a single itinerary item. Update/delete is agent-only."""
+
+    serializer_class = ItineraryItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        room_id = self.kwargs.get("room_id")
+        user = self.request.user
+        return ItineraryItem.objects.filter(
+            room_id=room_id
+        ).filter(
+            Q(room__traveler=user) | Q(room__agent=user)
+        ).select_related("created_by", "room")
+
+    def perform_update(self, serializer):
+        item = self.get_object()
+        if self.request.user != item.room.agent or self.request.user.role != Roles.AGENT:
+            raise permissions.PermissionDenied("Only the agent can update itinerary items for this room.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user != instance.room.agent or self.request.user.role != Roles.AGENT:
+            raise permissions.PermissionDenied("Only the agent can delete itinerary items for this room.")
+        instance.delete()
+
+
+class ChatItineraryTripCreateView(generics.GenericAPIView):
+    """POST: Create an itinerary trip with bulk items (agent-only). Used by the day/night wizard."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, room_id):
+        room = get_object_or_404(ChatRoom, pk=room_id)
+        if request.user != room.agent or request.user.role != Roles.AGENT:
+            raise permissions.PermissionDenied("Only the agent can create itinerary trips for this room.")
+        data = request.data
+        start_date = data.get("start_date")
+        days_count = int(data.get("days_count") or 1)
+        nights_count = int(data.get("nights_count") or 0)
+        items_data = data.get("items") or []
+        if not start_date:
+            return response.Response({"start_date": "Required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+        except ValueError:
+            return response.Response({"start_date": "Use YYYY-MM-DD format."}, status=status.HTTP_400_BAD_REQUEST)
+        trip = ItineraryTrip.objects.create(
+            room=room,
+            created_by=request.user,
+            start_date=start,
+            days_count=days_count,
+            nights_count=nights_count,
+        )
+        expected_slots = days_count + nights_count
+        created = []
+        for item_data in items_data[: 24 * expected_slots]:  # Max 24 entries per slot
+            day_num = item_data.get("day_number", 1)
+            is_night = item_data.get("is_night", False)
+            travel_date = start + timedelta(days=(day_num if isinstance(day_num, int) else int(day_num)) - 1)
+            item = ItineraryItem.objects.create(
+                room=room,
+                trip=trip,
+                created_by=request.user,
+                day_number=day_num,
+                is_night=is_night,
+                travel_date=travel_date,
+                day_label=(item_data.get("day_label") or "").strip(),
+                time_label=(item_data.get("time_label") or "").strip() or "—",
+                place=(item_data.get("place") or "").strip() or "—",
+                activity=(item_data.get("activity") or "").strip() or "—",
+                food_name=(item_data.get("food_name") or "").strip(),
+                notes=(item_data.get("notes") or "").strip(),
+            )
+            created.append(item)
+        return response.Response(
+            {"id": trip.id, "message": "Itinerary trip created.", "items_count": len(created)},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ChatItineraryTripPdfView(generics.GenericAPIView):
+    """GET: Stream itinerary PDF for preview (Check itinerary). Room participants only. Supports ?access=JWT for mobile."""
+
+    permission_classes = [permissions.AllowAny]  # Auth checked manually to support token-in-query
+
+    def get(self, request, room_id, trip_id):
+        access_token = request.query_params.get("access") or request.GET.get("access")
+        if access_token:
+            from rest_framework_simplejwt.tokens import AccessToken
+            from rest_framework_simplejwt.exceptions import InvalidToken
+            try:
+                token = AccessToken(access_token)
+                user = User.objects.get(pk=token["user_id"])
+            except (InvalidToken, User.DoesNotExist, KeyError):
+                return response.Response({"detail": "Invalid or expired token."}, status=status.HTTP_401_UNAUTHORIZED)
+        elif request.user.is_authenticated:
+            user = request.user
+        else:
+            return response.Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+        room = get_object_or_404(ChatRoom, pk=room_id)
+        if user not in (room.traveler, room.agent):
+            raise permissions.PermissionDenied("Access denied.")
+        trip = get_object_or_404(ItineraryTrip, pk=trip_id, room=room)
+        from .itinerary_pdf import build_itinerary_pdf
+
+        buf = build_itinerary_pdf(trip)
+        resp = HttpResponse(buf.getvalue(), content_type="application/pdf")
+        resp["Content-Disposition"] = 'inline; filename="itinerary.pdf"'
+        return resp
+
+
+class ChatItineraryTripSendView(generics.GenericAPIView):
+    """POST: Generate PDF, attach to new chat message, send to traveler (agent-only)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, room_id, trip_id):
+        room = get_object_or_404(ChatRoom, pk=room_id)
+        if request.user != room.agent or request.user.role != Roles.AGENT:
+            raise permissions.PermissionDenied("Only the agent can send itinerary for this room.")
+        trip = get_object_or_404(ItineraryTrip, pk=trip_id, room=room)
+        from django.core.files.base import ContentFile
+        from .itinerary_pdf import build_itinerary_pdf
+
+        buf = build_itinerary_pdf(trip)
+        pdf_content = buf.getvalue()
+        filename = f"itinerary_{trip.start_date}_{trip.days_count}d{trip.nights_count}n.pdf"
+        msg = ChatMessage.objects.create(
+            room=room,
+            sender=request.user,
+            text=f"Your trip itinerary ({trip.start_date}, {trip.days_count} Days / {trip.nights_count} Nights) is attached.",
+        )
+        msg.attachment.save(filename, ContentFile(pdf_content), save=True)
+        room.updated_at = msg.created_at
+        room.save(update_fields=["updated_at"])
+        return response.Response(
+            {
+                "message_id": msg.id,
+                "attachment_url": request.build_absolute_uri(msg.attachment.url) if msg.attachment else None,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # ---- Notification API views ----

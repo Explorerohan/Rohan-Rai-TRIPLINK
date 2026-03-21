@@ -12,3 +12,6 @@ daphne>=4.0
 
 # Media/forms
 Pillow
+
+# PDF generation (itinerary)
+reportlab>=4.0
