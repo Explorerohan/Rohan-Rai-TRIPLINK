@@ -76,3 +76,40 @@ def send_expo_push_for_notification(notification, recipient_user_ids):
             logger.warning("Expo push network error: %s", e)
         except Exception:
             logger.exception("Expo push failed unexpectedly")
+
+
+def create_and_send_deal_notification(deal):
+    """
+    Create an in-app notification for a newly created deal and send push to all travelers.
+
+    :param deal: Deal model instance (must have package and agent populated)
+    """
+    from django.db import transaction
+
+    from .models import Notification, NotificationRecipient, Roles, User
+
+    package = deal.package
+    agent = deal.agent
+    valid_until_str = deal.valid_until.strftime("%b %d, %Y") if deal.valid_until else ""
+
+    title = f"Hot Deal: {package.title}"
+    message = f"{deal.discount_percent}% off! Book before {valid_until_str}."
+
+    recipients = User.objects.filter(role=Roles.TRAVELER)
+    if not recipients.exists():
+        logger.info("No travelers to notify for deal %s", deal.id)
+        return
+
+    with transaction.atomic():
+        notification = Notification.objects.create(
+            title=title,
+            message=message,
+            notification_type="promotion",
+            sender=agent,
+        )
+        NotificationRecipient.objects.bulk_create(
+            [NotificationRecipient(notification=notification, user=u) for u in recipients]
+        )
+
+    recipient_ids = list(recipients.values_list("id", flat=True))
+    send_expo_push_for_notification(notification, recipient_ids)

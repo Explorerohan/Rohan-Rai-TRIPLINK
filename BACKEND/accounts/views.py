@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import logging
 import hmac
 import json
 import time
@@ -76,9 +77,10 @@ from .serializers import (
     NotificationCreateSerializer,
     ExpoPushTokenRegisterSerializer,
 )
-from .push_notifications import send_expo_push_for_notification
+from .push_notifications import send_expo_push_for_notification, create_and_send_deal_notification
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _money(value):
@@ -1222,7 +1224,7 @@ def agent_deals_view(request):
             if valid_from and valid_until and valid_until <= valid_from:
                 errors.append('Valid until must be after valid from.')
             if not errors:
-                Deal.objects.create(
+                deal = Deal.objects.create(
                     package_id=int(package_id),
                     agent=agent,
                     title=title or '',
@@ -1230,7 +1232,11 @@ def agent_deals_view(request):
                     valid_from=valid_from,
                     valid_until=valid_until,
                 )
-                messages.success(request, 'Deal created successfully.')
+                try:
+                    create_and_send_deal_notification(deal)
+                except Exception as e:
+                    logger.exception("Failed to send deal notification: %s", e)
+                messages.success(request, 'Deal created and notification sent to all travelers.')
                 return redirect('agent_deals')
 
         for e in errors:
