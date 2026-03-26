@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { SafeAreaView, ActivityIndicator, View, StyleSheet } from "react-native";
+import { SafeAreaView, ActivityIndicator, View, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
 import LoginScreen from "./src/screens/login/LoginScreen";
@@ -26,6 +26,7 @@ const SESSION_STORAGE_KEY = "@triplink_session";
 export default function App() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [screen, setScreen] = useState("onboarding");
+  const [screenHistory, setScreenHistory] = useState([]);
   const [session, setSession] = useState(null);
   const sessionRef = useRef(null);
   useEffect(() => {
@@ -36,7 +37,6 @@ export default function App() {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedCustomPackageId, setSelectedCustomPackageId] = useState(null);
-  const [customPackageDetailReturnScreen, setCustomPackageDetailReturnScreen] = useState("customPackages");
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [packagesRefreshKey, setPackagesRefreshKey] = useState(0);
   // Cached user data loaded at login so screens don't show loading on every switch
@@ -45,6 +45,40 @@ export default function App() {
   const [cachedBookings, setCachedBookings] = useState(null);
   const [cachedCustomPackages, setCachedCustomPackages] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const navigate = useCallback(
+    (nextScreen, options = {}) => {
+      const { resetHistory = false } = options;
+      setScreenHistory((prev) => {
+        if (resetHistory) return [];
+        if (screen === nextScreen) return prev;
+        return [...prev, screen];
+      });
+      setScreen(nextScreen);
+    },
+    [screen]
+  );
+
+  const goToRootScreen = useCallback((targetScreen) => {
+    setScreenHistory([]);
+    setScreen(targetScreen);
+  }, []);
+
+  const goBack = useCallback(() => {
+    setScreenHistory((prev) => {
+      if (prev.length === 0) {
+        Alert.alert("No previous screen", "Where do you want to go?", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Home", onPress: () => goToRootScreen("home") },
+          { text: "Profile", onPress: () => goToRootScreen("profile") },
+        ]);
+        return prev;
+      }
+      const previousScreen = prev[prev.length - 1];
+      setScreen(previousScreen);
+      return prev.slice(0, -1);
+    });
+  }, [goToRootScreen]);
 
   const preloadUserData = useCallback(async (accessToken) => {
     if (!accessToken) return;
@@ -86,6 +120,7 @@ export default function App() {
     setCachedPackages(null);
     setCachedBookings(null);
     setCachedCustomPackages(null);
+    setScreenHistory([]);
     setScreen("login");
   }, []);
 
@@ -146,7 +181,7 @@ export default function App() {
       if (cancelled) return;
       const data = last?.notification?.request?.content?.data;
       if (data?.type === "triplink_notification") {
-        setScreen("notifications");
+        navigate("notifications");
       }
     }).catch(() => {});
 
@@ -164,7 +199,7 @@ export default function App() {
     const sub = subscribeToNotificationResponse((response) => {
       const data = response?.notification?.request?.content?.data;
       if (data?.type === "triplink_notification") {
-        setScreen("notifications");
+        navigate("notifications");
       }
     });
 
@@ -200,23 +235,24 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
-  const goToLogin = () => setScreen("login");
-  const goToSignup = () => setScreen("signup");
-  const goToForgot = () => setScreen("forgot");
+  const goToLogin = () => navigate("login", { resetHistory: true });
+  const goToSignup = () => navigate("signup");
+  const goToForgot = () => navigate("forgot");
   const handleLoginSuccess = (auth) => {
     sessionRef.current = auth; // so 401 handler has refresh token before first request
     setSession(auth);
+    setScreenHistory([]);
     setScreen("home");
     if (auth?.access) {
       preloadUserData(auth.access);
       AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(auth)).catch((e) => console.warn("Save session failed:", e));
     }
   };
-  const handleSignupComplete = () => setScreen("login");
+  const handleSignupComplete = () => navigate("login", { resetHistory: true });
   const handleForgotComplete = (payload) => {
     setLastEmail(payload.email);
     setOtpSession(payload);
-    setScreen("verification");
+    navigate("verification");
   };
   const handleVerifyComplete = () => {
     const email = otpSession?.email || lastEmail;
@@ -226,21 +262,22 @@ export default function App() {
         refresh: null,
         user: { email, role: "traveler" },
       });
+      setScreenHistory([]);
       setScreen("home");
     } else {
-      setScreen("login");
+      navigate("login", { resetHistory: true });
     }
   };
 
   const handleTripPress = (trip) => {
     setSelectedTrip(trip);
-    setScreen("details");
+    navigate("details");
   };
 
   const handleBookTrip = useCallback(
     async (bookingResult = null) => {
       if (bookingResult?.requiresLogin) {
-        setScreen("login");
+        navigate("login", { resetHistory: true });
         return;
       }
       if (!bookingResult?.booking) {
@@ -287,6 +324,7 @@ export default function App() {
     setCachedPackages(null);
     setCachedBookings(null);
     setCachedCustomPackages(null);
+    setScreenHistory([]);
     setScreen("login");
   };
 
@@ -362,14 +400,14 @@ export default function App() {
           onUpdateCachedPackages={setCachedPackages}
           onUpdateCachedProfile={setUserProfile}
           onTripPress={handleTripPress}
-          onProfilePress={() => setScreen("profile")}
-          onNotificationsPress={() => setScreen("notifications")}
-          onCalendarPress={() => setScreen("schedule")}
-          onMessagesPress={() => setScreen("messages")}
-          onSearchPress={() => setScreen("search")}
-          onPlusPress={() => setScreen("customPackages")}
-          onSeeAllTopPicksPress={() => setScreen("topPicks")}
-          onSeeAllRunningNowPress={() => setScreen("runningNow")}
+          onProfilePress={() => navigate("profile")}
+          onNotificationsPress={() => navigate("notifications")}
+          onCalendarPress={() => navigate("schedule")}
+          onMessagesPress={() => navigate("messages")}
+          onSearchPress={() => navigate("search")}
+          onPlusPress={() => navigate("customPackages")}
+          onSeeAllTopPicksPress={() => navigate("topPicks")}
+          onSeeAllRunningNowPress={() => navigate("runningNow")}
           unreadCount={unreadCount}
         />
       )}
@@ -380,9 +418,9 @@ export default function App() {
           onUpdateCachedPackages={setCachedPackages}
           onTripPress={(trip) => {
             setSelectedTrip(trip?.packageData ? { ...trip, id: String(trip.packageData.id) } : trip);
-            setScreen("details");
+            navigate("details");
           }}
-          onBack={() => setScreen("home")}
+          onBack={goBack}
         />
       )}
       {screen === "runningNow" && (
@@ -392,19 +430,19 @@ export default function App() {
           onUpdateCachedPackages={setCachedPackages}
           onTripPress={(trip) => {
             setSelectedTrip(trip?.packageData ? { ...trip, id: String(trip.packageData.id) } : trip);
-            setScreen("details");
+            navigate("details");
           }}
-          onBack={() => setScreen("home")}
+          onBack={goBack}
         />
       )}
       {screen === "search" && (
         <SearchScreen
           session={session}
           initialPackages={cachedPackages}
-          onBack={() => setScreen("home")}
+          onBack={goBack}
           onTripPress={(trip) => {
             setSelectedTrip(trip?.packageData ? { ...trip, id: String(trip.packageData.id) } : trip);
-            setScreen("details");
+            navigate("details");
           }}
         />
       )}
@@ -412,14 +450,14 @@ export default function App() {
         <MessagesScreen
           session={session}
           unreadCount={unreadCount}
-          onBack={() => setScreen("home")}
-          onHomePress={() => setScreen("home")}
-          onCalendarPress={() => setScreen("schedule")}
-          onPlusPress={() => setScreen("customPackages")}
-          onProfilePress={() => setScreen("profile")}
+          onBack={goBack}
+          onHomePress={() => navigate("home")}
+          onCalendarPress={() => navigate("schedule")}
+          onPlusPress={() => navigate("customPackages")}
+          onProfilePress={() => navigate("profile")}
           onChatPress={(chat) => {
             setSelectedChat(chat);
-            setScreen("chatDetail");
+            navigate("chatDetail");
           }}
         />
       )}
@@ -431,12 +469,11 @@ export default function App() {
           otherUserId={selectedChat.other_user_id}
           session={session}
           isActive={true}
-          onBack={() => setScreen("messages")}
+          onBack={goBack}
           onMarkRoomRead={refreshUnreadCount}
           onPackagePress={(packageId) => {
-            setCustomPackageDetailReturnScreen("chatDetail");
             setSelectedCustomPackageId(packageId);
-            setScreen("customPackageDetail");
+            navigate("customPackageDetail");
           }}
         />
       )}
@@ -446,7 +483,7 @@ export default function App() {
           session={session}
           onBack={() => {
             setSelectedCustomPackageId(null);
-            setScreen(customPackageDetailReturnScreen);
+            goBack();
           }}
           onCancelSuccess={(updatedPkg) => {
             setCachedCustomPackages((prev) =>
@@ -456,7 +493,7 @@ export default function App() {
           onDeleteSuccess={(deletedId) => {
             setCachedCustomPackages((prev) => (prev ? prev.filter((p) => p.id !== deletedId) : prev));
             setSelectedCustomPackageId(null);
-            setScreen(customPackageDetailReturnScreen);
+            goBack();
           }}
         />
       )}
@@ -466,22 +503,22 @@ export default function App() {
           initialBookings={cachedBookings}
           onUpdateCachedBookings={setCachedBookings}
           unreadCount={unreadCount}
-          onBack={() => setScreen("home")}
-          onHomePress={() => setScreen("home")}
-          onMessagesPress={() => setScreen("messages")}
-          onProfilePress={() => setScreen("profile")}
-          onPlusPress={() => setScreen("customPackages")}
+          onBack={goBack}
+          onHomePress={() => navigate("home")}
+          onMessagesPress={() => navigate("messages")}
+          onProfilePress={() => navigate("profile")}
+          onPlusPress={() => navigate("customPackages")}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });
-              setScreen("details");
+              navigate("details");
             }
           }}
           onScheduleItemPress={(item) => {
             const packageId = item?.booking?.package_id ?? item?.packageData?.id;
             if (packageId != null) {
               setSelectedTrip({ id: String(packageId) });
-              setScreen("details");
+              navigate("details");
             }
           }}
         />
@@ -492,12 +529,12 @@ export default function App() {
           initialPackageFromCache={cachedPackages}
           session={session}
           initialProfile={userProfile}
-          onBack={() => setScreen("home")}
+          onBack={goBack}
           onBook={handleBookTrip}
           onMessageAgent={async (agent) => {
             if (!session?.access) {
               alert("Please log in to message the agent.");
-              setScreen("login");
+              navigate("login", { resetHistory: true });
               return;
             }
             try {
@@ -509,7 +546,7 @@ export default function App() {
                 avatar: room.other_user_avatar || agent.profile_picture_url,
                 other_user_id: room.other_user_id,
               });
-              setScreen("chatDetail");
+              navigate("chatDetail");
             } catch (err) {
               alert(err?.message || "Failed to start chat.");
             }
@@ -524,35 +561,35 @@ export default function App() {
           initialBookings={cachedBookings}
           onUpdateCachedProfile={setUserProfile}
           unreadCount={unreadCount}
-          onBack={() => setScreen("home")}
-          onEdit={() => setScreen("editProfile")}
-          onProfileDetailsPress={() => setScreen("profileDetails")}
-          onBookmarkedPress={() => setScreen("bookmarked")}
-          onPastTripsPress={() => setScreen("pastTrips")}
-          onUpcomingTripsPress={() => setScreen("upcomingTrips")}
-          onLeaderboardPress={() => setScreen("leaderboard")}
-          onNotificationsPress={() => setScreen("notifications")}
-          onCalendarPress={() => setScreen("schedule")}
-          onMessagesPress={() => setScreen("messages")}
+          onBack={goBack}
+          onEdit={() => navigate("editProfile")}
+          onProfileDetailsPress={() => navigate("profileDetails")}
+          onBookmarkedPress={() => navigate("bookmarked")}
+          onPastTripsPress={() => navigate("pastTrips")}
+          onUpcomingTripsPress={() => navigate("upcomingTrips")}
+          onLeaderboardPress={() => navigate("leaderboard")}
+          onNotificationsPress={() => navigate("notifications")}
+          onCalendarPress={() => navigate("schedule")}
+          onMessagesPress={() => navigate("messages")}
           onLogout={handleLogout}
-          onPlusPress={() => setScreen("customPackages")}
+          onPlusPress={() => navigate("customPackages")}
           onUpdateCachedBookings={setCachedBookings}
         />
       )}
       {screen === "profileDetails" && (
         <ProfileDetailsScreen
           profile={userProfile}
-          onBack={() => setScreen("profile")}
+          onBack={goBack}
         />
       )}
       {screen === "bookmarked" && (
         <BookmarkedScreen
           session={session}
-          onBack={() => setScreen("profile")}
+          onBack={goBack}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });
-              setScreen("details");
+              navigate("details");
             }
           }}
         />
@@ -562,11 +599,11 @@ export default function App() {
           session={session}
           initialBookings={cachedBookings}
           onUpdateCachedBookings={setCachedBookings}
-          onBack={() => setScreen("profile")}
+          onBack={goBack}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });
-              setScreen("details");
+              navigate("details");
             }
           }}
         />
@@ -574,13 +611,13 @@ export default function App() {
       {screen === "leaderboard" && (
         <LeaderboardScreen
           session={session}
-          onBack={() => setScreen("profile")}
+          onBack={goBack}
         />
       )}
       {screen === "notifications" && (
         <NotificationsScreen
           session={session}
-          onBack={() => setScreen("profile")}
+          onBack={goBack}
         />
       )}
       {screen === "upcomingTrips" && (
@@ -588,11 +625,11 @@ export default function App() {
           session={session}
           initialBookings={cachedBookings}
           onUpdateCachedBookings={setCachedBookings}
-          onBack={() => setScreen("profile")}
+          onBack={goBack}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });
-              setScreen("details");
+              navigate("details");
             }
           }}
         />
@@ -603,26 +640,25 @@ export default function App() {
           initialCustomPackages={cachedCustomPackages}
           onUpdateCachedCustomPackages={setCachedCustomPackages}
           unreadCount={unreadCount}
-          onBack={() => setScreen("home")}
-          onCreatePress={() => setScreen("createCustomPackage")}
+          onBack={goBack}
+          onCreatePress={() => navigate("createCustomPackage")}
           onPackagePress={(packageId) => {
-            setCustomPackageDetailReturnScreen("customPackages");
             setSelectedCustomPackageId(packageId);
-            setScreen("customPackageDetail");
+            navigate("customPackageDetail");
           }}
-          onHomePress={() => setScreen("home")}
-          onCalendarPress={() => setScreen("schedule")}
-          onMessagesPress={() => setScreen("messages")}
-          onProfilePress={() => setScreen("profile")}
+          onHomePress={() => navigate("home")}
+          onCalendarPress={() => navigate("schedule")}
+          onMessagesPress={() => navigate("messages")}
+          onProfilePress={() => navigate("profile")}
         />
       )}
       {screen === "createCustomPackage" && (
         <CreateCustomPackageScreen
           session={session}
-          onBack={() => setScreen("customPackages")}
+          onBack={goBack}
           onCreateSuccess={(newPackage) => {
             if (newPackage) setCachedCustomPackages((prev) => [...(prev || []), newPackage]);
-            setScreen("customPackages");
+            goBack();
           }}
         />
       )}
@@ -630,11 +666,11 @@ export default function App() {
         <EditProfileScreen
           session={session}
           initialProfile={userProfile}
-          onBack={() => setScreen("profile")}
+          onBack={goBack}
           onSave={(updatedProfile) => {
             if (updatedProfile) setUserProfile(updatedProfile);
             setProfileRefreshKey((prev) => prev + 1);
-            setScreen("profile");
+            goBack();
           }}
         />
       )}
