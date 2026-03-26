@@ -234,7 +234,7 @@ class PackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
         fields = [
-            'id', 'title', 'location', 'country', 'description',
+            'id', 'title', 'location', 'country', 'latitude', 'longitude', 'description',
             'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
             'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'status',
@@ -642,7 +642,7 @@ class PackageDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
         fields = [
-            'id', 'title', 'location', 'country', 'description',
+            'id', 'title', 'location', 'country', 'latitude', 'longitude', 'description',
             'price_per_person', 'duration_days', 'duration_nights', 'duration_display',
             'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'status',

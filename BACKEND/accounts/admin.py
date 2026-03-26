@@ -93,7 +93,7 @@ class PackageFeatureAdmin(admin.ModelAdmin):
 
 @admin.register(Package)
 class PackageAdmin(admin.ModelAdmin):
-    list_display = ['title', 'location', 'country', 'agent', 'price_per_person', 'status', 'created_at']
+    list_display = ['title', 'location', 'country', 'latitude', 'longitude', 'agent', 'price_per_person', 'status', 'created_at']
     list_filter = ['status', 'country', 'created_at']
     search_fields = ['title', 'location', 'country', 'agent__email']
     readonly_fields = ['created_at', 'updated_at']

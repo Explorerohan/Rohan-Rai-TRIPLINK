@@ -12,12 +12,20 @@ module.exports = {
     },
     ios: {
       deploymentTarget: "15.1",
+      config: {
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+      },
       infoPlist: {
         NSPhotoLibraryUsageDescription: "This app needs access to your photo library to select profile pictures.",
         NSCameraUsageDescription: "This app needs access to your camera to take profile pictures.",
       },
     },
     android: {
+      config: {
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        },
+      },
       permissions: [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",

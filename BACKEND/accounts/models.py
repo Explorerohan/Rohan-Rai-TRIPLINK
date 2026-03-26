@@ -178,6 +178,22 @@ class Package(models.Model):
     title = models.CharField(max_length=200, help_text="Package title (e.g., PARIS)")
     location = models.CharField(max_length=200, help_text="Location name (e.g., Paris)")
     country = models.CharField(max_length=100, help_text="Country name (e.g., France)")
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        help_text="Latitude for map pin (e.g., 48.856613)",
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        help_text="Longitude for map pin (e.g., 2.352222)",
+    )
     description = models.TextField(help_text="Detailed description of the package")
     price_per_person = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in Rs.")
     duration_days = models.PositiveIntegerField(default=7, help_text="Number of days")

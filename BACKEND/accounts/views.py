@@ -91,6 +91,19 @@ def _money_str(value):
     return format(_money(value), ".2f")
 
 
+def _parse_coordinate(raw_value, min_value, max_value):
+    raw = (raw_value or "").strip()
+    if raw == "":
+        return None
+    try:
+        value = Decimal(raw)
+    except Exception:
+        return None
+    if value < Decimal(str(min_value)) or value > Decimal(str(max_value)):
+        return None
+    return value
+
+
 def _esewa_product_code():
     return getattr(settings, "ESEWA_PRODUCT_CODE", "EPAYTEST")
 
@@ -2575,6 +2588,8 @@ def agent_add_package_view(request):
                 title=request.POST.get('title', '').strip(),
                 location=request.POST.get('location', '').strip(),
                 country=request.POST.get('country', '').strip(),
+                latitude=_parse_coordinate(request.POST.get('latitude'), -90, 90),
+                longitude=_parse_coordinate(request.POST.get('longitude'), -180, 180),
                 description=request.POST.get('description', '').strip(),
                 price_per_person=request.POST.get('price_per_person', 0),
                 duration_days=int(request.POST.get('duration_days', 7)),
@@ -2639,6 +2654,8 @@ def agent_edit_package_view(request, package_id):
             package.title = request.POST.get('title', '').strip()
             package.location = request.POST.get('location', '').strip()
             package.country = request.POST.get('country', '').strip()
+            package.latitude = _parse_coordinate(request.POST.get('latitude'), -90, 90)
+            package.longitude = _parse_coordinate(request.POST.get('longitude'), -180, 180)
             package.description = request.POST.get('description', '').strip()
             package.price_per_person = request.POST.get('price_per_person', 0)
             package.duration_days = int(request.POST.get('duration_days', 7))

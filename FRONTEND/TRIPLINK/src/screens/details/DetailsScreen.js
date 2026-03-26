@@ -91,6 +91,23 @@ const formatReviewDate = (dateStr) => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
+const toValidCoordinate = (value, min, max) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return parsed >= min && parsed <= max ? parsed : null;
+};
+
+const resolvePackageCoordinates = (pkg) => {
+  if (!pkg || typeof pkg !== "object") return { latitude: null, longitude: null };
+  const latitudeRaw = pkg.latitude ?? pkg.lat ?? pkg.package_latitude ?? pkg.package_lat ?? pkg.coordinates?.latitude ?? pkg.coordinates?.lat;
+  const longitudeRaw = pkg.longitude ?? pkg.lng ?? pkg.lon ?? pkg.package_longitude ?? pkg.package_lng ?? pkg.package_lon ?? pkg.coordinates?.longitude ?? pkg.coordinates?.lng ?? pkg.coordinates?.lon;
+
+  return {
+    latitude: toValidCoordinate(latitudeRaw, -90, 90),
+    longitude: toValidCoordinate(longitudeRaw, -180, 180),
+  };
+};
+
 const COLS = 4;
 const CARD_GAP = 10;
 const ROW_GAP = 12;
@@ -320,7 +337,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting, t }) => {
   );
 };
 
-const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, initialProfile = null, onBack = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
+const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, initialProfile = null, onBack = () => {}, onShowMap = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
   const { t } = useLanguage();
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
@@ -676,6 +693,10 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
   const agent = packageDetail?.agent;
   const participants = packageDetail?.participants || [];
   const descriptionText = packageDetail?.description || trip.description || "";
+  const mapCoords = resolvePackageCoordinates(packageDetail || trip || {});
+  const locationLabel = packageDetail
+    ? [packageDetail.location, packageDetail.country].filter(Boolean).join(", ")
+    : trip.location;
   const agentRatingRaw = packageDetail?.agent_rating ?? agent?.rating ?? trip.rating ?? 0;
   const agentRatingNumber = Number(agentRatingRaw);
   const agentRatingDisplayValue = Number.isFinite(agentRatingNumber)
@@ -712,6 +733,19 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           {/* Title & Map Link */}
           <View style={styles.titleRow}>
             <Text style={styles.title}>{packageDetail?.title || trip.title}</Text>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() =>
+                onShowMap({
+                  title: packageDetail?.title || trip.title,
+                  locationLabel,
+                  latitude: mapCoords.latitude,
+                  longitude: mapCoords.longitude,
+                })
+              }
+            >
+              <Text style={styles.mapLink}>{t("showMap")}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Location */}

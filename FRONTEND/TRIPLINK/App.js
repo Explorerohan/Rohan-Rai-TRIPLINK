@@ -15,6 +15,7 @@ import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
+import { MapScreen } from "./src/screens/map";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
 import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, getNotificationUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken } from "./src/utils/api";
 import { registerForExpoPushTokenAsync, subscribeToNotificationResponse, consumeInitialNotificationResponse } from "./src/utils/pushNotifications";
@@ -35,6 +36,7 @@ export default function App() {
   const [lastEmail, setLastEmail] = useState("");
   const [otpSession, setOtpSession] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
+  const [selectedMapData, setSelectedMapData] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedCustomPackageId, setSelectedCustomPackageId] = useState(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
@@ -553,6 +555,10 @@ export default function App() {
           session={session}
           initialProfile={userProfile}
           onBack={goBack}
+          onShowMap={(mapData) => {
+            setSelectedMapData(mapData || null);
+            navigate("map");
+          }}
           onBook={handleBookTrip}
           onMessageAgent={async (agent) => {
             if (!session?.access) {
@@ -574,6 +580,12 @@ export default function App() {
               alert(err?.message || "Failed to start chat.");
             }
           }}
+        />
+      )}
+      {screen === "map" && (
+        <MapScreen
+          mapData={selectedMapData}
+          onBack={goBack}
         />
       )}
       {screen === "profile" && (
