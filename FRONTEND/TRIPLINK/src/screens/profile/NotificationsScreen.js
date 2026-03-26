@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -28,9 +29,11 @@ const getNotificationIcon = (type) => NOTIFICATION_ICONS[type] || NOTIFICATION_I
 const NotificationsScreen = ({
   session,
   onBack = () => {},
+  onReadStateChange = () => {},
 }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [markAllBusy, setMarkAllBusy] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
   const fetchNotifications = useCallback(async () => {
@@ -39,6 +42,8 @@ const NotificationsScreen = ({
       const { data } = await getNotifications(session.access);
       const list = Array.isArray(data) ? data : data?.results ?? [];
       setNotifications(list);
+      const unread = list.filter((n) => !n?.is_read).length;
+      onReadStateChange(unread);
     } catch (e) {
       console.warn("Failed to fetch notifications:", e);
       setNotifications([]);
@@ -46,7 +51,7 @@ const NotificationsScreen = ({
       setLoading(false);
       setRefreshing(false);
     }
-  }, [session?.access]);
+  }, [session?.access, onReadStateChange]);
 
   useEffect(() => {
     fetchNotifications();
@@ -66,15 +71,42 @@ const NotificationsScreen = ({
         item.recipient_id ? { recipient_id: item.recipient_id } : { notification_id: item.id },
         session.access
       );
-      setNotifications((prev) =>
-        prev.map((n) =>
+      setNotifications((prev) => {
+        const next = prev.map((n) =>
           (n.recipient_id === item.recipient_id || (n.id === item.id && !n.recipient_id))
             ? { ...n, is_read: true }
             : n
-        )
-      );
+        );
+        onReadStateChange(next.filter((n) => !n?.is_read).length);
+        return next;
+      });
     } catch (e) {
       console.warn("Failed to mark notification read:", e);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!session?.access || markAllBusy) return;
+    const unreadItems = notifications.filter((item) => !item?.is_read);
+    if (unreadItems.length === 0) return;
+
+    setMarkAllBusy(true);
+    try {
+      await Promise.all(
+        unreadItems.map((item) =>
+          markNotificationRead(
+            item.recipient_id ? { recipient_id: item.recipient_id } : { notification_id: item.id },
+            session.access
+          )
+        )
+      );
+      setNotifications((prev) => prev.map((item) => ({ ...item, is_read: true })));
+      onReadStateChange(0);
+    } catch (e) {
+      console.warn("Failed to mark all notifications read:", e);
+      Alert.alert("Error", "Could not mark all notifications as read.");
+    } finally {
+      setMarkAllBusy(false);
     }
   };
 
@@ -142,6 +174,13 @@ const NotificationsScreen = ({
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
+        <TouchableOpacity
+          style={[styles.markAllButton, markAllBusy && styles.markAllButtonDisabled]}
+          onPress={handleMarkAllRead}
+          disabled={markAllBusy}
+        >
+          <Ionicons name="checkmark-done" size={20} color="#1f6b2a" />
+        </TouchableOpacity>
       </View>
       <FlatList
         data={notifications}
@@ -193,6 +232,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: { fontSize: 18, fontWeight: "600", color: "#1e293b" },
+  markAllButton: {
+    position: "absolute",
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f3f5f7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markAllButtonDisabled: {
+    opacity: 0.5,
+  },
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
   listContent: { padding: 16, paddingBottom: 32 },
   notificationCard: {

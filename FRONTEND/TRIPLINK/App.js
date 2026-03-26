@@ -16,7 +16,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
 import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken } from "./src/utils/api";
+import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, getNotificationUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken } from "./src/utils/api";
 import { registerForExpoPushTokenAsync, subscribeToNotificationResponse, consumeInitialNotificationResponse } from "./src/utils/pushNotifications";
 import { LanguageProvider } from "./src/context/LanguageContext";
 import { API_BASE } from "./src/config";
@@ -45,6 +45,7 @@ export default function App() {
   const [cachedBookings, setCachedBookings] = useState(null);
   const [cachedCustomPackages, setCachedCustomPackages] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
 
   const navigate = useCallback(
     (nextScreen, options = {}) => {
@@ -151,6 +152,26 @@ export default function App() {
     const interval = setInterval(refreshUnreadCount, 3000);
     return () => clearInterval(interval);
   }, [session?.access, refreshUnreadCount]);
+
+  const refreshNotificationUnreadCount = useCallback(async () => {
+    const token = sessionRef.current?.access;
+    if (!token) return;
+    try {
+      const { data } = await getNotificationUnreadCount(token);
+      const count = typeof data?.count === "number" ? data.count : 0;
+      setNotificationUnreadCount(count);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    if (!session?.access) {
+      setNotificationUnreadCount(0);
+      return;
+    }
+    refreshNotificationUnreadCount();
+    const interval = setInterval(refreshNotificationUnreadCount, 5000);
+    return () => clearInterval(interval);
+  }, [session?.access, refreshNotificationUnreadCount]);
 
   // Proactive refresh: get new access token before it expires (backend access lifetime 30 min, refresh every 25 min)
   useEffect(() => {
@@ -324,6 +345,7 @@ export default function App() {
     setCachedPackages(null);
     setCachedBookings(null);
     setCachedCustomPackages(null);
+    setNotificationUnreadCount(0);
     setScreenHistory([]);
     setScreen("login");
   };
@@ -409,6 +431,7 @@ export default function App() {
           onSeeAllTopPicksPress={() => navigate("topPicks")}
           onSeeAllRunningNowPress={() => navigate("runningNow")}
           unreadCount={unreadCount}
+          notificationUnreadCount={notificationUnreadCount}
         />
       )}
       {screen === "topPicks" && (
@@ -618,6 +641,7 @@ export default function App() {
         <NotificationsScreen
           session={session}
           onBack={goBack}
+          onReadStateChange={refreshNotificationUnreadCount}
         />
       )}
       {screen === "upcomingTrips" && (

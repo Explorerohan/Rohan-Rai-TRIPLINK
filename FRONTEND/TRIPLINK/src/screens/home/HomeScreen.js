@@ -193,6 +193,7 @@ const HomeScreen = ({
   onSeeAllRunningNowPress = () => {},
   onNotificationsPress = () => {},
   unreadCount = 0,
+  notificationUnreadCount = 0,
 }) => {
   const { t } = useLanguage();
   const hasInitialPackages = initialPackages && initialPackages.length > 0;
@@ -453,7 +454,13 @@ const HomeScreen = ({
           </View>
           <TouchableOpacity style={styles.alertButton} activeOpacity={0.8} onPress={onNotificationsPress}>
             <Ionicons name="notifications-outline" size={22} color="#1f6b2a" />
-            <View style={styles.alertDot} />
+            {notificationUnreadCount > 0 && (
+              <View style={styles.alertBadge}>
+                <Text style={styles.alertBadgeText}>
+                  {notificationUnreadCount > 99 ? "99+" : notificationUnreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -855,14 +862,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
-  alertDot: {
+  alertBadge: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#f59e0b",
+    top: 7,
+    right: 7,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: "#dc2626",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  alertBadgeText: {
+    color: "#ffffff",
+    fontSize: 8,
+    fontWeight: "700",
   },
   searchRow: {
     flexDirection: "row",
