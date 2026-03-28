@@ -192,6 +192,7 @@
   "cancellingBooking": "रद्द गर्दै…",
   "bookingCancelledTitle": "बुकिङ रद्द भयो",
   "bookingCancelledBody": "तपाईंको बुकिङ रद्द गरिएको छ।",
+  "bookingCancelledRefundSoonBody": "तपाईंको बुकिङ रद्द भयो। फिर्ता चाँडै प्रक्रिया हुनेछ।",
   "paymentRefundedShort": "भुक्तानी फिर्ता भयो",
   "refundPendingEsewaShort": "फिर्ता बाँकी (म्यानुअल)",
   "refundPendingManualShort": "फिर्ता बाँकी (म्यानुअल)",

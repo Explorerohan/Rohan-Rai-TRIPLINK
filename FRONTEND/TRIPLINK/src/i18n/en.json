@@ -192,6 +192,7 @@
   "cancellingBooking": "Cancelling…",
   "bookingCancelledTitle": "Booking cancelled",
   "bookingCancelledBody": "Your booking has been cancelled.",
+  "bookingCancelledRefundSoonBody": "Your booking has been cancelled. Your refund will be processed soon.",
   "paymentRefundedShort": "Payment refunded",
   "refundPendingEsewaShort": "Refund pending (manual)",
   "refundPendingManualShort": "Refund pending (manual)",

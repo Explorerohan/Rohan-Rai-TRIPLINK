@@ -85,13 +85,6 @@ const CancelRefundScreen = ({
     }
   };
 
-  const refundStatusHint = (paymentStatus) => {
-    if (paymentStatus === "refunded") return t("paymentRefundedShort");
-    if (paymentStatus === "refund_pending") return t("refundPendingManualShort");
-    if (paymentStatus === "refund_declined") return t("refundDeclinedShort");
-    return "";
-  };
-
   const handleCancelBooking = (item) => {
     const booking = item?.booking;
     if (!booking || !session?.access) return;
@@ -116,12 +109,7 @@ const CancelRefundScreen = ({
               const arr = Array.isArray(list) ? list : [];
               setBookings(arr);
               onUpdateCachedBookings(arr);
-              const updated = arr.find((x) => String(x.id) === String(booking.id));
-              const hint = refundStatusHint(updated?.payment_status);
-              Alert.alert(
-                t("bookingCancelledTitle"),
-                hint ? `${t("bookingCancelledBody")}\n\n${hint}` : t("bookingCancelledBody")
-              );
+              Alert.alert(t("bookingCancelledTitle"), t("bookingCancelledRefundSoonBody"));
             } catch (err) {
               Alert.alert(t("error"), err?.message || t("couldNotCancelBooking"));
             } finally {
@@ -182,7 +170,6 @@ const CancelRefundScreen = ({
               const showTbaCancelNote = isConfirmed && canCancel && daysUntilTrip === null;
               const isCancelled = item.booking?.status === "cancelled";
               const isCancelling = cancellingId === item.id;
-              const refundHint = isCancelled ? refundStatusHint(item.paymentStatus) : "";
               let closedDetailText = t("cancellationWindowClosedTooSoon").replace(
                 "{{days}}",
                 String(daysUntilTrip != null ? Math.max(0, daysUntilTrip) : 0)
@@ -223,10 +210,7 @@ const CancelRefundScreen = ({
                         </View>
                       )}
                       {isCancelled && (
-                        <Text style={styles.bookingStatusMeta}>
-                          {t("bookingStatusCancelled")}
-                          {refundHint ? ` · ${refundHint}` : ""}
-                        </Text>
+                        <Text style={styles.bookingStatusMeta}>{t("bookingStatusCancelled")}</Text>
                       )}
                     </View>
                     <Ionicons name="chevron-forward" size={22} color="#94a3b8" style={styles.cardArrow} />
