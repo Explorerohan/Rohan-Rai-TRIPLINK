@@ -212,7 +212,7 @@
   "refundQrEmpty": "No QR uploaded",
   "upcomingTripsRefundHint": "To cancel a booking and request a refund, open the Schedule tab and use “Cancel & request refund” on your trip — only until 2 days before the trip starts.",
   "openScheduleToCancel": "Open Schedule",
-  "noBookingsForDate": "No bookings for this date",
+  "noBookingsForDate": "No bookings on this date. Choose another day to see your trips.",
   "dateTba": "Date TBA",
   "tripLocation": "Trip location",
   "locationNotAvailable": "Location not available",

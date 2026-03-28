@@ -67,6 +67,38 @@ const toDateString = (date) => {
   return `${y}-${m}-${d}`;
 };
 
+/** Parse API trip_start_date (YYYY-MM-DD or ISO) to local calendar date (avoids UTC shift). */
+const parseTripStartLocal = (raw) => {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "string") {
+    const part = raw.split("T")[0];
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(part);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const day = Number(m[3]);
+      return new Date(y, mo, day);
+    }
+  }
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const isSameCalendarDay = (a, b) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+/** Bookings whose trip start falls on the selected calendar day (excludes Date TBA). */
+const filterScheduleItemsBySelectedDate = (items, selectedDate) => {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  return items.filter((item) => {
+    const trip = parseTripStartLocal(item.tripStartDateRaw);
+    if (!trip) return false;
+    return isSameCalendarDay(trip, selectedDate);
+  });
+};
+
 const mapBookingsToScheduleItems = (list) => {
   if (!Array.isArray(list) || list.length === 0) return [];
   return list.map((b) => {
@@ -129,6 +161,11 @@ const ScheduleScreen = ({
   const month = viewDate.getMonth();
 
   const monthGrid = useMemo(() => getMonthGrid(year, month), [year, month]);
+
+  const scheduleItemsForSelectedDate = useMemo(
+    () => filterScheduleItemsBySelectedDate(scheduleItems, selectedDate),
+    [scheduleItems, selectedDate]
+  );
 
   const isSelected = (dayNum) => {
     if (dayNum == null) return false;
@@ -376,18 +413,16 @@ const ScheduleScreen = ({
           )}
         </View>
 
-        {/* My Schedule */}
+        {/* My Schedule — only bookings whose trip starts on the selected calendar day */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("mySchedule")}</Text>
-            {scheduleItems.length > 0 && (
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.viewAll}>View all</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.sectionTitleBlock}>
+              <Text style={styles.sectionTitle}>{t("mySchedule")}</Text>
+              <Text style={styles.sectionDateHint}>{formatDayMonth(selectedDate)}</Text>
+            </View>
           </View>
 
-          {!scheduleLoading && scheduleItems.length > 0 && (
+          {!scheduleLoading && scheduleItemsForSelectedDate.length > 0 && (
             <View style={styles.policyCard}>
               <Ionicons name="information-circle-outline" size={22} color="#1f6b2a" style={styles.policyIcon} />
               <View style={styles.policyCardTextWrap}>
@@ -408,8 +443,13 @@ const ScheduleScreen = ({
                 {session?.access ? "No booked packages yet. Book a trip from Home to see it here." : "Log in to see your booked packages."}
               </Text>
             </View>
+          ) : scheduleItemsForSelectedDate.length === 0 ? (
+            <View style={styles.scheduleEmpty}>
+              <Ionicons name="calendar-outline" size={40} color="#94a3b8" style={{ marginBottom: 8 }} />
+              <Text style={styles.scheduleEmptyText}>{t("noBookingsForDate")}</Text>
+            </View>
           ) : (
-            scheduleItems.map((item) => {
+            scheduleItemsForSelectedDate.map((item) => {
               const isConfirmed = item.booking?.status === "confirmed";
               const daysUntilTrip = getCalendarDaysUntilTripStart(item.tripStartDateRaw);
               const canCancel = isConfirmed && canCancelByTwoDayRule(item.tripStartDateRaw);
@@ -689,19 +729,23 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 12,
+  },
+  sectionTitleBlock: {
+    flex: 1,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#1e293b",
   },
-  viewAll: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1f6b2a",
+  sectionDateHint: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#64748b",
+    marginTop: 4,
   },
   card: {
     backgroundColor: "#ffffff",

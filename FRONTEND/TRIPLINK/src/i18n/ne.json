@@ -212,7 +212,7 @@
   "refundQrEmpty": "कुनै QR अपलोड भएको छैन",
   "upcomingTripsRefundHint": "बुकिङ रद्द र फिर्ताको लागि तालिका (Schedule) खोल्नुहोस् र “रद्द गर्नुहोस् र फिर्ता माग्नुहोस्” प्रयोग गर्नुहोस् — यात्रा सुरु भन्दा २ दिन अघि मात्र।",
   "openScheduleToCancel": "तालिका खोल्नुहोस्",
-  "noBookingsForDate": "यो मितिको लागि कुनै बुकिङ छैन",
+  "noBookingsForDate": "यो मितिमा कुनै बुकिङ छैन। अरू मिति छान्नुहोस्।",
   "dateTba": "मिति TBA",
   "tripLocation": "यात्रा स्थान",
   "locationNotAvailable": "स्थान उपलब्ध छैन",
