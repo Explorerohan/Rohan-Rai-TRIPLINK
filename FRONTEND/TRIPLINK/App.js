@@ -10,7 +10,7 @@ import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import TopPicksScreen from "./src/screens/home/TopPicksScreen";
 import RunningNowScreen from "./src/screens/home/RunningNowScreen";
-import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen, LeaderboardScreen, NotificationsScreen } from "./src/screens/profile";
+import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen, LeaderboardScreen, NotificationsScreen, CancelRefundScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
@@ -609,6 +609,22 @@ export default function App() {
           onLogout={handleLogout}
           onPlusPress={() => navigate("customPackages")}
           onUpdateCachedBookings={setCachedBookings}
+          onCancelRefundPress={() => navigate("cancelRefund")}
+        />
+      )}
+      {screen === "cancelRefund" && (
+        <CancelRefundScreen
+          session={session}
+          initialBookings={cachedBookings}
+          onUpdateCachedBookings={setCachedBookings}
+          onBack={goBack}
+          onTripPress={(item) => {
+            const packageId = item?.booking?.package_id ?? item?.packageData?.id;
+            if (packageId != null) {
+              setSelectedTrip({ id: String(packageId) });
+              navigate("details");
+            }
+          }}
         />
       )}
       {screen === "profileDetails" && (
@@ -662,7 +678,7 @@ export default function App() {
           initialBookings={cachedBookings}
           onUpdateCachedBookings={setCachedBookings}
           onBack={goBack}
-          onOpenSchedule={() => navigate("schedule")}
+          onOpenSchedule={() => navigate("cancelRefund")}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });

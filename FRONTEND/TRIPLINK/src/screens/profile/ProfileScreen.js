@@ -50,6 +50,7 @@ const ProfileScreen = ({
   onUpcomingTripsPress = () => {},
   onLeaderboardPress = () => {},
   onNotificationsPress = () => {},
+  onCancelRefundPress = () => {},
   onLogout = () => {},
   onCalendarPress = () => {},
   onMessagesPress = () => {},
@@ -202,21 +203,34 @@ const ProfileScreen = ({
           {menuItems.map((item, index) => (
             <React.Fragment key={item.id}>
               {index === 2 && (
-                <View style={styles.menuItem}>
-                  <View style={styles.menuItemLeft}>
-                    <Ionicons name="language-outline" size={23} color="#1f1f1f" />
-                    <Text style={styles.menuItemText}>{t("language")}</Text>
+                <>
+                  <View style={styles.menuItem}>
+                    <View style={styles.menuItemLeft}>
+                      <Ionicons name="language-outline" size={23} color="#1f1f1f" />
+                      <Text style={styles.menuItemText}>{t("language")}</Text>
+                    </View>
+                    <View style={styles.languageToggleWrap}>
+                      <Text style={styles.languageLabel}>{language === "ne" ? t("nepali") : t("english")}</Text>
+                      <Switch
+                        value={language === "ne"}
+                        onValueChange={(val) => setLanguage(val ? "ne" : "en")}
+                        trackColor={{ false: "#e3e6ea", true: "#a8d4b0" }}
+                        thumbColor={language === "ne" ? "#1f6b2a" : "#f4f3f4"}
+                      />
+                    </View>
                   </View>
-                  <View style={styles.languageToggleWrap}>
-                    <Text style={styles.languageLabel}>{language === "ne" ? t("nepali") : t("english")}</Text>
-                    <Switch
-                      value={language === "ne"}
-                      onValueChange={(val) => setLanguage(val ? "ne" : "en")}
-                      trackColor={{ false: "#e3e6ea", true: "#a8d4b0" }}
-                      thumbColor={language === "ne" ? "#1f6b2a" : "#f4f3f4"}
-                    />
-                  </View>
-                </View>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    activeOpacity={0.7}
+                    onPress={onCancelRefundPress}
+                  >
+                    <View style={styles.menuItemLeft}>
+                      <Ionicons name="wallet-outline" size={23} color="#1f1f1f" />
+                      <Text style={styles.menuItemText}>{t("cancelRefundMenu")}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={21} color="#9aa0a6" />
+                  </TouchableOpacity>
+                </>
               )}
               <TouchableOpacity
                 style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
