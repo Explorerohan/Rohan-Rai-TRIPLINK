@@ -1994,7 +1994,12 @@ def admin_refunds_view(request):
 
     refund_requests = (
         RefundRequest.objects.select_related(
-            "traveler", "package", "package__agent", "booking", "resolved_by"
+            "traveler",
+            "package",
+            "package__agent",
+            "booking",
+            "booking__esewa_payment_session",
+            "resolved_by",
         ).order_by("-created_at")[:500]
     )
     context = {
@@ -2054,7 +2059,14 @@ def agent_refunds_view(request):
 
     refund_requests = (
         RefundRequest.objects.filter(package__agent=agent)
-        .select_related("traveler", "package", "package__agent", "booking", "resolved_by")
+        .select_related(
+            "traveler",
+            "package",
+            "package__agent",
+            "booking",
+            "booking__esewa_payment_session",
+            "resolved_by",
+        )
         .order_by("-created_at")[:500]
     )
     context = {

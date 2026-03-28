@@ -1,0 +1,30 @@
+{% if d %}
+<div style="font-size: 12px; line-height: 1.55; color: #0f172a; max-width: 260px;">
+    <div><strong>Travelers</strong> · {{ d.traveler_count }}</div>
+    <div style="margin-top: 4px;"><strong>List total</strong> · Rs. {{ d.list_line_total|floatformat:2 }}</div>
+    <div style="margin-top: 4px;"><strong>Booked total</strong> · Rs. {{ d.subtotal_after_deal|floatformat:2 }}</div>
+    {% if d.has_deal %}
+    <div style="margin-top: 4px; color: #1d4ed8;"><strong>Deal</strong> · saved Rs. {{ d.deal_savings_from_list|floatformat:2 }}</div>
+    {% else %}
+    <div style="margin-top: 4px; color: #64748b;"><strong>Deal</strong> · none</div>
+    {% endif %}
+    <div style="margin-top: 4px;"><strong>Points used</strong> · {{ d.reward_points_used }} (Rs. {{ d.reward_points_value_npr|floatformat:2 }})</div>
+
+    <div style="margin-top: 10px; padding: 8px 10px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+        <div style="font-weight: 800; color: #14532d; font-size: 11px;">Amount paid (eSewa)</div>
+        <div style="font-size: 16px; font-weight: 800; color: #14532d;">Rs. {{ d.amount_paid_esewa|floatformat:2 }}</div>
+        {% if d.is_reward_only %}
+        <div style="font-size: 11px; color: #166534; margin-top: 2px;">Paid with points only — no eSewa charge.</div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 8px; color: #475569; font-size: 11px;">
+        <div>{{ d.payment_method|default:"—" }}{% if d.payment_reference %} · ref {{ d.payment_reference }}{% endif %}</div>
+        {% if d.transaction_uuid %}
+        <div style="word-break: break-all; margin-top: 2px;">{{ d.transaction_uuid }}</div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<span style="color:#94a3b8;">—</span>
+{% endif %}

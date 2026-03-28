@@ -1,11 +1,12 @@
 {% extends 'base_admin.html' %}
+{% load refund_tags %}
 {% block title %}Refunds - TRIPLINK Admin{% endblock %}
 {% block main_content %}
 <div class="admin-topbar" style="margin: -20px -40px 20px; padding: 0 28px;">
     <div class="admin-topbar-left">
         <div>
             <div style="font-size: 18px; font-weight: 800; color: #0f172a;">Manual refunds</div>
-            <div style="font-size: 13px; color: #64748b; margin-top: 4px;">Travelers cancel in the app; you send the refund to their QR, then mark Complete or Cancel.</div>
+            <div style="font-size: 13px; color: #64748b; margin-top: 4px;">Travelers cancel in the app; refund the <strong>Amount paid (eSewa)</strong> shown below (reward-points-only bookings have Rs. 0).</div>
         </div>
     </div>
 </div>
@@ -18,8 +19,7 @@
                 <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">Status</th>
                 <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">Traveler</th>
                 <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">Package</th>
-                <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">Amount</th>
-                <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">Payment</th>
+                <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; min-width: 280px;">Payment breakdown</th>
                 <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">Trip start</th>
                 <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">QR</th>
                 <th style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0;">Actions</th>
@@ -40,12 +40,7 @@
                     <div>{{ rr.package_title }}</div>
                     <div style="color:#64748b; font-size:12px;">Agent: {{ rr.package.agent.email|default:"—" }}</div>
                 </td>
-                <td style="padding: 12px 14px;">Rs. {{ rr.total_amount }}</td>
-                <td style="padding: 12px 14px; font-size: 12px;">
-                    {{ rr.payment_method }}<br/>
-                    ref: {{ rr.payment_reference|truncatechars:16 }}<br/>
-                    txn: {{ rr.transaction_uuid|truncatechars:20 }}
-                </td>
+                <td style="padding: 12px 14px;">{% refund_payment_breakdown rr %}</td>
                 <td style="padding: 12px 14px;">{{ rr.trip_start_date|default:"—" }}</td>
                 <td style="padding: 12px 14px;">
                     {% if rr.traveler_qr_snapshot %}
@@ -70,7 +65,7 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="9" style="padding: 24px; text-align: center; color: #64748b;">No refund requests yet.</td></tr>
+            <tr><td colspan="8" style="padding: 24px; text-align: center; color: #64748b;">No refund requests yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>
