@@ -170,6 +170,10 @@
                 <i>🔔</i>
                 <span>Notifications</span>
             </a>
+            <a href="{% url 'admin_refunds' %}" class="nav-item{% if active_nav == 'refunds' %} active{% endif %}">
+                <i>💸</i>
+                <span>Refunds</span>
+            </a>
             <a href="#" class="nav-item{% if active_nav == 'bookings' %} active{% endif %}">
                 <i>📋</i>
                 <span>Bookings</span>

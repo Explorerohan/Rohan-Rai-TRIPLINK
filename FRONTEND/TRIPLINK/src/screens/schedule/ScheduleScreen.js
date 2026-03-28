@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getMyBookings, getPackages, cancelBooking } from "../../utils/api";
+import { canCancelByTwoDayRule, getCalendarDaysUntilTripStart } from "../../utils/bookingCancellation";
 
 const DAYS_HEADER = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -88,6 +89,7 @@ const mapBookingsToScheduleItems = (list) => {
       date: dateStr,
       image: b.package_image_url || PLACEHOLDER_IMAGE,
       booking: b,
+      paymentStatus: b.payment_status || null,
       tripStartDateRaw: b.trip_start_date || null,
       packageData: {
         id: b.package_id,
@@ -207,32 +209,27 @@ const ScheduleScreen = ({
     ? formatDayMonth(selectedDate)
     : formatMonthYear(viewDate);
 
-  const canCancelBookingByDate = (tripStartDateRaw) => {
-    if (!tripStartDateRaw) return false;
-    const start = new Date(tripStartDateRaw);
-    const today = new Date();
-    // Compare on date basis (ignoring time-of-day)
-    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const diffMs = startMidnight.getTime() - todayMidnight.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    return diffDays >= 2;
+  const refundStatusHint = (paymentStatus) => {
+    if (paymentStatus === "refunded") return t("paymentRefundedShort");
+    if (paymentStatus === "refund_pending") return t("refundPendingManualShort");
+    if (paymentStatus === "refund_declined") return t("refundDeclinedShort");
+    return "";
   };
 
   const handleCancelBooking = (item) => {
     const booking = item?.booking;
     if (!booking || !session?.access) return;
-    if (!canCancelBookingByDate(item.tripStartDateRaw)) {
-      Alert.alert("Cannot cancel", "You can only cancel a booking at least 2 days before the trip start date.");
+    if (!canCancelByTwoDayRule(item.tripStartDateRaw)) {
+      Alert.alert(t("cannotCancelBooking"), t("cancelBookingTwoDayRule"));
       return;
     }
     Alert.alert(
-      "Cancel booking",
-      "Are you sure you want to cancel this booking?",
+      t("cancelBookingTitle"),
+      t("cancelBookingConfirmMessage"),
       [
-        { text: "Keep booking", style: "cancel" },
+        { text: t("keepBooking"), style: "cancel" },
         {
-          text: "Cancel booking",
+          text: t("cancelBookingTitle"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -244,8 +241,11 @@ const ScheduleScreen = ({
               const items = Array.isArray(list) && list.length > 0 ? mapBookingsToScheduleItems(list) : [];
               setScheduleItems(items);
               onUpdateCachedBookings(Array.isArray(list) ? list : []);
+              const updated = Array.isArray(list) ? list.find((x) => String(x.id) === String(booking.id)) : null;
+              const hint = refundStatusHint(updated?.payment_status);
+              Alert.alert(t("bookingCancelledTitle"), hint ? `${t("bookingCancelledBody")}\n\n${hint}` : t("bookingCancelledBody"));
             } catch (err) {
-              Alert.alert("Error", err?.message || "Could not cancel booking.");
+              Alert.alert(t("error"), err?.message || t("couldNotCancelBooking"));
             } finally {
               setCancellingId(null);
             }
@@ -387,6 +387,16 @@ const ScheduleScreen = ({
             )}
           </View>
 
+          {!scheduleLoading && scheduleItems.length > 0 && (
+            <View style={styles.policyCard}>
+              <Ionicons name="information-circle-outline" size={22} color="#1f6b2a" style={styles.policyIcon} />
+              <View style={styles.policyCardTextWrap}>
+                <Text style={styles.policyCardTitle}>{t("scheduleRefundPolicyTitle")}</Text>
+                <Text style={styles.policyCardBody}>{t("scheduleRefundPolicyBody")}</Text>
+              </View>
+            </View>
+          )}
+
           {scheduleLoading ? (
             <View style={styles.scheduleEmpty}>
               <Text style={styles.scheduleEmptyText}>Loading your bookings…</Text>
@@ -400,8 +410,24 @@ const ScheduleScreen = ({
             </View>
           ) : (
             scheduleItems.map((item) => {
-              const canCancel = item.booking?.status === "confirmed" && canCancelBookingByDate(item.tripStartDateRaw);
+              const isConfirmed = item.booking?.status === "confirmed";
+              const daysUntilTrip = getCalendarDaysUntilTripStart(item.tripStartDateRaw);
+              const canCancel = isConfirmed && canCancelByTwoDayRule(item.tripStartDateRaw);
+              const showCancellationClosed =
+                isConfirmed && !canCancel && Boolean(item.tripStartDateRaw);
+              const showTbaCancelNote = isConfirmed && canCancel && daysUntilTrip === null;
+              const isCancelled = item.booking?.status === "cancelled";
               const isCancelling = cancellingId === item.id;
+              const refundHint = isCancelled ? refundStatusHint(item.paymentStatus) : "";
+              let closedDetailText = t("cancellationWindowClosedTooSoon").replace(
+                "{{days}}",
+                String(daysUntilTrip != null ? Math.max(0, daysUntilTrip) : 0)
+              );
+              if (daysUntilTrip != null) {
+                if (daysUntilTrip < 0) closedDetailText = t("cancellationWindowClosedPastTrip");
+                else if (daysUntilTrip === 0) closedDetailText = t("cancellationWindowClosedTripToday");
+                else if (daysUntilTrip === 1) closedDetailText = t("cancellationWindowClosedTripTomorrow");
+              }
               return (
                 <View key={item.id} style={styles.card}>
                   <TouchableOpacity
@@ -430,21 +456,52 @@ const ScheduleScreen = ({
                           {item.location}
                         </Text>
                       </View>
+                      {isConfirmed && canCancel && (
+                        <View style={styles.cancelEligiblePill}>
+                          <Ionicons name="checkmark-circle" size={14} color="#166534" />
+                          <Text style={styles.cancelEligiblePillText}>{t("cancellationWindowOpen")}</Text>
+                        </View>
+                      )}
+                      {isCancelled && (
+                        <Text style={styles.bookingStatusMeta}>
+                          {t("bookingStatusCancelled")}
+                          {refundHint ? ` · ${refundHint}` : ""}
+                        </Text>
+                      )}
                     </View>
                     <Ionicons name="chevron-forward" size={22} color="#94a3b8" style={styles.cardArrow} />
                   </TouchableOpacity>
+
+                  {showCancellationClosed && (
+                    <View style={styles.cancelBlockedBox}>
+                      <Ionicons name="lock-closed-outline" size={20} color="#b45309" />
+                      <View style={styles.cancelBlockedTextWrap}>
+                        <Text style={styles.cancelBlockedTitle}>{t("cancellationNotAvailableTitle")}</Text>
+                        <Text style={styles.cancelBlockedText}>{closedDetailText}</Text>
+                        <Text style={styles.cancelBlockedSub}>{t("cancellationContactHint")}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {showTbaCancelNote && (
+                    <Text style={styles.cancelTbaNote}>{t("tripDateTbaCancelNote")}</Text>
+                  )}
+
                   {canCancel && (
-                    <TouchableOpacity
-                      style={[styles.cancelBookingBtn, isCancelling && styles.cancelBookingBtnDisabled]}
-                      onPress={() => handleCancelBooking(item)}
-                      disabled={isCancelling}
-                      activeOpacity={0.85}
-                    >
-                      <Ionicons name="close-circle-outline" size={16} color="#b91c1c" />
-                      <Text style={styles.cancelBookingText}>
-                        {isCancelling ? "Cancelling…" : "Cancel booking"}
-                      </Text>
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        style={[styles.cancelBookingBtn, isCancelling && styles.cancelBookingBtnDisabled]}
+                        onPress={() => handleCancelBooking(item)}
+                        disabled={isCancelling}
+                        activeOpacity={0.85}
+                      >
+                        <Ionicons name="wallet-outline" size={18} color="#b91c1c" />
+                        <Text style={styles.cancelBookingText}>
+                          {isCancelling ? t("cancellingBooking") : t("cancelAndRefund")}
+                        </Text>
+                      </TouchableOpacity>
+                      <Text style={styles.cancelRefundHint}>{t("cancelRefundButtonHint")}</Text>
+                    </>
                   )}
                 </View>
               );
@@ -705,17 +762,113 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
     flex: 1,
   },
+  bookingStatusMeta: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  policyCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    gap: 10,
+  },
+  policyIcon: {
+    marginTop: 2,
+  },
+  policyCardTextWrap: {
+    flex: 1,
+  },
+  policyCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#14532d",
+    marginBottom: 4,
+  },
+  policyCardBody: {
+    fontSize: 12,
+    color: "#166534",
+    lineHeight: 18,
+  },
+  cancelEligiblePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#ecfdf5",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  cancelEligiblePillText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#166534",
+  },
+  cancelBlockedBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    borderRadius: 12,
+  },
+  cancelBlockedTextWrap: {
+    flex: 1,
+  },
+  cancelBlockedTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#92400e",
+    marginBottom: 4,
+  },
+  cancelBlockedText: {
+    fontSize: 12,
+    color: "#a16207",
+    lineHeight: 17,
+  },
+  cancelBlockedSub: {
+    marginTop: 6,
+    fontSize: 11,
+    color: "#78716c",
+  },
+  cancelTbaNote: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#64748b",
+    lineHeight: 17,
+    paddingHorizontal: 2,
+  },
+  cancelRefundHint: {
+    marginTop: 6,
+    fontSize: 11,
+    color: "#64748b",
+    lineHeight: 16,
+    paddingLeft: 4,
+    paddingRight: 4,
+  },
   cardArrow: {
     marginLeft: 6,
   },
   cancelBookingBtn: {
     marginTop: 10,
     marginRight: 4,
-    alignSelf: "flex-end",
+    alignSelf: "stretch",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    paddingVertical: 6,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 999,
     backgroundColor: "#fef2f2",

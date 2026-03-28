@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, ItineraryItem, Notification, NotificationRecipient, Roles, get_active_deal
+from .booking_cancellation import cancel_traveler_booking
 
 User = get_user_model()
 
@@ -48,6 +49,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     profile_picture_url = serializers.SerializerMethodField()
     profile_picture = serializers.ImageField(required=False, allow_null=True)
+    refund_qr_url = serializers.SerializerMethodField()
+    refund_qr = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = UserProfile
@@ -61,6 +64,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'location',
             'profile_picture',
             'profile_picture_url',
+            'refund_qr',
+            'refund_qr_url',
             'reward_points',
             'created_at',
             'updated_at',
@@ -75,12 +80,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return obj.profile_picture.url
         return None
 
+    def get_refund_qr_url(self, obj):
+        if obj.refund_qr:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.refund_qr.url)
+            return obj.refund_qr.url
+        return None
+
     def update(self, instance, validated_data):
         # Handle profile picture removal (when None is passed)
         if 'profile_picture' in validated_data and validated_data['profile_picture'] is None:
             if instance.profile_picture:
                 instance.profile_picture.delete(save=False)
             validated_data['profile_picture'] = None
+        if 'refund_qr' in validated_data and validated_data['refund_qr'] is None:
+            if instance.refund_qr:
+                instance.refund_qr.delete(save=False)
+            validated_data['refund_qr'] = None
         return super().update(instance, validated_data)
 
 
@@ -341,10 +358,11 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'user', 'package_id', 'package_title', 'status', 'created_at',
             'traveler_count', 'price_per_person_snapshot', 'total_amount',
             'payment_method', 'payment_status', 'payment_reference', 'transaction_uuid',
+            'refunded_at', 'esewa_refund_reference',
             'package_image_url', 'package_location', 'package_country',
             'trip_start_date', 'trip_end_date', 'package_status',
         ]
-        read_only_fields = ['id', 'user', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at', 'refunded_at', 'esewa_refund_reference']
 
     def get_package_image_url(self, obj):
         pkg = obj.package
@@ -401,33 +419,16 @@ class BookingSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """
-        Support traveler cancellation with a 2-day cutoff before trip_start_date.
-        Other updates are not supported.
+        Support traveler cancellation with a 2-day cutoff before trip_start_date,
+        reward-point restoration, and eSewa refund bookkeeping (see booking_cancellation).
         """
         new_status = validated_data.get('status')
         if new_status != BookingStatus.CANCELLED:
             raise serializers.ValidationError({
                 "status": "Only cancellation is supported for bookings."
             })
-        if instance.status == BookingStatus.CANCELLED:
-            raise serializers.ValidationError({
-                "status": "This booking is already cancelled."
-            })
-
-        start = instance.package.trip_start_date
-        if start:
-            days_diff = (start - date.today()).days
-            if days_diff < 2:
-                raise serializers.ValidationError({
-                    "status": "You can only cancel a booking at least 2 days before the trip start date."
-                })
-
-        instance.status = BookingStatus.CANCELLED
-        instance.save(update_fields=["status"])
-        package = instance.package
-        decrement_by = max(int(getattr(instance, "traveler_count", 1) or 1), 1)
-        package.participants_count = max((package.participants_count or 0) - decrement_by, 0)
-        package.save(update_fields=["participants_count"])
+        cancel_traveler_booking(instance)
+        instance.refresh_from_db()
         return instance
 
 

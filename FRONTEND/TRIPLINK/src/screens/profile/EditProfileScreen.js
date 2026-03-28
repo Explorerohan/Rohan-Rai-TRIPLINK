@@ -41,6 +41,13 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
     const url = initialProfile.profile_picture_url && String(initialProfile.profile_picture_url).trim();
     return url || null;
   });
+  const [refundQrImage, setRefundQrImage] = useState(null);
+  const [refundQrUri, setRefundQrUri] = useState(() => {
+    if (!hasInitial) return null;
+    const u = initialProfile.refund_qr_url && String(initialProfile.refund_qr_url).trim();
+    return u || null;
+  });
+  const [refundQrRemoved, setRefundQrRemoved] = useState(false);
   const [isFirstTimeProfile, setIsFirstTimeProfile] = useState(() => {
     if (!hasInitial) return true;
     const required = ["first_name", "last_name", "phone_number", "location"];
@@ -58,6 +65,8 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       });
       const url = initialProfile.profile_picture_url && String(initialProfile.profile_picture_url).trim();
       if (url) setProfileImageUri(url);
+      const rqUrl = initialProfile.refund_qr_url && String(initialProfile.refund_qr_url).trim();
+      if (rqUrl) setRefundQrUri(rqUrl);
       const required = ["first_name", "last_name", "phone_number", "location"];
       setIsFirstTimeProfile(!required.every((f) => !!initialProfile[f]));
       setFetching(false);
@@ -90,6 +99,13 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
 
       const url = data.profile_picture_url && String(data.profile_picture_url).trim();
       if (url) setProfileImageUri(url);
+      const rq = data.refund_qr_url && String(data.refund_qr_url).trim();
+      if (rq) {
+        setRefundQrUri(rq);
+        setRefundQrRemoved(false);
+      } else {
+        setRefundQrUri(null);
+      }
     } catch (error) {
       console.error("Error fetching profile:", error);
       if (!hasInitial) Alert.alert("Error", "Failed to load profile data");
@@ -149,6 +165,46 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
     } catch (error) {
       console.error("Error taking photo with camera:", error);
       Alert.alert("Error", "Failed to open camera. Please try again.");
+    }
+  };
+
+  const appendFileToFormData = (formData, fieldName, imageAsset) => {
+    if (!imageAsset?.uri) return;
+    const imageUri = imageAsset.uri;
+    let filename = imageUri.split("/").pop() || `${fieldName}.jpg`;
+    if (!filename.includes(".")) filename = `${filename}.jpg`;
+    const match = /\.(\w+)$/.exec(filename);
+    const mime = match ? `image/${match[1] === "jpg" ? "jpeg" : match[1]}` : "image/jpeg";
+    let finalUri = imageUri;
+    if (Platform.OS === "ios") finalUri = imageUri.replace("file://", "");
+    formData.append(fieldName, {
+      uri: finalUri,
+      name: filename,
+      type: mime,
+    });
+  };
+
+  const pickRefundQr = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Please allow photo library access to upload your refund QR.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: false,
+        quality: 0.9,
+        allowsMultiple: false,
+        selectionLimit: 1,
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setRefundQrImage(result.assets[0]);
+        setRefundQrUri(result.assets[0].uri);
+        setRefundQrRemoved(false);
+      }
+    } catch (error) {
+      console.error("Error picking refund QR:", error);
+      Alert.alert("Error", "Could not open gallery.");
     }
   };
 
@@ -212,71 +268,56 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
 
     setLoading(true);
     try {
-      // Check if profile picture was removed (had image before, now null)
       const hadImageBefore = profileImageUri && !profileImageUri.includes("Assets");
       const imageRemoved = hadImageBefore && !profileImage;
+      const hasNewProfileImage = !!profileImage;
+      const hasNewRefundQr = !!refundQrImage;
+      const needsMultipart = hasNewProfileImage || hasNewRefundQr;
 
-      if (profileImage) {
-        // Upload with new image using multipart/form-data
-        const formData = new FormData();
-
-        // Add text fields
+      const appendTextFields = (fd) => {
         Object.keys(profileData).forEach((key) => {
           if (
             profileData[key] !== null &&
             profileData[key] !== undefined &&
             profileData[key] !== ""
           ) {
-            formData.append(key, String(profileData[key]));
+            fd.append(key, String(profileData[key]));
           }
         });
+      };
 
-        // Add image - React Native FormData format
-        const imageUri = profileImage.uri;
-        let filename = imageUri.split("/").pop() || "profile.jpg";
+      let response;
 
-        // Ensure filename has extension
-        if (!filename.includes(".")) {
-          filename = `${filename}.jpg`;
+      if (needsMultipart) {
+        if (refundQrRemoved && !hasNewRefundQr) {
+          await updateProfile({ ...profileData, refund_qr: null }, session.access);
         }
-
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : "image/jpeg";
-
-        // Handle different platforms for image URI
-        let finalUri = imageUri;
-        if (Platform.OS === "ios") {
-          // iOS needs file:// prefix removed
-          finalUri = imageUri.replace("file://", "");
+        if (imageRemoved && !hasNewProfileImage) {
+          await updateProfile({ ...profileData, profile_picture: null }, session.access);
         }
-
-        formData.append("profile_picture", {
-          uri: finalUri,
-          name: filename,
-          type: type,
-        });
-
-        const response = await updateProfileWithImage(formData, session.access);
-        Alert.alert("Success", "Profile updated successfully!");
-        setIsFirstTimeProfile(false);
-        if (onSave) onSave(response.data);
-      } else if (imageRemoved) {
-        // Profile picture was removed - send null to clear it
-        const updateData = {
-          ...profileData,
-          profile_picture: null,
-        };
-        const response = await updateProfile(updateData, session.access);
-        Alert.alert("Success", "Profile updated successfully!");
-        setIsFirstTimeProfile(false);
-        if (onSave) onSave(response.data);
+        const formData = new FormData();
+        appendTextFields(formData);
+        if (hasNewProfileImage) appendFileToFormData(formData, "profile_picture", profileImage);
+        if (hasNewRefundQr) appendFileToFormData(formData, "refund_qr", refundQrImage);
+        response = await updateProfileWithImage(formData, session.access);
       } else {
-        // Update without image (no change to image)
-        const response = await updateProfile(profileData, session.access);
-        Alert.alert("Success", "Profile updated successfully!");
-        setIsFirstTimeProfile(false);
-        if (onSave) onSave(response.data);
+        const updateData = { ...profileData };
+        if (imageRemoved) updateData.profile_picture = null;
+        if (refundQrRemoved) updateData.refund_qr = null;
+        response = await updateProfile(updateData, session.access);
       }
+
+      Alert.alert("Success", "Profile updated successfully!");
+      const didClearRefundQr = refundQrRemoved;
+      setIsFirstTimeProfile(false);
+      setRefundQrRemoved(false);
+      setRefundQrImage(null);
+      if (response?.data?.refund_qr_url) {
+        setRefundQrUri(String(response.data.refund_qr_url).trim());
+      } else if (didClearRefundQr) {
+        setRefundQrUri(null);
+      }
+      if (onSave) onSave(response.data);
 
       if (onBack) onBack();
     } catch (error) {
@@ -457,6 +498,47 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
               />
             </View>
           </View>
+
+          {!isAgent && (
+            <View style={styles.refundQrSection}>
+              <Text style={styles.label}>{t("refundQrSectionTitle")}</Text>
+              <Text style={styles.refundQrHint}>{t("refundQrSectionHint")}</Text>
+              <View style={styles.refundQrPreviewWrap}>
+                {refundQrUri?.trim?.() ? (
+                  <Image
+                    source={{ uri: refundQrUri.trim() }}
+                    style={styles.refundQrPreview}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.refundQrPlaceholder}>
+                    <Ionicons name="qr-code-outline" size={40} color="#94a3b8" />
+                    <Text style={styles.refundQrPlaceholderText}>{t("refundQrEmpty")}</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.refundQrActions}>
+                <TouchableOpacity onPress={pickRefundQr} style={styles.refundQrBtn} activeOpacity={0.85}>
+                  <Ionicons name="image-outline" size={18} color="#1f6b2a" />
+                  <Text style={styles.refundQrBtnText}>{t("refundQrChange")}</Text>
+                </TouchableOpacity>
+                {refundQrUri ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setRefundQrImage(null);
+                      setRefundQrUri(null);
+                      setRefundQrRemoved(true);
+                    }}
+                    style={styles.refundQrRemoveBtn}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    <Text style={styles.refundQrRemoveText}>{t("refundQrRemove")}</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -653,6 +735,82 @@ const styles = StyleSheet.create({
     right: 16,
     top: "50%",
     marginTop: -9,
+  },
+  refundQrSection: {
+    marginTop: 8,
+    marginBottom: 24,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#eef2f7",
+  },
+  refundQrHint: {
+    fontSize: 13,
+    color: "#64748b",
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  refundQrPreviewWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    minHeight: 160,
+    padding: 12,
+  },
+  refundQrPreview: {
+    width: 200,
+    height: 200,
+  },
+  refundQrPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  refundQrPlaceholderText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: "#94a3b8",
+  },
+  refundQrActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 12,
+    alignItems: "center",
+  },
+  refundQrBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#f0f9f4",
+    borderWidth: 1,
+    borderColor: "#1f6b2a",
+  },
+  refundQrBtnText: {
+    fontSize: 14,
+    color: "#1f6b2a",
+    fontWeight: "600",
+  },
+  refundQrRemoveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  refundQrRemoveText: {
+    fontSize: 14,
+    color: "#ef4444",
+    fontWeight: "600",
   },
 });
 

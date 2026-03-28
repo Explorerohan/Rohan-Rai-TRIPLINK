@@ -216,3 +216,6 @@ ESEWA_PRODUCT_CODE = os.environ.get('ESEWA_PRODUCT_CODE', 'EPAYTEST')
 ESEWA_SECRET_KEY = os.environ.get('ESEWA_SECRET_KEY', '8gBm/:&EnhH.1/q')
 ESEWA_FORM_URL = os.environ.get('ESEWA_FORM_URL', 'https://rc-epay.esewa.com.np/api/epay/main/v2/form')
 ESEWA_STATUS_URL = os.environ.get('ESEWA_STATUS_URL', 'https://rc.esewa.com.np/api/epay/transaction/status/')
+# Optional: eSewa merchant refund endpoint (JSON POST). Obtain the exact URL and contract from eSewa for your merchant account.
+ESEWA_REFUND_URL = os.environ.get('ESEWA_REFUND_URL', '')
+ESEWA_REFUND_TIMEOUT = int(os.environ.get('ESEWA_REFUND_TIMEOUT', '30'))

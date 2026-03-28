@@ -53,7 +53,10 @@ from .models import (
     ItineraryItem,
     Notification,
     NotificationRecipient,
+    NotificationType,
     ExpoPushToken,
+    RefundRequest,
+    RefundRequestStatus,
 )
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
@@ -1932,6 +1935,135 @@ def agent_travelers_view(request):
     return render(request, 'agent_travelers.html', context)
 
 
+def _notify_traveler_manual_refund(traveler, sender, title, message):
+    notification = Notification.objects.create(
+        title=title[:200],
+        message=message,
+        notification_type=NotificationType.INFO,
+        sender=sender,
+    )
+    NotificationRecipient.objects.create(notification=notification, user=traveler)
+    send_expo_push_for_notification(notification, [traveler.id])
+
+
+def admin_refunds_view(request):
+    """Admin dashboard: list manual refund requests; Complete / Cancel with traveler notifications."""
+    if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
+        messages.error(request, "Access denied. Admin access required.")
+        return redirect("login")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        rid = request.POST.get("refund_id")
+        if action and rid:
+            rr = get_object_or_404(RefundRequest, pk=rid)
+            if rr.status != RefundRequestStatus.PENDING:
+                messages.error(request, "This refund request was already processed.")
+            elif action == "complete":
+                rr.status = RefundRequestStatus.COMPLETED
+                rr.resolved_at = timezone.now()
+                rr.resolved_by = request.user
+                rr.save(update_fields=["status", "resolved_at", "resolved_by", "updated_at"])
+                b = rr.booking
+                b.payment_status = PaymentStatus.REFUNDED
+                b.refunded_at = timezone.now()
+                b.save(update_fields=["payment_status", "refunded_at"])
+                _notify_traveler_manual_refund(
+                    rr.traveler,
+                    request.user,
+                    "Refund completed",
+                    f'Your refund for "{rr.package_title}" has been processed. If you paid via eSewa, check your wallet.',
+                )
+                messages.success(request, "Refund marked complete. Traveler notified.")
+            elif action == "cancel":
+                rr.status = RefundRequestStatus.CANCELLED
+                rr.resolved_at = timezone.now()
+                rr.resolved_by = request.user
+                rr.save(update_fields=["status", "resolved_at", "resolved_by", "updated_at"])
+                b = rr.booking
+                b.payment_status = PaymentStatus.REFUND_DECLINED
+                b.save(update_fields=["payment_status"])
+                _notify_traveler_manual_refund(
+                    rr.traveler,
+                    request.user,
+                    "Refund request update",
+                    f'Your refund request for "{rr.package_title}" was not completed. Contact support if you need help.',
+                )
+                messages.success(request, "Refund request cancelled. Traveler notified.")
+        return redirect("admin_refunds")
+
+    refund_requests = (
+        RefundRequest.objects.select_related(
+            "traveler", "package", "package__agent", "booking", "resolved_by"
+        ).order_by("-created_at")[:500]
+    )
+    context = {
+        "refund_requests": refund_requests,
+        "active_nav": "refunds",
+    }
+    return render(request, "admin_refunds.html", context)
+
+
+def agent_refunds_view(request):
+    """Agent dashboard: refund requests for this agent's packages only."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, "Access denied. Agent access required.")
+        return redirect("login")
+
+    agent = request.user
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        rid = request.POST.get("refund_id")
+        if action and rid:
+            rr = get_object_or_404(RefundRequest, pk=rid, package__agent=agent)
+            if rr.status != RefundRequestStatus.PENDING:
+                messages.error(request, "This refund request was already processed.")
+            elif action == "complete":
+                rr.status = RefundRequestStatus.COMPLETED
+                rr.resolved_at = timezone.now()
+                rr.resolved_by = request.user
+                rr.save(update_fields=["status", "resolved_at", "resolved_by", "updated_at"])
+                b = rr.booking
+                b.payment_status = PaymentStatus.REFUNDED
+                b.refunded_at = timezone.now()
+                b.save(update_fields=["payment_status", "refunded_at"])
+                _notify_traveler_manual_refund(
+                    rr.traveler,
+                    request.user,
+                    "Refund completed",
+                    f'Your refund for "{rr.package_title}" has been processed. If you paid via eSewa, check your wallet.',
+                )
+                messages.success(request, "Refund marked complete. Traveler notified.")
+            elif action == "cancel":
+                rr.status = RefundRequestStatus.CANCELLED
+                rr.resolved_at = timezone.now()
+                rr.resolved_by = request.user
+                rr.save(update_fields=["status", "resolved_at", "resolved_by", "updated_at"])
+                b = rr.booking
+                b.payment_status = PaymentStatus.REFUND_DECLINED
+                b.save(update_fields=["payment_status"])
+                _notify_traveler_manual_refund(
+                    rr.traveler,
+                    request.user,
+                    "Refund request update",
+                    f'Your refund request for "{rr.package_title}" was not completed. Contact support if you need help.',
+                )
+                messages.success(request, "Refund request cancelled. Traveler notified.")
+        return redirect("agent_refunds")
+
+    refund_requests = (
+        RefundRequest.objects.filter(package__agent=agent)
+        .select_related("traveler", "package", "package__agent", "booking", "resolved_by")
+        .order_by("-created_at")[:500]
+    )
+    context = {
+        "refund_requests": refund_requests,
+        "active_nav": "refunds",
+    }
+    return render(request, "agent_refunds.html", context)
+
+
 def agent_bookings_view(request):
     """List all bookings for the agent's packages with optional filters and stats."""
     if not request.user.is_authenticated or request.user.role != Roles.AGENT:
@@ -2985,7 +3117,11 @@ class BookingListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         _mark_overdue_packages_completed()
-        return Booking.objects.filter(user=self.request.user).select_related('package').order_by('-created_at')
+        return (
+            Booking.objects.filter(user=self.request.user)
+            .select_related("package", "esewa_payment_session")
+            .order_by("-created_at")
+        )
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -3002,7 +3138,7 @@ class BookingDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsTraveler]
 
     def get_queryset(self):
-        return Booking.objects.filter(user=self.request.user).select_related('package')
+        return Booking.objects.filter(user=self.request.user).select_related("package", "esewa_payment_session")
 
 
 class EsewaPaymentInitiateView(generics.GenericAPIView):

@@ -90,11 +90,16 @@ export const apiRequest = async (endpoint, options = {}, accessToken = null) => 
   if (!result.response.ok) {
     const data = result.data;
     let message = data.detail || data.message;
-    if (!message && typeof data === "object") {
-      const firstKey = Object.keys(data)[0];
-      if (firstKey) {
-        const val = data[firstKey];
-        message = Array.isArray(val) ? val[0] : val;
+    if (!message && typeof data === "object" && data && !Array.isArray(data)) {
+      if (data.refund_qr != null) {
+        const v = data.refund_qr;
+        message = Array.isArray(v) ? v[0] : v;
+      } else {
+        const firstKey = Object.keys(data)[0];
+        if (firstKey) {
+          const val = data[firstKey];
+          message = Array.isArray(val) ? val[0] : val;
+        }
       }
     }
     throw new Error(message || `HTTP error ${result.response.status}`);
@@ -155,10 +160,15 @@ export const apiRequestMultipart = async (endpoint, formData, accessToken) => {
     const messageFromDetail = data?.detail || data?.message;
     let messageFromFields = null;
     if (!messageFromDetail && data && typeof data === "object" && !Array.isArray(data)) {
-      const firstKey = Object.keys(data)[0];
-      if (firstKey) {
-        const fieldError = data[firstKey];
-        messageFromFields = Array.isArray(fieldError) ? fieldError[0] : fieldError;
+      if (data.refund_qr != null) {
+        const v = data.refund_qr;
+        messageFromFields = Array.isArray(v) ? v[0] : v;
+      } else {
+        const firstKey = Object.keys(data)[0];
+        if (firstKey) {
+          const fieldError = data[firstKey];
+          messageFromFields = Array.isArray(fieldError) ? fieldError[0] : fieldError;
+        }
       }
     }
     throw new Error(messageFromDetail || messageFromFields || `HTTP error ${result.response.status}`);

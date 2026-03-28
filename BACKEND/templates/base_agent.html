@@ -375,6 +375,10 @@
                 <i>&#128203;</i>
                 <span>Bookings</span>
             </a>
+            <a href="{% url 'agent_refunds' %}" class="nav-item{% if active_nav == 'refunds' %} active{% endif %}">
+                <i>&#128184;</i>
+                <span>Refunds</span>
+            </a>
             <a href="{% url 'agent_travelers' %}" class="nav-item{% if active_nav == 'travelers' %} active{% endif %}">
                 <i>&#128101;</i>
                 <span>Travelers</span>

@@ -97,6 +97,12 @@ class UserProfile(models.Model):
     # Simplified profile: single location field instead of multiple address fields
     location = models.CharField(max_length=200, blank=True, help_text="User location")
     reward_points = models.PositiveIntegerField(default=0, help_text="Points earned from completed trips (10% of booking total)")
+    refund_qr = models.ImageField(
+        upload_to="profiles/refund_qr/",
+        null=True,
+        blank=True,
+        help_text="eSewa (or other) QR for receiving manual refunds when cancelling paid bookings.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -403,6 +409,8 @@ class PaymentStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     PAID = "paid", "Paid"
     FAILED = "failed", "Failed"
+    REFUND_PENDING = "refund_pending", "Refund pending"
+    REFUND_DECLINED = "refund_declined", "Refund declined"
     REFUNDED = "refunded", "Refunded"
 
 
@@ -447,6 +455,16 @@ class Booking(models.Model):
     reward_points_used = models.PositiveIntegerField(
         default=0,
         help_text="Reward points redeemed/used as discount for this booking.",
+    )
+    refunded_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the payment was marked refunded (eSewa or internal ledger).",
+    )
+    esewa_refund_reference = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="eSewa reference after refund (e.g. ref_id from status API).",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -519,6 +537,65 @@ class EsewaPaymentSession(models.Model):
 
     def __str__(self):
         return f"{self.transaction_uuid} ({self.status})"
+
+
+class RefundRequestStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+
+
+class RefundRequest(models.Model):
+    """Manual refund queue after booking cancellation (agent/admin pays using traveler's QR)."""
+
+    booking = models.OneToOneField(
+        Booking,
+        on_delete=models.CASCADE,
+        related_name="refund_request",
+    )
+    traveler = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="refund_requests",
+        limit_choices_to={"role": Roles.TRAVELER},
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name="refund_requests",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=RefundRequestStatus.choices,
+        default=RefundRequestStatus.PENDING,
+    )
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payment_method = models.CharField(max_length=20, blank=True)
+    payment_reference = models.CharField(max_length=120, blank=True)
+    transaction_uuid = models.CharField(max_length=120, blank=True)
+    traveler_email = models.EmailField(blank=True)
+    traveler_name = models.CharField(max_length=200, blank=True)
+    package_title = models.CharField(max_length=200, blank=True)
+    trip_start_date = models.DateField(null=True, blank=True)
+    traveler_qr_snapshot = models.ImageField(upload_to="refund_requests/snapshots/", blank=True, null=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="refund_requests_resolved",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Refund Request"
+        verbose_name_plural = "Refund Requests"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Refund #{self.pk} booking {self.booking_id} ({self.status})"
 
 
 class AgentReview(models.Model):

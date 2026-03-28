@@ -662,6 +662,7 @@ export default function App() {
           initialBookings={cachedBookings}
           onUpdateCachedBookings={setCachedBookings}
           onBack={goBack}
+          onOpenSchedule={() => navigate("schedule")}
           onTripPress={(pkg) => {
             if (pkg?.id != null) {
               setSelectedTrip({ id: String(pkg.id) });

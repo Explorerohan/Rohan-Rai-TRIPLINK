@@ -4,7 +4,22 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.urls import reverse
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm
-from .models import User, UserProfile, AgentProfile, Package, PackageFeature, Deal, CustomPackage, Booking, AgentReview, Notification, NotificationRecipient, ExpoPushToken, Roles
+from .models import (
+    User,
+    UserProfile,
+    AgentProfile,
+    Package,
+    PackageFeature,
+    Deal,
+    CustomPackage,
+    Booking,
+    RefundRequest,
+    AgentReview,
+    Notification,
+    NotificationRecipient,
+    ExpoPushToken,
+    Roles,
+)
 from .emailjs_utils import send_agent_credentials_email
 
 
@@ -123,6 +138,14 @@ class BookingAdmin(admin.ModelAdmin):
     list_filter = ['status', 'created_at']
     search_fields = ['user__email', 'package__title']
     readonly_fields = ['created_at']
+
+
+@admin.register(RefundRequest)
+class RefundRequestAdmin(admin.ModelAdmin):
+    list_display = ['id', 'status', 'traveler', 'package_title', 'total_amount', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['traveler__email', 'package_title', 'payment_reference']
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(AgentReview)

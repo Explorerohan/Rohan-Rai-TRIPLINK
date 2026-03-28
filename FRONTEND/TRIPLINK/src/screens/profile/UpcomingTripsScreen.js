@@ -48,6 +48,7 @@ const UpcomingTripsScreen = ({
   onUpdateCachedBookings = () => {},
   onBack = () => {},
   onTripPress = () => {},
+  onOpenSchedule = null,
 }) => {
   const { t } = useLanguage();
   const [bookings, setBookings] = useState(() => Array.isArray(initialBookings) ? initialBookings : []);
@@ -170,40 +171,55 @@ const UpcomingTripsScreen = ({
               </Text>
             </View>
           ) : (
-            mappedItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                activeOpacity={0.9}
-                onPress={() => handleTripPress(item)}
-              >
-                <Image source={{ uri: item.image }} style={styles.cardImage} />
-                <View style={styles.cardBody}>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-
-                  <View style={styles.metaRow}>
-                    <Ionicons name="location-outline" size={14} color="#64748b" />
-                    <Text style={styles.metaText} numberOfLines={1}>
-                      {item.location}
+            <>
+              <View style={styles.refundInfoCard}>
+                <Ionicons name="information-circle-outline" size={22} color="#1f6b2a" />
+                <View style={styles.refundInfoTextCol}>
+                  <Text style={styles.refundInfoTitle}>{t("scheduleRefundPolicyTitle")}</Text>
+                  <Text style={styles.refundInfoBody}>{t("upcomingTripsRefundHint")}</Text>
+                  {typeof onOpenSchedule === "function" ? (
+                    <TouchableOpacity style={styles.refundScheduleBtn} onPress={onOpenSchedule} activeOpacity={0.88}>
+                      <Ionicons name="calendar-outline" size={17} color="#ffffff" />
+                      <Text style={styles.refundScheduleBtnText}>{t("openScheduleToCancel")}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+              {mappedItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.card}
+                  activeOpacity={0.9}
+                  onPress={() => handleTripPress(item)}
+                >
+                  <Image source={{ uri: item.image }} style={styles.cardImage} />
+                  <View style={styles.cardBody}>
+                    <Text style={styles.cardTitle} numberOfLines={2}>
+                      {item.title}
                     </Text>
-                  </View>
 
-                  <View style={styles.metaRow}>
-                    <Ionicons name="calendar-outline" size={14} color="#64748b" />
-                    <Text style={styles.metaText}>{item.dateRange}</Text>
-                  </View>
+                    <View style={styles.metaRow}>
+                      <Ionicons name="location-outline" size={14} color="#64748b" />
+                      <Text style={styles.metaText} numberOfLines={1}>
+                        {item.location}
+                      </Text>
+                    </View>
 
-                  <View style={styles.footerRow}>
-                    <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
-                    <View style={styles.badgeWrap}>
-                      <Text style={styles.badgeText}>Upcoming</Text>
+                    <View style={styles.metaRow}>
+                      <Ionicons name="calendar-outline" size={14} color="#64748b" />
+                      <Text style={styles.metaText}>{item.dateRange}</Text>
+                    </View>
+
+                    <View style={styles.footerRow}>
+                      <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
+                      <View style={styles.badgeWrap}>
+                        <Text style={styles.badgeText}>Upcoming</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))
+                </TouchableOpacity>
+              ))}
+            </>
           )}
         </ScrollView>
       )}
@@ -264,6 +280,48 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
     paddingBottom: 28,
+  },
+  refundInfoCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 14,
+    marginBottom: 14,
+    borderRadius: 14,
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+  },
+  refundInfoTextCol: {
+    flex: 1,
+  },
+  refundInfoTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#14532d",
+    marginBottom: 6,
+  },
+  refundInfoBody: {
+    fontSize: 12,
+    color: "#166534",
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  refundScheduleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    backgroundColor: "#1f6b2a",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  refundScheduleBtnText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
   },
   emptyCard: {
     marginTop: 16,
