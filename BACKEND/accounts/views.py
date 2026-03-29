@@ -3648,6 +3648,21 @@ class PackageFeatureListView(generics.ListAPIView):
 # ---- Chat API views ----
 
 
+_MAX_CHAT_BATCH_FILES = 10
+_MAX_CHAT_ATTACHMENT_BYTES = 15 * 1024 * 1024
+
+
+def _is_batch_image_upload(file_obj):
+    """Images only for multi-file chat send (field name: attachments)."""
+    ct = (getattr(file_obj, "content_type", None) or "").lower()
+    if ct.startswith("image/"):
+        return True
+    name = (getattr(file_obj, "name", "") or "").lower()
+    return any(
+        name.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif")
+    )
+
+
 class ChatMessagePagination(PageNumberPagination):
     """Smaller pages for chat history so we don't load everything at once.
 
@@ -3712,6 +3727,61 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = ChatMessagePagination
     parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def create(self, request, *args, **kwargs):
+        """POST JSON/text, multipart single `attachment`, or multipart `attachments` (images only, max 10)."""
+        room_id = self.kwargs.get("room_id")
+        try:
+            room = ChatRoom.objects.get(pk=room_id)
+        except ChatRoom.DoesNotExist:
+            return response.Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if request.user not in (room.traveler, room.agent):
+            return response.Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+
+        batch_files = list(request.FILES.getlist("attachments"))
+        if batch_files:
+            if len(batch_files) > _MAX_CHAT_BATCH_FILES:
+                return response.Response(
+                    {"detail": f"Maximum {_MAX_CHAT_BATCH_FILES} images per send."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            for f in batch_files:
+                if f.size > _MAX_CHAT_ATTACHMENT_BYTES:
+                    return response.Response(
+                        {"detail": "A file is too large (maximum 15 MB)."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if not _is_batch_image_upload(f):
+                    return response.Response(
+                        {"detail": "Batch send only supports image files."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            text = (request.data.get("text") or "").strip()
+            custom_package = None
+            cp_id = request.data.get("custom_package_id")
+            if cp_id and request.user.role == Roles.AGENT:
+                try:
+                    pkg = CustomPackage.objects.get(pk=cp_id, user=room.traveler)
+                    custom_package = pkg
+                except (CustomPackage.DoesNotExist, ValueError, TypeError):
+                    pass
+            msgs = []
+            with transaction.atomic():
+                for f in batch_files:
+                    msg = ChatMessage.objects.create(
+                        room=room,
+                        sender=request.user,
+                        text=text,
+                        custom_package=custom_package,
+                        attachment=f,
+                    )
+                    msgs.append(msg)
+                room.updated_at = msgs[-1].created_at
+                room.save(update_fields=["updated_at"])
+            serializer = self.get_serializer(msgs, many=True)
+            return response.Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
         room_id = self.kwargs.get("room_id")

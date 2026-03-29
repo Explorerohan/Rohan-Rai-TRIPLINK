@@ -294,6 +294,12 @@
         max-width: 72%;
     }
 
+    /* Image batches: bubble only as wide as thumbnails + padding (no empty strip). */
+    .chat-msg-wrap:has(.chat-msg-image-grid) {
+        width: fit-content;
+        max-width: 72%;
+    }
+
     .chat-msg-bubble {
         padding: 12px 16px;
         border-radius: 16px;
@@ -302,18 +308,40 @@
         font-weight: 400;
         white-space: pre-wrap;
         overflow: hidden;
+        border: 0;
+        border-top: 0;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        box-shadow: none;
+        outline: none;
+    }
+
+    /* Image-only message: no inset on any side (thumbnails flush to bubble edges). */
+    .chat-msg-bubble:has(> .chat-msg-image-grid:only-child) {
+        padding: 0;
     }
 
     .chat-msg-row.incoming .chat-msg-bubble {
         background: #f1f5f9;
         color: #334155;
         border-bottom-left-radius: 4px;
+        border: 0;
+        border-top: 0;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
     }
 
     .chat-msg-row.outgoing .chat-msg-bubble {
         background: #1f6b2a;
         color: #fff;
         border-bottom-right-radius: 4px;
+        border: 0;
+        border-top: 0;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
     }
 
     .chat-msg-time {
@@ -391,15 +419,16 @@
         line-height: 0;
         font: inherit;
     }
-    .chat-msg-image-open:focus {
-        outline: 2px solid #1f6b2a;
-        outline-offset: 2px;
+    .chat-msg-image-open:focus,
+    .chat-msg-image-open:focus-visible {
+        outline: none;
     }
     .chat-msg-attachment-image img {
         width: 100%;
         max-width: 100%;
-        max-height: 280px;
+        max-height: min(480px, 70vh);
         height: auto;
+        object-fit: contain;
         border: none;
         outline: none;
         border-radius: 0;
@@ -409,38 +438,190 @@
         pointer-events: none;
     }
 
+    /* Compact square thumbnails. White grid background fills flex gaps so bubble color does not show in gutters. */
+    .chat-msg-image-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: calc(3 * 72px + 2 * 6px);
+        background: #ffffff;
+    }
+    .chat-msg-image-grid--outgoing {
+        justify-content: flex-start;
+    }
+    .chat-msg-image-grid--incoming {
+        justify-content: flex-start;
+    }
+    .chat-msg-image-grid--bleed {
+        margin: 0;
+    }
+    .chat-msg-bubble:not(:has(> .chat-msg-image-grid:only-child)) .chat-msg-image-grid--bleed {
+        margin-top: -12px;
+        margin-bottom: -12px;
+    }
+    .chat-msg-image-grid--after-text {
+        margin-top: 8px;
+        margin-bottom: -12px;
+        margin-left: -16px;
+        margin-right: -16px;
+    }
+    .chat-msg-image-grid-cell {
+        flex: 0 0 auto;
+        width: 72px;
+        height: 72px;
+        position: relative;
+        padding: 0;
+        margin: 0;
+        border: 0;
+        border-top: 0;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        box-shadow: none;
+        outline: none;
+        background: #e2e8f0;
+        border-radius: 0;
+        overflow: hidden;
+        cursor: zoom-in;
+        line-height: 0;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    .chat-msg-image-grid-cell:focus,
+    .chat-msg-image-grid-cell:focus-visible {
+        outline: none;
+    }
+    .chat-msg-row.outgoing .chat-msg-image-grid-cell {
+        background: #e2e8f0;
+    }
+    .chat-msg-image-grid-cell img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        pointer-events: none;
+        border: 0;
+        border-top: 0;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        outline: none;
+        box-shadow: none;
+        vertical-align: top;
+        border-radius: 0;
+    }
+
     .chat-image-lightbox {
         position: fixed;
         inset: 0;
         z-index: 10050;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
         box-sizing: border-box;
+        overflow: hidden;
     }
     .chat-image-lightbox[hidden] {
         display: none !important;
     }
-    .chat-image-lightbox-scrim {
+    .chat-image-lightbox-bg {
         position: absolute;
         inset: 0;
+        z-index: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+    .chat-image-lightbox-bg-img {
+        position: absolute;
+        inset: -24px;
+        width: calc(100% + 48px);
+        height: calc(100% + 48px);
+        object-fit: cover;
+        filter: blur(28px) saturate(1.1);
+        transform: scale(1.05);
+        opacity: 0.85;
+    }
+    .chat-image-lightbox-dim {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background: rgba(15, 23, 42, 0.45);
+        pointer-events: none;
+    }
+    .chat-image-lightbox-hit {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
         border: none;
         padding: 0;
         margin: 0;
-        background: rgba(0, 0, 0, 0.9);
+        background: transparent;
         cursor: zoom-out;
     }
-    .chat-image-lightbox-close {
-        position: fixed;
-        top: 12px;
-        right: 12px;
-        z-index: 10052;
+    .chat-image-lightbox-shell {
+        position: relative;
+        z-index: 3;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        pointer-events: none;
+    }
+    .chat-image-lightbox-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 12px 16px;
+        pointer-events: auto;
+        flex-shrink: 0;
+    }
+    .chat-image-lightbox-icon-btn {
         width: 44px;
         height: 44px;
         border: none;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+    .chat-image-lightbox-icon-btn:hover {
+        background: rgba(255, 255, 255, 0.22);
+    }
+    .chat-image-lightbox-icon-btn svg {
+        width: 22px;
+        height: 22px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+    }
+    .chat-image-lightbox-stage-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+        padding: 0 56px;
+        position: relative;
+        pointer-events: auto;
+    }
+    .chat-image-lightbox-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 3;
+        width: 48px;
+        height: 48px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.14);
         color: #fff;
         font-size: 28px;
         line-height: 1;
@@ -448,28 +629,82 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 0;
+        pointer-events: auto;
     }
-    .chat-image-lightbox-close:hover {
-        background: rgba(255, 255, 255, 0.25);
+    .chat-image-lightbox-nav:hover {
+        background: rgba(255, 255, 255, 0.24);
     }
+    .chat-image-lightbox-nav:disabled {
+        opacity: 0.25;
+        cursor: default;
+    }
+    .chat-image-lightbox-prev { left: 12px; }
+    .chat-image-lightbox-next { right: 12px; }
     .chat-image-lightbox-frame {
         position: relative;
-        z-index: 10051;
         max-width: min(96vw, 1200px);
-        max-height: 90vh;
+        max-height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        pointer-events: none;
     }
     .chat-image-lightbox-frame img {
         max-width: 100%;
-        max-height: 90vh;
+        max-height: calc(100vh - 200px);
+        max-height: calc(100dvh - 200px);
         width: auto;
         height: auto;
         object-fit: contain;
         display: block;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        vertical-align: top;
+    }
+    .chat-image-lightbox-thumbs-wrap {
+        flex-shrink: 0;
+        padding: 10px 12px 16px;
         pointer-events: auto;
+        background: linear-gradient(to top, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.35), transparent);
+    }
+    .chat-image-lightbox-thumbs {
+        display: flex;
+        flex-direction: row;
+        gap: 6px;
+        background: rgba(30, 41, 59, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        padding: 8px 10px;
+        border-radius: 12px;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
+    }
+    .chat-image-lightbox-thumb {
+        flex: 0 0 56px;
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        background: rgba(15, 23, 42, 0.55);
+    }
+    .chat-image-lightbox-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        border: none;
+        vertical-align: top;
+    }
+    .chat-image-lightbox-thumb.is-active {
+        border-color: #4ade80;
+        box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.35);
     }
 
     .chat-input-area {
@@ -539,6 +774,29 @@
     }
 
     .chat-btn-itinerary svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .chat-btn-attach {
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: #64748b;
+        border-radius: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .chat-btn-attach:hover {
+        background: #475569;
+    }
+
+    .chat-btn-attach svg {
         width: 18px;
         height: 18px;
     }
@@ -778,8 +1036,12 @@
                     <div class="chat-quick-replies-list" id="chatQuickRepliesList"></div>
                 </div>
                 <div class="chat-input-area" id="chatInputArea">
+                    <input type="file" id="chatAttachInput" accept="image/*" multiple hidden aria-hidden="true">
                     <div class="chat-input-wrap">
                         <input type="text" class="chat-input-field" placeholder="Type a message..." id="chatInput" aria-label="Message">
+                        <button type="button" class="chat-btn-attach" id="chatAttachBtn" aria-label="Attach images">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        </button>
                         <button type="button" class="chat-btn-itinerary" id="chatItineraryBtn" aria-label="Create itinerary">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
                         </button>
@@ -793,11 +1055,32 @@
     </div>
 </div>
 
-<div id="chatImageLightbox" class="chat-image-lightbox" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Image preview">
-    <button type="button" class="chat-image-lightbox-scrim" id="chatImageLightboxScrim" aria-label="Close preview"></button>
-    <button type="button" class="chat-image-lightbox-close" id="chatImageLightboxClose" aria-label="Close">&times;</button>
-    <div class="chat-image-lightbox-frame">
-        <img id="chatImageLightboxImg" src="" alt="">
+<div id="chatImageLightbox" class="chat-image-lightbox" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Image gallery">
+    <div class="chat-image-lightbox-bg" aria-hidden="true">
+        <img class="chat-image-lightbox-bg-img" id="chatImageLightboxBgImg" src="" alt="">
+    </div>
+    <div class="chat-image-lightbox-dim" aria-hidden="true"></div>
+    <button type="button" class="chat-image-lightbox-hit" id="chatImageLightboxHit" aria-label="Close preview"></button>
+    <div class="chat-image-lightbox-shell">
+        <div class="chat-image-lightbox-topbar">
+            <button type="button" class="chat-image-lightbox-icon-btn" id="chatImageLightboxDownload" title="Download" aria-label="Download image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+            <button type="button" class="chat-image-lightbox-icon-btn" id="chatImageLightboxShare" title="Share" aria-label="Share image">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </button>
+            <button type="button" class="chat-image-lightbox-icon-btn" id="chatImageLightboxClose" title="Close" aria-label="Close">&times;</button>
+        </div>
+        <div class="chat-image-lightbox-stage-wrap">
+            <button type="button" class="chat-image-lightbox-nav chat-image-lightbox-prev" id="chatImageLightboxPrev" aria-label="Previous image">&#8249;</button>
+            <button type="button" class="chat-image-lightbox-nav chat-image-lightbox-next" id="chatImageLightboxNext" aria-label="Next image">&#8250;</button>
+            <div class="chat-image-lightbox-frame">
+                <img id="chatImageLightboxImg" src="" alt="">
+            </div>
+        </div>
+        <div class="chat-image-lightbox-thumbs-wrap">
+            <div class="chat-image-lightbox-thumbs" id="chatImageLightboxThumbs" role="tablist" aria-label="All images in conversation"></div>
+        </div>
     </div>
 </div>
 
@@ -912,6 +1195,8 @@
     const chatInput = document.getElementById('chatInput');
     const chatSend = document.getElementById('chatSend');
     const chatInputArea = document.getElementById('chatInputArea');
+    const chatAttachBtn = document.getElementById('chatAttachBtn');
+    const chatAttachInput = document.getElementById('chatAttachInput');
     const chatItineraryBtn = document.getElementById('chatItineraryBtn');
     const chatQuickReplies = document.getElementById('chatQuickReplies');
     const chatQuickRepliesPackage = document.getElementById('chatQuickRepliesPackage');
@@ -935,28 +1220,148 @@
     const itineraryFinalCancelBtn = document.getElementById('itineraryFinalCancelBtn');
     const chatImageLightbox = document.getElementById('chatImageLightbox');
     const chatImageLightboxImg = document.getElementById('chatImageLightboxImg');
-    const chatImageLightboxScrim = document.getElementById('chatImageLightboxScrim');
+    const chatImageLightboxBgImg = document.getElementById('chatImageLightboxBgImg');
+    const chatImageLightboxHit = document.getElementById('chatImageLightboxHit');
     const chatImageLightboxClose = document.getElementById('chatImageLightboxClose');
+    const chatImageLightboxPrev = document.getElementById('chatImageLightboxPrev');
+    const chatImageLightboxNext = document.getElementById('chatImageLightboxNext');
+    const chatImageLightboxDownloadBtn = document.getElementById('chatImageLightboxDownload');
+    const chatImageLightboxShareBtn = document.getElementById('chatImageLightboxShare');
+    const chatImageLightboxThumbs = document.getElementById('chatImageLightboxThumbs');
+
+    let chatImageLightboxUrls = [];
+    let chatImageLightboxIndex = 0;
+
+    function collectChatImageUrlsFromDom() {
+        if (!chatMessages) return [];
+        return Array.from(chatMessages.querySelectorAll('.chat-msg-image-open[data-full-url]')).map(function (el) {
+            return el.getAttribute('data-full-url');
+        }).filter(Boolean);
+    }
+
+    function renderChatImageLightboxThumbs() {
+        if (!chatImageLightboxThumbs) return;
+        chatImageLightboxThumbs.innerHTML = chatImageLightboxUrls.map(function (url, i) {
+            const active = i === chatImageLightboxIndex ? ' is-active' : '';
+            return '<button type="button" role="tab" class="chat-image-lightbox-thumb' + active + '" data-idx="' + i + '" aria-selected="' + (i === chatImageLightboxIndex ? 'true' : 'false') + '" aria-label="Image ' + (i + 1) + '"><img src="' + escapeHtml(url) + '" alt=""></button>';
+        }).join('');
+        const sel = chatImageLightboxThumbs.querySelector('.chat-image-lightbox-thumb.is-active');
+        if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    }
+
+    function showChatImageLightboxAtIndex() {
+        const url = chatImageLightboxUrls[chatImageLightboxIndex];
+        if (!url || !chatImageLightboxImg) return;
+        chatImageLightboxImg.src = url;
+        if (chatImageLightboxBgImg) chatImageLightboxBgImg.src = url;
+        const n = chatImageLightboxUrls.length;
+        const hideNav = n <= 1;
+        if (chatImageLightboxPrev) {
+            chatImageLightboxPrev.disabled = hideNav;
+            chatImageLightboxPrev.style.visibility = hideNav ? 'hidden' : '';
+        }
+        if (chatImageLightboxNext) {
+            chatImageLightboxNext.disabled = hideNav;
+            chatImageLightboxNext.style.visibility = hideNav ? 'hidden' : '';
+        }
+        renderChatImageLightboxThumbs();
+    }
 
     function openChatImageLightbox(url) {
         if (!chatImageLightbox || !chatImageLightboxImg || !url) return;
-        chatImageLightboxImg.src = url;
+        chatImageLightboxUrls = collectChatImageUrlsFromDom();
+        let idx = chatImageLightboxUrls.indexOf(url);
+        if (idx < 0) {
+            chatImageLightboxUrls = [url];
+            chatImageLightboxIndex = 0;
+        } else {
+            chatImageLightboxIndex = idx;
+        }
+        showChatImageLightboxAtIndex();
         chatImageLightbox.removeAttribute('hidden');
         chatImageLightbox.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
     }
+
     function closeChatImageLightbox() {
         if (!chatImageLightbox || !chatImageLightboxImg) return;
         chatImageLightbox.setAttribute('hidden', '');
         chatImageLightbox.setAttribute('aria-hidden', 'true');
         chatImageLightboxImg.removeAttribute('src');
+        if (chatImageLightboxBgImg) chatImageLightboxBgImg.removeAttribute('src');
+        chatImageLightboxUrls = [];
+        if (chatImageLightboxThumbs) chatImageLightboxThumbs.innerHTML = '';
         document.body.style.overflow = '';
     }
-    if (chatImageLightboxScrim) chatImageLightboxScrim.addEventListener('click', closeChatImageLightbox);
-    if (chatImageLightboxClose) chatImageLightboxClose.addEventListener('click', closeChatImageLightbox);
+
+    function chatImageLightboxGoPrev(e) {
+        if (e) e.stopPropagation();
+        if (chatImageLightboxUrls.length <= 1) return;
+        chatImageLightboxIndex = (chatImageLightboxIndex - 1 + chatImageLightboxUrls.length) % chatImageLightboxUrls.length;
+        showChatImageLightboxAtIndex();
+    }
+
+    function chatImageLightboxGoNext(e) {
+        if (e) e.stopPropagation();
+        if (chatImageLightboxUrls.length <= 1) return;
+        chatImageLightboxIndex = (chatImageLightboxIndex + 1) % chatImageLightboxUrls.length;
+        showChatImageLightboxAtIndex();
+    }
+
+    function chatImageLightboxDownloadCurrent() {
+        const url = chatImageLightboxUrls[chatImageLightboxIndex];
+        if (!url) return;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function chatImageLightboxShareCurrent() {
+        const url = chatImageLightboxUrls[chatImageLightboxIndex];
+        if (!url) return;
+        if (navigator.share) {
+            navigator.share({ url: url }).catch(function () {});
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(function () {
+                alert('Link copied to clipboard.');
+            }).catch(function () {});
+        } else {
+            window.prompt('Copy link:', url);
+        }
+    }
+
+    if (chatImageLightboxThumbs) {
+        chatImageLightboxThumbs.addEventListener('click', function (e) {
+            const btn = e.target.closest('.chat-image-lightbox-thumb');
+            if (!btn) return;
+            e.stopPropagation();
+            const idx = parseInt(btn.getAttribute('data-idx'), 10);
+            if (!Number.isNaN(idx) && idx >= 0 && idx < chatImageLightboxUrls.length) {
+                chatImageLightboxIndex = idx;
+                showChatImageLightboxAtIndex();
+            }
+        });
+    }
+    if (chatImageLightboxHit) chatImageLightboxHit.addEventListener('click', closeChatImageLightbox);
+    if (chatImageLightboxClose) chatImageLightboxClose.addEventListener('click', function (e) { e.stopPropagation(); closeChatImageLightbox(); });
+    if (chatImageLightboxPrev) chatImageLightboxPrev.addEventListener('click', chatImageLightboxGoPrev);
+    if (chatImageLightboxNext) chatImageLightboxNext.addEventListener('click', chatImageLightboxGoNext);
+    if (chatImageLightboxDownloadBtn) chatImageLightboxDownloadBtn.addEventListener('click', function (e) { e.stopPropagation(); chatImageLightboxDownloadCurrent(); });
+    if (chatImageLightboxShareBtn) chatImageLightboxShareBtn.addEventListener('click', function (e) { e.stopPropagation(); chatImageLightboxShareCurrent(); });
+
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && chatImageLightbox && !chatImageLightbox.hasAttribute('hidden')) {
+        if (!chatImageLightbox || chatImageLightbox.hasAttribute('hidden')) return;
+        if (e.key === 'Escape') {
             closeChatImageLightbox();
+        } else if (e.key === 'ArrowLeft') {
+            chatImageLightboxGoPrev(e);
+        } else if (e.key === 'ArrowRight') {
+            chatImageLightboxGoNext(e);
         }
     });
     if (chatMessages) {
@@ -996,6 +1401,60 @@
         });
         if (!res.ok) throw new Error('API error: ' + res.status);
         return res.json();
+    }
+
+    /** Multipart POST (no JSON Content-Type). Same-origin session + CSRF. */
+    async function apiFetchMultipart(path, formData) {
+        const url = path.startsWith('http') ? path : (API_BASE + path);
+        const headers = { ...getCsrfHeaders() };
+        const res = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers,
+            body: formData,
+        });
+        let data = null;
+        try {
+            const raw = await res.text();
+            data = raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            data = null;
+        }
+        if (!res.ok) {
+            const msg = data && (data.detail || data.message);
+            const errText = typeof msg === 'string' ? msg : (msg ? JSON.stringify(msg) : ('API error ' + res.status));
+            throw new Error(errText);
+        }
+        return data;
+    }
+
+    async function sendChatImages(fileList) {
+        if (!activeRoomId || !fileList || fileList.length === 0) return;
+        const maxN = 10;
+        const files = Array.from(fileList).slice(0, maxN);
+        if (fileList.length > maxN) {
+            alert('Only the first ' + maxN + ' images will be sent.');
+        }
+        const text = (chatInput && chatInput.value) ? chatInput.value.trim() : '';
+        const formData = new FormData();
+        formData.append('text', text);
+        files.forEach(function (f) {
+            formData.append('attachments', f);
+        });
+        if (initialCpId) {
+            const n = parseInt(initialCpId, 10);
+            if (!Number.isNaN(n)) formData.append('custom_package_id', String(n));
+        }
+        try {
+            if (chatInput) chatInput.value = '';
+            await apiFetchMultipart('/chat/rooms/' + activeRoomId + '/messages/', formData);
+            await loadMessages(activeRoomId);
+        } catch (err) {
+            console.error('Image upload failed', err);
+            alert(err.message || 'Could not send images.');
+        } finally {
+            if (chatAttachInput) chatAttachInput.value = '';
+        }
     }
 
     function initials(name) {
@@ -1085,14 +1544,110 @@
         return t.includes('itinerary') || n.includes('itinerary');
     }
 
-    function chatAttachmentLinkHtml(data, hasContentAbove) {
+    function getMsgPlainText(m) {
+        let text = ((m.text || '') + '').trim();
+        const pkg = m.custom_package_detail;
+        if (pkg && /^Re: \[.+\]\s*[\r\n]+/.test(text)) {
+            text = text.replace(/^Re: \[.+\]\s*[\r\n]+/, '').trim();
+        }
+        return text;
+    }
+
+    function hasPackageCardData(m) {
+        const pkg = m.custom_package_detail;
+        return !!(pkg && (pkg.image_url || pkg.title));
+    }
+
+    function clusterChatMessagesWeb(msgs, room) {
+        const clusters = [];
+        let i = 0;
+        const MAX_GAP_MS = 20000;
+        const isOutgoing = (m) => room && (m.sender_id !== room.other_user_id);
+
+        while (i < msgs.length) {
+            const m = msgs[i];
+            if (hasPackageCardData(m)) {
+                clusters.push({ type: 'single', msg: m });
+                i++;
+                continue;
+            }
+            const out = isOutgoing(m);
+            const url = m.attachment_url;
+            const name = m.attachment_name || '';
+            if (!url || chatAttachmentKind(url, name) !== 'image') {
+                clusters.push({ type: 'single', msg: m });
+                i++;
+                continue;
+            }
+            const textKey = getMsgPlainText(m);
+            const group = [m];
+            let j = i + 1;
+            while (j < msgs.length) {
+                const next = msgs[j];
+                if (hasPackageCardData(next)) break;
+                if (isOutgoing(next) !== out) break;
+                const u2 = next.attachment_url;
+                const n2 = next.attachment_name || '';
+                if (!u2 || chatAttachmentKind(u2, n2) !== 'image') break;
+                if (getMsgPlainText(next) !== textKey) break;
+                const prevTime = new Date(group[group.length - 1].created_at).getTime();
+                const nextTime = new Date(next.created_at).getTime();
+                if (nextTime - prevTime > MAX_GAP_MS) break;
+                group.push(next);
+                j++;
+            }
+            clusters.push({ type: 'image_group', messages: group, outgoing: out });
+            i = j;
+        }
+        return clusters;
+    }
+
+    function chatImageGridHtml(urls, isOutgoing, hasTextAbove) {
+        const mod = hasTextAbove ? ' chat-msg-image-grid--after-text' : ' chat-msg-image-grid--bleed';
+        const align = isOutgoing ? ' chat-msg-image-grid--outgoing' : ' chat-msg-image-grid--incoming';
+        const cells = urls.map(function (url) {
+            return '<button type="button" class="chat-msg-image-grid-cell chat-msg-image-open" data-full-url="' + escapeHtml(url) + '"><img src="' + escapeHtml(url) + '" alt=""></button>';
+        }).join('');
+        return '<div class="chat-msg-image-grid' + align + mod + '">' + cells + '</div>';
+    }
+
+    function renderClusterRowHtml(cluster, room) {
+        if (cluster.type === 'single') {
+            const m = cluster.msg;
+            const isOutgoing = room && (m.sender_id !== room.other_user_id);
+            return '<div class="chat-msg-row ' + (isOutgoing ? 'outgoing' : 'incoming') + '" data-msg-id="' + m.id + '">' +
+                '<div class="chat-msg-wrap">' +
+                '<div class="chat-msg-bubble">' + messageBodyHtml(m, isOutgoing) + '</div>' +
+                '<div class="chat-msg-time">' + formatTime(m.created_at) + '</div>' +
+                '</div></div>';
+        }
+        const group = cluster.messages;
+        const first = group[0];
+        const last = group[group.length - 1];
+        const isOutgoing = cluster.outgoing;
+        const text = getMsgPlainText(first);
+        const showText = !!text;
+        const urls = group.map(function (x) { return x.attachment_url; }).filter(Boolean);
+        const ids = group.map(function (x) { return x.id; }).join('-');
+        let inner = '';
+        if (showText) {
+            inner += '<div class="chat-msg-pkg-text">' + escapeHtml(text) + '</div>';
+        }
+        inner += chatImageGridHtml(urls, isOutgoing, showText);
+        return '<div class="chat-msg-row ' + (isOutgoing ? 'outgoing' : 'incoming') + '" data-msg-id="' + ids + '">' +
+            '<div class="chat-msg-wrap">' +
+            '<div class="chat-msg-bubble">' + inner + '</div>' +
+            '<div class="chat-msg-time">' + formatTime(last.created_at) + '</div>' +
+            '</div></div>';
+    }
+
+    function chatAttachmentLinkHtml(data, hasContentAbove, isOutgoing) {
         const url = data.attachment_url;
         if (!url) return '';
         const name = data.attachment_name || '';
         const kind = chatAttachmentKind(url, name);
         if (kind === 'image') {
-            const mod = hasContentAbove ? ' chat-msg-attachment-image--after-text' : ' chat-msg-attachment-image--bleed-tb';
-            return '<div class="chat-msg-attachment chat-msg-attachment-image' + mod + '"><button type="button" class="chat-msg-image-open" data-full-url="' + escapeHtml(url) + '"><img src="' + escapeHtml(url) + '" alt=""></button></div>';
+            return chatImageGridHtml([url], !!isOutgoing, hasContentAbove);
         }
         let label;
         if (kind === 'pdf' && chatAttachmentLooksLikeItinerary(data)) {
@@ -1105,12 +1660,13 @@
         return '<div class="chat-msg-attachment"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(label) + '</a></div>';
     }
 
-    function messageBodyHtml(data) {
+    function messageBodyHtml(data, isOutgoing) {
         const pkg = data.custom_package_detail || null;
         let text = (data.text || '').trim();
         if (pkg && /^Re: \[.+\]\s*[\r\n]+/.test(text)) {
             text = text.replace(/^Re: \[.+\]\s*[\r\n]+/, '').trim();
         }
+        const outgoingRow = isOutgoing !== undefined ? isOutgoing : true;
         let inner = '';
         if (pkg && (pkg.image_url || pkg.title)) {
             inner += '<div class="chat-msg-pkg-card">';
@@ -1125,7 +1681,7 @@
         }
         if (data.attachment_url) {
             const hasContentAbove = !!(pkg && (pkg.image_url || pkg.title)) || !!text;
-            inner += chatAttachmentLinkHtml(data, hasContentAbove);
+            inner += chatAttachmentLinkHtml(data, hasContentAbove, outgoingRow);
         }
         if (!inner) inner = '<div class="chat-msg-pkg-text">' + escapeHtml(data.text || '') + '</div>';
         if (pkg && pkg.id) {
@@ -1164,12 +1720,14 @@
             const tempEl = chatMessages.querySelector('[data-msg-id^="temp-"]');
             if (tempEl) tempEl.remove();
         }
-        const html = `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${msgId}">
-            <div class="chat-msg-wrap">
-                <div class="chat-msg-bubble">${messageBodyHtml(data)}</div>
-                <div class="chat-msg-time">${formatTime(data.created_at || new Date().toISOString())}</div>
-            </div>
-        </div>`;
+        const payload = Object.assign({}, data);
+        if (isOptimistic || !payload.id) payload.id = msgId;
+        const clusters = clusterChatMessagesWeb([payload], room);
+        if (!clusters.length) return;
+        let html = renderClusterRowHtml(clusters[0], room);
+        if (isOptimistic) {
+            html = html.replace(/data-msg-id="[^"]*"/, 'data-msg-id="' + msgId + '"');
+        }
         const atBottom = Math.abs(chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) < 10;
         chatMessages.insertAdjacentHTML('beforeend', html);
         if (atBottom) {
@@ -1210,14 +1768,9 @@
             let html = '';
             for (const [label, msgs] of Object.entries(byDate)) {
                 html += `<div class="chat-date-divider">${escapeHtml(label)}</div>`;
-                msgs.forEach(m => {
-                    const isOutgoing = room ? (m.sender_id !== room.other_user_id) : false;
-                    html += `<div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}" data-msg-id="${m.id}">
-                        <div class="chat-msg-wrap">
-                            <div class="chat-msg-bubble">${messageBodyHtml(m)}</div>
-                            <div class="chat-msg-time">${formatTime(m.created_at)}</div>
-                        </div>
-                    </div>`;
+                const clusters = clusterChatMessagesWeb(msgs, room);
+                clusters.forEach(function (c) {
+                    html += renderClusterRowHtml(c, room);
                 });
             }
             const hasAny = !!html;
@@ -1605,6 +2158,19 @@
     }
 
     chatSend.addEventListener('click', sendMessage);
+    if (chatAttachBtn && chatAttachInput) {
+        chatAttachBtn.addEventListener('click', function () {
+            if (!activeRoomId) {
+                alert('Please select a conversation first.');
+                return;
+            }
+            chatAttachInput.click();
+        });
+        chatAttachInput.addEventListener('change', function () {
+            const files = chatAttachInput.files;
+            if (files && files.length) sendChatImages(files);
+        });
+    }
     if (chatItineraryBtn) chatItineraryBtn.addEventListener('click', openItineraryModal);
     if (itineraryCancelBtn) itineraryCancelBtn.addEventListener('click', closeItineraryModal);
     if (itineraryFinalCancelBtn) itineraryFinalCancelBtn.addEventListener('click', closeItineraryModal);

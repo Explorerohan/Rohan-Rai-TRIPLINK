@@ -130,25 +130,106 @@ const GenericFileAttachment = ({ url, fileLabel, variant, t }) => {
   );
 };
 
+const CHAT_IMAGE_CELL = 72;
+/** Space between thumbnails; white grid background in gutters so bubble color never shows through. */
+const CHAT_IMAGE_GAP = 6;
+
+/** Square thumbnails (cover); full image opens in lightbox on press. Bubble shrink-wraps to grid width. */
+const ChatImageThumbGrid = ({ urls, variant, onImagePress }) => {
+  const outgoing = variant === "outgoing" || variant === "incomingDark";
+
+  return (
+    <View
+      style={[
+        styles.chatImageGrid,
+        outgoing ? styles.chatImageGridOutgoing : styles.chatImageGridIncoming,
+      ]}
+    >
+      {urls.map((url, idx) => (
+        <TouchableOpacity
+          key={`${url}-${idx}`}
+          activeOpacity={0.88}
+          onPress={() => onImagePress?.(url)}
+          accessibilityRole="button"
+          accessibilityLabel="Open image"
+          style={[styles.chatImageGridCell, { width: CHAT_IMAGE_CELL, height: CHAT_IMAGE_CELL }]}
+        >
+          <Image source={{ uri: url }} style={styles.chatImageGridCellImg} resizeMode="cover" />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+
+function hasPackageCard(msg) {
+  const pkg = msg?.custom_package_detail;
+  return !!(pkg && (pkg.image_url || pkg.title));
+}
+
+/** Group consecutive image messages from the same sender with matching caption (batch uploads). */
+function clusterChatMessages(msgs, isOutgoingFn) {
+  const clusters = [];
+  let i = 0;
+  const MAX_GAP_MS = 20000;
+
+  while (i < msgs.length) {
+    const msg = msgs[i];
+    if (hasPackageCard(msg)) {
+      clusters.push({ type: "single", msg });
+      i++;
+      continue;
+    }
+
+    const out = isOutgoingFn(msg);
+    const body = getMessageBody(msg);
+    const url = body.attachmentUrl;
+    const name = body.attachmentName;
+    const isImg = url && attachmentKindFromMeta(url, name) === "image";
+
+    if (!isImg) {
+      clusters.push({ type: "single", msg });
+      i++;
+      continue;
+    }
+
+    const textKey = (body.text || "").trim();
+    const group = [msg];
+    let j = i + 1;
+    while (j < msgs.length) {
+      const next = msgs[j];
+      if (hasPackageCard(next)) break;
+      if (isOutgoingFn(next) !== out) break;
+      const b2 = getMessageBody(next);
+      const u2 = b2.attachmentUrl;
+      const n2 = b2.attachmentName;
+      if (!u2 || attachmentKindFromMeta(u2, n2) !== "image") break;
+      if ((b2.text || "").trim() !== textKey) break;
+      const prevTime = new Date(group[group.length - 1].created_at).getTime();
+      const nextTime = new Date(next.created_at).getTime();
+      if (nextTime - prevTime > MAX_GAP_MS) break;
+      group.push(next);
+      j++;
+    }
+
+    clusters.push({ type: "image_group", messages: group, outgoing: out });
+    i = j;
+  }
+  return clusters;
+}
+
 /** Renders image, itinerary PDF card, or generic file row. */
 const ChatAttachmentBlock = ({ url, name, variant, t, displayText, hasContentAbove, onImagePress }) => {
   const kind = attachmentKindFromMeta(url, name);
   if (kind === "image" && url) {
-    const isOutgoing = variant === "outgoing";
-    const edge = !hasContentAbove;
-    const wrapStyle = [
-      isOutgoing ? styles.chatAttachImageWrapOutgoing : styles.chatAttachImageWrapIncoming,
-      edge ? styles.chatAttachImageWrapBleedTB : styles.chatAttachImageWrapAfterContent,
-    ];
     return (
-      <TouchableOpacity
-        onPress={() => onImagePress?.(url)}
-        activeOpacity={0.9}
-        accessibilityRole="button"
-        style={wrapStyle}
+      <View
+        style={[
+          variant === "outgoing" ? styles.chatAttachImageWrapOutgoing : styles.chatAttachImageWrapIncoming,
+          hasContentAbove ? styles.chatAttachImageWrapAfterContent : styles.chatAttachImageWrapBleedTB,
+        ]}
       >
-        <Image source={{ uri: url }} style={styles.chatAttachImage} resizeMode="cover" />
-      </TouchableOpacity>
+        <ChatImageThumbGrid urls={[url]} variant={variant} onImagePress={onImagePress} />
+      </View>
     );
   }
   if (kind === "pdf" && isBrandedItineraryPdf(displayText, name)) {
@@ -416,6 +497,33 @@ const ChatDetailScreen = ({
     [roomId, accessToken, inputText, loadMessages, t]
   );
 
+  /** Up to 10 images per request (`attachments` field); same caption on each message server-side. */
+  const uploadChatImagesBatch = useCallback(
+    async (assets) => {
+      if (!roomId || !accessToken || !assets?.length) return;
+      setSending(true);
+      try {
+        const formData = new FormData();
+        formData.append("text", (inputText || "").trim());
+        assets.slice(0, 10).forEach((a, i) => {
+          formData.append("attachments", {
+            uri: a.uri,
+            name: a.fileName || `photo_${i + 1}.jpg`,
+            type: a.mimeType || "image/jpeg",
+          });
+        });
+        await sendChatMessageMultipart(roomId, formData, accessToken);
+        setInputText("");
+        await loadMessages(false);
+      } catch (err) {
+        Alert.alert(t("error"), err?.message || t("chatAttachmentUploadFailed"));
+      } finally {
+        setSending(false);
+      }
+    },
+    [roomId, accessToken, inputText, loadMessages, t]
+  );
+
   const pickImageFromLibrary = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -425,12 +533,13 @@ const ChatDetailScreen = ({
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
-      quality: 0.85,
+      allowsMultipleSelection: true,
+      selectionLimit: 10,
+      quality: 1,
     });
-    if (result.canceled || !result.assets?.[0]) return;
-    const a = result.assets[0];
-    await uploadChatAttachment(a.uri, a.fileName || "photo.jpg", a.mimeType || "image/jpeg");
-  }, [uploadChatAttachment, t]);
+    if (result.canceled || !result.assets?.length) return;
+    await uploadChatImagesBatch(result.assets);
+  }, [uploadChatImagesBatch, t]);
 
   const pickFromCamera = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -438,11 +547,11 @@ const ChatDetailScreen = ({
       Alert.alert(t("error"), t("chatCameraPermission"));
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+    const result = await ImagePicker.launchCameraAsync({ quality: 1 });
     if (result.canceled || !result.assets?.[0]) return;
     const a = result.assets[0];
-    await uploadChatAttachment(a.uri, a.fileName || "photo.jpg", a.mimeType || "image/jpeg");
-  }, [uploadChatAttachment, t]);
+    await uploadChatImagesBatch([a]);
+  }, [uploadChatImagesBatch, t]);
 
   const pickDocument = useCallback(async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -826,8 +935,106 @@ const ChatDetailScreen = ({
                     <Text style={styles.dateText}>{dateLabel}</Text>
                   </View>
                 </View>
-                {msgs.map((msg) =>
-                  isOutgoing(msg) ? (() => {
+                {clusterChatMessages(msgs, isOutgoing).map((cluster) => {
+                  if (cluster.type === "image_group") {
+                    const { messages, outgoing } = cluster;
+                    const first = messages[0];
+                    const last = messages[messages.length - 1];
+                    const { text: bodyText } = getMessageBody(first);
+                    const showText = !!(bodyText && String(bodyText).trim());
+                    const urls = messages
+                      .map((m) => getMessageBody(m).attachmentUrl)
+                      .filter(Boolean);
+                    const clusterKey = messages.map((m) => m.id).join("-");
+                    if (outgoing) {
+                      return (
+                        <View key={clusterKey} style={styles.msgRowRight}>
+                          <View style={[styles.msgBubbleRight, !showText && styles.msgBubbleImageOnly]}>
+                            {showText ? <Text style={styles.msgText}>{bodyText}</Text> : null}
+                            <View style={styles.msgImageWithMetaColOutgoing}>
+                              <View
+                                style={[
+                                  styles.chatImageGridWrap,
+                                  showText ? styles.chatImageGridWrapAfterText : styles.chatImageGridWrapFlush,
+                                ]}
+                              >
+                                <ChatImageThumbGrid
+                                  urls={urls}
+                                  variant="outgoing"
+                                  onImagePress={setImageLightboxUri}
+                                />
+                              </View>
+                              <View style={[styles.msgMetaRight, styles.msgMetaBelowImage, !showText && styles.msgMetaInsetH]}>
+                                <Text style={styles.msgTime}>{formatTime(last.created_at)}</Text>
+                                <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    }
+                    const msg = first;
+                    const { pkg, text } = getMessageBody(msg);
+                    const showText = !!(text && String(text).trim());
+                    const hasPkg = !!(pkg && (pkg.image_url || pkg.title));
+                    const BubbleWrapper = hasPkg && pkg?.id && onPackagePress ? TouchableOpacity : View;
+                    const bubbleProps = hasPkg && pkg?.id && onPackagePress
+                      ? { activeOpacity: 0.85, onPress: () => onPackagePress(pkg.id) }
+                      : {};
+                    const variant = hasPkg ? "incomingDark" : "incoming";
+                    return (
+                      <View key={clusterKey} style={styles.msgRowLeft}>
+                        <Image
+                          source={{ uri: contactAvatar || DEFAULT_AVATAR }}
+                          style={styles.senderAvatar}
+                        />
+                        <BubbleWrapper
+                          style={[
+                            styles.msgBubbleLeft,
+                            hasPkg && styles.msgBubbleLeftWithPkg,
+                            !showText && !hasPkg && styles.msgBubbleImageOnly,
+                          ]}
+                          {...bubbleProps}
+                        >
+                          {hasPkg && (
+                            <View style={styles.msgPkgCard}>
+                              {pkg.image_url ? (
+                                <Image source={{ uri: pkg.image_url }} style={styles.msgPkgImage} resizeMode="cover" />
+                              ) : null}
+                              <Text style={styles.msgPkgTitle} numberOfLines={2}>
+                                {pkg.title}{pkg.location ? ` – ${pkg.location}` : ""}
+                              </Text>
+                            </View>
+                          )}
+                          {showText ? (
+                            <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{text}</Text>
+                          ) : null}
+                          <View style={styles.msgImageWithMetaColIncoming}>
+                            <View
+                              style={[
+                                styles.chatImageGridWrap,
+                                showText || hasPkg ? styles.chatImageGridWrapAfterText : styles.chatImageGridWrapFlush,
+                              ]}
+                            >
+                              <ChatImageThumbGrid
+                                urls={urls}
+                                variant={variant}
+                                onImagePress={setImageLightboxUri}
+                              />
+                            </View>
+                            <View style={[styles.msgMetaLeft, styles.msgMetaBelowImage, !showText && !hasPkg && styles.msgMetaInsetH]}>
+                              <Text style={[styles.msgTime, hasPkg && styles.msgTimeInPkg]}>
+                                {formatTime(last.created_at)}
+                              </Text>
+                              <Ionicons name="checkmark-done" size={16} color={hasPkg ? "#a7f3d0" : "#22c55e"} />
+                            </View>
+                          </View>
+                        </BubbleWrapper>
+                      </View>
+                    );
+                  }
+                  const msg = cluster.msg;
+                  return isOutgoing(msg) ? (() => {
                     const { text: bodyText, attachmentUrl, attachmentName } = getMessageBody(msg);
                     const showText = !!(bodyText && String(bodyText).trim());
                     const isImageAttach =
@@ -837,7 +1044,7 @@ const ChatDetailScreen = ({
                         <View style={styles.msgBubbleRight}>
                           {showText ? <Text style={styles.msgText}>{bodyText}</Text> : null}
                           {attachmentUrl && isImageAttach ? (
-                            <View style={styles.msgImageWithMetaCol}>
+                            <View style={styles.msgImageWithMetaColOutgoing}>
                               <ChatAttachmentBlock
                                 url={attachmentUrl}
                                 name={attachmentName}
@@ -909,7 +1116,7 @@ const ChatDetailScreen = ({
                               <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{text}</Text>
                             ) : null}
                             {attachmentUrl && isImageAttach ? (
-                              <View style={styles.msgImageWithMetaCol}>
+                              <View style={styles.msgImageWithMetaColIncoming}>
                                 <ChatAttachmentBlock
                                   url={attachmentUrl}
                                   name={attachmentName}
@@ -947,8 +1154,8 @@ const ChatDetailScreen = ({
                         </View>
                       );
                     })()
-                  )
-                )}
+                  );
+                })}
               </React.Fragment>
             ))}
           </ScrollView>
@@ -1318,6 +1525,7 @@ const styles = StyleSheet.create({
   },
   msgBubbleRight: {
     maxWidth: "80%",
+    alignSelf: "flex-end",
     backgroundColor: "#7dd3fc",
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -1325,6 +1533,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderTopRightRadius: 4,
     overflow: "hidden",
+    borderWidth: 0,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderColor: "transparent",
+  },
+  /** Image-only bubble: flush thumbnails on every side (no inner padding). */
+  msgBubbleImageOnly: {
+    padding: 0,
   },
   chatAttachImageWrapOutgoing: {
     marginHorizontal: -14,
@@ -1342,18 +1560,66 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 0,
   },
-  /** Column so image is always above timestamp row. */
-  msgImageWithMetaCol: {
+  /** Incoming: full width of bubble for image + meta. */
+  msgImageWithMetaColIncoming: {
     width: "100%",
     alignSelf: "stretch",
   },
-  chatAttachImage: {
-    width: "100%",
-    minHeight: 160,
-    maxHeight: 280,
-    borderWidth: 0,
+  /** Outgoing: shrink to thumbnails + meta (no empty strip). */
+  msgImageWithMetaColOutgoing: {
+    alignSelf: "flex-end",
+    maxWidth: "100%",
+  },
+  chatImageGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: CHAT_IMAGE_GAP,
+    maxWidth: CHAT_IMAGE_CELL * 3 + CHAT_IMAGE_GAP * 2,
+    backgroundColor: "#ffffff",
+  },
+  chatImageGridOutgoing: {
+    alignSelf: "flex-end",
+  },
+  chatImageGridIncoming: {
+    alignSelf: "flex-start",
+  },
+  chatImageGridCell: {
     borderRadius: 0,
-    backgroundColor: "transparent",
+    overflow: "hidden",
+    backgroundColor: "#e2e8f0",
+    borderWidth: 0,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderColor: "transparent",
+    elevation: 0,
+    shadowOpacity: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 0,
+  },
+  chatImageGridCellImg: {
+    width: "100%",
+    height: "100%",
+    borderWidth: 0,
+  },
+  chatImageGridWrap: {
+    marginHorizontal: -14,
+  },
+  /** No side/top/bottom offset — used with msgBubbleImageOnly. */
+  chatImageGridWrapFlush: {
+    marginHorizontal: 0,
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  chatImageGridWrapBleed: {
+    marginTop: -10,
+  },
+  chatImageGridWrapAfterText: {
+    marginTop: 8,
+  },
+  msgMetaInsetH: {
+    paddingHorizontal: 14,
   },
   msgText: {
     fontSize: 15,
@@ -1399,10 +1665,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderTopLeftRadius: 4,
     overflow: "hidden",
+    borderWidth: 0,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderColor: "transparent",
   },
   msgBubbleLeftWithPkg: {
     backgroundColor: "#2A733E",
-    borderColor: "#2A733E",
+    borderWidth: 0,
+    borderColor: "transparent",
     overflow: "hidden",
   },
   msgPkgCard: {

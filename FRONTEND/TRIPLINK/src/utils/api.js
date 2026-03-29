@@ -621,7 +621,8 @@ export const sendChatMessage = async (roomId, payload, accessToken) => {
 };
 
 /**
- * Send a message with an optional file (multipart). Field names: text (optional caption), attachment (file).
+ * Send a message with an optional file (multipart).
+ * Field names: text (optional caption), attachment (single file), or attachments (repeat for images, max 10; batch returns an array from the API).
  * @param {number|string} roomId
  * @param {FormData} formData
  * @param {string} accessToken
