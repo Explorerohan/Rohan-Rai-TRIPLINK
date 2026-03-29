@@ -48,6 +48,8 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
     return u || null;
   });
   const [refundQrRemoved, setRefundQrRemoved] = useState(false);
+  /** Only true when user taps Remove on profile photo — not when they simply did not pick a new file. */
+  const [profilePictureRemoved, setProfilePictureRemoved] = useState(false);
   const [isFirstTimeProfile, setIsFirstTimeProfile] = useState(() => {
     if (!hasInitial) return true;
     const required = ["first_name", "last_name", "phone_number", "location"];
@@ -161,6 +163,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       if (!result.canceled && result.assets && result.assets[0]) {
         setProfileImage(result.assets[0]);
         setProfileImageUri(result.assets[0].uri);
+        setProfilePictureRemoved(false);
       }
     } catch (error) {
       console.error("Error taking photo with camera:", error);
@@ -232,6 +235,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       if (!result.canceled && result.assets && result.assets[0]) {
         setProfileImage(result.assets[0]);
         setProfileImageUri(result.assets[0].uri);
+        setProfilePictureRemoved(false);
       }
     } catch (error) {
       console.error("Error picking image from gallery:", error);
@@ -268,8 +272,6 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
 
     setLoading(true);
     try {
-      const hadImageBefore = profileImageUri && !profileImageUri.includes("Assets");
-      const imageRemoved = hadImageBefore && !profileImage;
       const hasNewProfileImage = !!profileImage;
       const hasNewRefundQr = !!refundQrImage;
       const needsMultipart = hasNewProfileImage || hasNewRefundQr;
@@ -292,7 +294,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
         if (refundQrRemoved && !hasNewRefundQr) {
           await updateProfile({ ...profileData, refund_qr: null }, session.access);
         }
-        if (imageRemoved && !hasNewProfileImage) {
+        if (profilePictureRemoved && !hasNewProfileImage) {
           await updateProfile({ ...profileData, profile_picture: null }, session.access);
         }
         const formData = new FormData();
@@ -302,16 +304,24 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
         response = await updateProfileWithImage(formData, session.access);
       } else {
         const updateData = { ...profileData };
-        if (imageRemoved) updateData.profile_picture = null;
+        if (profilePictureRemoved) updateData.profile_picture = null;
         if (refundQrRemoved) updateData.refund_qr = null;
         response = await updateProfile(updateData, session.access);
       }
 
       Alert.alert("Success", "Profile updated successfully!");
       const didClearRefundQr = refundQrRemoved;
+      const didRemoveProfilePicture = profilePictureRemoved;
       setIsFirstTimeProfile(false);
       setRefundQrRemoved(false);
+      setProfilePictureRemoved(false);
       setRefundQrImage(null);
+      setProfileImage(null);
+      if (response?.data?.profile_picture_url) {
+        setProfileImageUri(String(response.data.profile_picture_url).trim());
+      } else if (didRemoveProfilePicture && !hasNewProfileImage) {
+        setProfileImageUri(null);
+      }
       if (response?.data?.refund_qr_url) {
         setRefundQrUri(String(response.data.refund_qr_url).trim());
       } else if (didClearRefundQr) {
@@ -402,6 +412,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
                 onPress={() => {
                   setProfileImage(null);
                   setProfileImageUri(null);
+                  setProfilePictureRemoved(true);
                 }}
                 style={styles.removePhotoButton}
               >
