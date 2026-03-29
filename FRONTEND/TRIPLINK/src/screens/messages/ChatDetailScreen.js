@@ -217,7 +217,10 @@ const ChatDetailScreen = ({
           setMessages((prev) => {
             const exists = prev.some((m) => m.id === data.id || (m.id && String(m.id) === String(data.id)));
             if (exists) return prev;
-            const isFromMe = data.sender_id !== otherUserId;
+            const isFromMe =
+              otherUserId != null && otherUserId !== ""
+                ? Number(data.sender_id) !== Number(otherUserId)
+                : true;
             const newMsg = {
               id: data.id,
               text: data.text,
@@ -239,7 +242,7 @@ const ChatDetailScreen = ({
       ws.close();
       wsRef.current = null;
     };
-  }, [roomId, accessToken]);
+  }, [roomId, accessToken, otherUserId]);
 
   useEffect(() => {
     if (!roomId || !accessToken || loading) return;
@@ -250,7 +253,17 @@ const ChatDetailScreen = ({
           const ordered = [...list].reverse();
           setMessages((prev) => {
             const tempMsgs = prev.filter((m) => String(m.id || "").startsWith("temp-"));
-            return tempMsgs.length > 0 ? [...ordered, ...tempMsgs] : ordered;
+            if (tempMsgs.length === 0) return ordered;
+            const oid = otherUserId != null ? Number(otherUserId) : null;
+            const stillPending = tempMsgs.filter((t) => {
+              const matched = ordered.some((o) => {
+                if (String(o.text || "").trim() !== String(t.text || "").trim()) return false;
+                if (oid == null || Number.isNaN(oid)) return false;
+                return Number(o.sender_id) !== oid;
+              });
+              return !matched;
+            });
+            return stillPending.length > 0 ? [...ordered, ...stillPending] : ordered;
           });
         })
         .catch(() => {});
@@ -264,7 +277,7 @@ const ChatDetailScreen = ({
     poll();
     const pollInterval = setInterval(poll, 1000);
     return () => clearInterval(pollInterval);
-  }, [roomId, accessToken, loading]);
+  }, [roomId, accessToken, loading, otherUserId]);
 
   const sendMessage = async (messageOverride = null) => {
     const baseText = messageOverride !== null && messageOverride !== undefined ? messageOverride : inputText;
@@ -286,21 +299,17 @@ const ChatDetailScreen = ({
     };
     setMessages((prev) => [...prev, optimisticMsg]);
 
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "message", text }));
-      setSending(false);
-      return;
-    }
-
+    // Always persist via REST so sending works even when Channels/WebSocket delivery fails in dev.
+    // WebSocket remains for receiving other participants' messages in real time.
     try {
       await sendChatMessage(roomId, { text }, accessToken);
       await loadMessages(false);
-    } catch (_) {
+    } catch (err) {
       if (messageOverride == null) {
         setInputText(text);
       }
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      Alert.alert(t("error"), err?.message || "Failed to send message");
     } finally {
       setSending(false);
     }
@@ -323,7 +332,12 @@ const ChatDetailScreen = ({
   }, {});
   const itineraryGroups = Object.entries(itineraryByDate);
 
-  const isOutgoing = (msg) => msg.sender_id !== otherUserId;
+  const isOutgoing = (msg) => {
+    if (otherUserId == null || otherUserId === "") {
+      return String(msg.id || "").startsWith("temp-") || msg.sender_id === -1;
+    }
+    return Number(msg.sender_id) !== Number(otherUserId);
+  };
 
   const slotLabels = (days, nights) => {
     const labels = [];
@@ -559,6 +573,8 @@ const ChatDetailScreen = ({
             style={styles.chatScroll}
             contentContainerStyle={styles.chatContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           >
             <View style={styles.itinerarySection}>
@@ -676,7 +692,7 @@ const ChatDetailScreen = ({
           </ScrollView>
         )}
 
-        <View style={styles.inputRow}>
+        <View style={styles.inputRow} pointerEvents="box-none">
           <View style={styles.inputBox}>
             <TextInput
               style={styles.input}
@@ -687,6 +703,7 @@ const ChatDetailScreen = ({
               editable={!sending}
               onSubmitEditing={() => sendMessage()}
               returnKeyType="send"
+              blurOnSubmit={false}
             />
             <TouchableOpacity style={styles.attachBtn} activeOpacity={0.8}>
               <Ionicons name="attach" size={22} color="#7a7f85" />
@@ -704,9 +721,10 @@ const ChatDetailScreen = ({
           )}
           <TouchableOpacity
             style={styles.micBtn}
-            activeOpacity={0.8}
-            onPress={sendMessage}
+            activeOpacity={0.75}
+            onPress={() => sendMessage()}
             disabled={sending || !inputText.trim()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {sending ? (
               <ActivityIndicator size="small" color="#ffffff" />
@@ -1149,6 +1167,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
+    zIndex: 2,
+    elevation: 8,
   },
   inputBox: {
     flex: 1,
