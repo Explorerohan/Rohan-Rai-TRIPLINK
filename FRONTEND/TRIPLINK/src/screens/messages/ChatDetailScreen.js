@@ -10,6 +10,7 @@ import {
   Linking,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   SafeAreaView,
   StatusBar,
@@ -835,21 +836,41 @@ const ChatDetailScreen = ({
                       <View key={msg.id} style={styles.msgRowRight}>
                         <View style={styles.msgBubbleRight}>
                           {showText ? <Text style={styles.msgText}>{bodyText}</Text> : null}
-                          {attachmentUrl ? (
-                            <ChatAttachmentBlock
-                              url={attachmentUrl}
-                              name={attachmentName}
-                              variant="outgoing"
-                              t={t}
-                              displayText={bodyText}
-                              hasContentAbove={showText}
-                              onImagePress={setImageLightboxUri}
-                            />
-                          ) : null}
-                          <View style={[styles.msgMetaRight, isImageAttach && styles.msgMetaTightAfterImage]}>
-                            <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
-                            <Ionicons name="checkmark-done" size={16} color="#22c55e" />
-                          </View>
+                          {attachmentUrl && isImageAttach ? (
+                            <View style={styles.msgImageWithMetaCol}>
+                              <ChatAttachmentBlock
+                                url={attachmentUrl}
+                                name={attachmentName}
+                                variant="outgoing"
+                                t={t}
+                                displayText={bodyText}
+                                hasContentAbove={showText}
+                                onImagePress={setImageLightboxUri}
+                              />
+                              <View style={[styles.msgMetaRight, styles.msgMetaBelowImage]}>
+                                <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
+                                <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                              </View>
+                            </View>
+                          ) : (
+                            <>
+                              {attachmentUrl ? (
+                                <ChatAttachmentBlock
+                                  url={attachmentUrl}
+                                  name={attachmentName}
+                                  variant="outgoing"
+                                  t={t}
+                                  displayText={bodyText}
+                                  hasContentAbove={showText}
+                                  onImagePress={setImageLightboxUri}
+                                />
+                              ) : null}
+                              <View style={styles.msgMetaRight}>
+                                <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
+                                <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                              </View>
+                            </>
+                          )}
                         </View>
                       </View>
                     );
@@ -887,21 +908,41 @@ const ChatDetailScreen = ({
                             {showText ? (
                               <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{text}</Text>
                             ) : null}
-                            {attachmentUrl ? (
-                              <ChatAttachmentBlock
-                                url={attachmentUrl}
-                                name={attachmentName}
-                                variant={hasPkg ? "incomingDark" : "incoming"}
-                                t={t}
-                                displayText={text}
-                                hasContentAbove={showText || hasPkg}
-                                onImagePress={setImageLightboxUri}
-                              />
-                            ) : null}
-                            <View style={[styles.msgMetaLeft, isImageAttach && styles.msgMetaTightAfterImage]}>
-                              <Text style={[styles.msgTime, hasPkg && styles.msgTimeInPkg]}>{formatTime(msg.created_at)}</Text>
-                              <Ionicons name="checkmark-done" size={16} color={hasPkg ? "#a7f3d0" : "#22c55e"} />
-                            </View>
+                            {attachmentUrl && isImageAttach ? (
+                              <View style={styles.msgImageWithMetaCol}>
+                                <ChatAttachmentBlock
+                                  url={attachmentUrl}
+                                  name={attachmentName}
+                                  variant={hasPkg ? "incomingDark" : "incoming"}
+                                  t={t}
+                                  displayText={text}
+                                  hasContentAbove={showText || hasPkg}
+                                  onImagePress={setImageLightboxUri}
+                                />
+                                <View style={[styles.msgMetaLeft, styles.msgMetaBelowImage]}>
+                                  <Text style={[styles.msgTime, hasPkg && styles.msgTimeInPkg]}>{formatTime(msg.created_at)}</Text>
+                                  <Ionicons name="checkmark-done" size={16} color={hasPkg ? "#a7f3d0" : "#22c55e"} />
+                                </View>
+                              </View>
+                            ) : (
+                              <>
+                                {attachmentUrl ? (
+                                  <ChatAttachmentBlock
+                                    url={attachmentUrl}
+                                    name={attachmentName}
+                                    variant={hasPkg ? "incomingDark" : "incoming"}
+                                    t={t}
+                                    displayText={text}
+                                    hasContentAbove={showText || hasPkg}
+                                    onImagePress={setImageLightboxUri}
+                                  />
+                                ) : null}
+                                <View style={styles.msgMetaLeft}>
+                                  <Text style={[styles.msgTime, hasPkg && styles.msgTimeInPkg]}>{formatTime(msg.created_at)}</Text>
+                                  <Ionicons name="checkmark-done" size={16} color={hasPkg ? "#a7f3d0" : "#22c55e"} />
+                                </View>
+                              </>
+                            )}
                           </BubbleWrapper>
                         </View>
                       );
@@ -1056,17 +1097,21 @@ const ChatDetailScreen = ({
         visible={!!imageLightboxUri}
         transparent
         animationType="fade"
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
         onRequestClose={() => setImageLightboxUri(null)}
       >
         <View style={styles.imageLightboxRoot}>
-          <TouchableOpacity
+          <Pressable
             style={styles.imageLightboxBackdrop}
-            activeOpacity={1}
             onPress={() => setImageLightboxUri(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Close preview"
           />
           <View style={styles.imageLightboxCenter} pointerEvents="box-none">
             {imageLightboxUri ? (
               <Image
+                key={imageLightboxUri}
                 source={{ uri: imageLightboxUri }}
                 style={{
                   width: Dimensions.get("window").width - 32,
@@ -1076,15 +1121,23 @@ const ChatDetailScreen = ({
               />
             ) : null}
           </View>
-          <TouchableOpacity
-            style={styles.imageLightboxClose}
+          <Pressable
+            style={[
+              styles.imageLightboxClose,
+              {
+                top:
+                  Platform.OS === "ios"
+                    ? 52
+                    : (StatusBar.currentHeight || 0) + 8,
+              },
+            ]}
             onPress={() => setImageLightboxUri(null)}
             hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
             accessibilityRole="button"
             accessibilityLabel="Close"
           >
-            <Ionicons name="close" size={32} color="#ffffff" />
-          </TouchableOpacity>
+            <Ionicons name="close-circle" size={40} color="#ffffff" />
+          </Pressable>
         </View>
       </Modal>
     </SafeAreaView>
@@ -1279,15 +1332,20 @@ const styles = StyleSheet.create({
   chatAttachImageWrapIncoming: {
     marginHorizontal: -14,
   },
-  /** Image is the only content: bleed to bubble top & bottom (padding 10 / 8). */
+  /** Image is the only content: bleed to bubble top; meta sits in column below (no negative bottom). */
   chatAttachImageWrapBleedTB: {
     marginTop: -10,
-    marginBottom: -8,
+    marginBottom: 0,
   },
-  /** Image below text or package card: keep a small gap above; pull bottom toward timestamp. */
+  /** Image below text or package card. */
   chatAttachImageWrapAfterContent: {
     marginTop: 8,
-    marginBottom: -8,
+    marginBottom: 0,
+  },
+  /** Column so image is always above timestamp row. */
+  msgImageWithMetaCol: {
+    width: "100%",
+    alignSelf: "stretch",
   },
   chatAttachImage: {
     width: "100%",
@@ -1309,8 +1367,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 4,
   },
-  msgMetaTightAfterImage: {
-    marginTop: 0,
+  msgMetaBelowImage: {
+    marginTop: 6,
+    marginBottom: 0,
   },
   msgTime: {
     fontSize: 11,
@@ -1513,7 +1572,6 @@ const styles = StyleSheet.create({
   },
   imageLightboxClose: {
     position: "absolute",
-    top: Platform.OS === "ios" ? 52 : 16,
     right: 16,
     zIndex: 10,
     padding: 8,
