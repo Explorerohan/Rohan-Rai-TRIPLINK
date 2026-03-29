@@ -301,6 +301,7 @@
         line-height: 1.5;
         font-weight: 400;
         white-space: pre-wrap;
+        overflow: hidden;
     }
 
     .chat-msg-row.incoming .chat-msg-bubble {
@@ -366,6 +367,109 @@
         color: #0369a1;
         text-decoration: underline;
         font-size: 13px;
+    }
+    .chat-msg-attachment-image {
+        margin-left: -16px;
+        margin-right: -16px;
+    }
+    .chat-msg-attachment-image--bleed-tb {
+        margin-top: -12px;
+        margin-bottom: -12px;
+    }
+    .chat-msg-attachment-image--after-text {
+        margin-top: 8px;
+        margin-bottom: -12px;
+    }
+    .chat-msg-image-open {
+        display: block;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+        border: none;
+        background: transparent;
+        cursor: zoom-in;
+        line-height: 0;
+        font: inherit;
+    }
+    .chat-msg-image-open:focus {
+        outline: 2px solid #1f6b2a;
+        outline-offset: 2px;
+    }
+    .chat-msg-attachment-image img {
+        width: 100%;
+        max-width: 100%;
+        max-height: 280px;
+        height: auto;
+        border: none;
+        outline: none;
+        border-radius: 0;
+        box-shadow: none;
+        display: block;
+        vertical-align: top;
+        pointer-events: none;
+    }
+
+    .chat-image-lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 10050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        box-sizing: border-box;
+    }
+    .chat-image-lightbox[hidden] {
+        display: none !important;
+    }
+    .chat-image-lightbox-scrim {
+        position: absolute;
+        inset: 0;
+        border: none;
+        padding: 0;
+        margin: 0;
+        background: rgba(0, 0, 0, 0.9);
+        cursor: zoom-out;
+    }
+    .chat-image-lightbox-close {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        z-index: 10052;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        font-size: 28px;
+        line-height: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .chat-image-lightbox-close:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+    .chat-image-lightbox-frame {
+        position: relative;
+        z-index: 10051;
+        max-width: min(96vw, 1200px);
+        max-height: 90vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+    .chat-image-lightbox-frame img {
+        max-width: 100%;
+        max-height: 90vh;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+        pointer-events: auto;
     }
 
     .chat-input-area {
@@ -689,6 +793,14 @@
     </div>
 </div>
 
+<div id="chatImageLightbox" class="chat-image-lightbox" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Image preview">
+    <button type="button" class="chat-image-lightbox-scrim" id="chatImageLightboxScrim" aria-label="Close preview"></button>
+    <button type="button" class="chat-image-lightbox-close" id="chatImageLightboxClose" aria-label="Close">&times;</button>
+    <div class="chat-image-lightbox-frame">
+        <img id="chatImageLightboxImg" src="" alt="">
+    </div>
+</div>
+
 <div class="itinerary-modal" id="itineraryModal" aria-hidden="true">
     <div class="itinerary-modal-card">
         <!-- Step 0: Date + Days + Nights -->
@@ -821,6 +933,41 @@
     const itineraryCancelBtn = document.getElementById('itineraryCancelBtn');
     const itineraryBackBtn = document.getElementById('itineraryBackBtn');
     const itineraryFinalCancelBtn = document.getElementById('itineraryFinalCancelBtn');
+    const chatImageLightbox = document.getElementById('chatImageLightbox');
+    const chatImageLightboxImg = document.getElementById('chatImageLightboxImg');
+    const chatImageLightboxScrim = document.getElementById('chatImageLightboxScrim');
+    const chatImageLightboxClose = document.getElementById('chatImageLightboxClose');
+
+    function openChatImageLightbox(url) {
+        if (!chatImageLightbox || !chatImageLightboxImg || !url) return;
+        chatImageLightboxImg.src = url;
+        chatImageLightbox.removeAttribute('hidden');
+        chatImageLightbox.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeChatImageLightbox() {
+        if (!chatImageLightbox || !chatImageLightboxImg) return;
+        chatImageLightbox.setAttribute('hidden', '');
+        chatImageLightbox.setAttribute('aria-hidden', 'true');
+        chatImageLightboxImg.removeAttribute('src');
+        document.body.style.overflow = '';
+    }
+    if (chatImageLightboxScrim) chatImageLightboxScrim.addEventListener('click', closeChatImageLightbox);
+    if (chatImageLightboxClose) chatImageLightboxClose.addEventListener('click', closeChatImageLightbox);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && chatImageLightbox && !chatImageLightbox.hasAttribute('hidden')) {
+            closeChatImageLightbox();
+        }
+    });
+    if (chatMessages) {
+        chatMessages.addEventListener('click', function (e) {
+            const btn = e.target.closest('.chat-msg-image-open');
+            if (!btn) return;
+            e.preventDefault();
+            const url = btn.getAttribute('data-full-url');
+            if (url) openChatImageLightbox(url);
+        });
+    }
 
     function getCookie(name) {
         const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
@@ -918,6 +1065,46 @@
         return CP_DETAIL_URL_TEMPLATE.replace(/\/0\/?$/, '/' + id + '/');
     }
 
+    /** Infer file kind from attachment name or URL (for agent chat rendering). */
+    function chatAttachmentKind(url, name) {
+        const pickExt = (s) => {
+            if (!s || typeof s !== 'string') return '';
+            const base = s.split('?')[0];
+            const i = base.lastIndexOf('.');
+            return i >= 0 ? base.slice(i + 1).toLowerCase() : '';
+        };
+        const ext = pickExt(name) || pickExt(url);
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+        if (ext === 'pdf') return 'pdf';
+        return 'file';
+    }
+
+    function chatAttachmentLooksLikeItinerary(data) {
+        const t = ((data.text || '') + '').toLowerCase();
+        const n = ((data.attachment_name || '') + '').toLowerCase();
+        return t.includes('itinerary') || n.includes('itinerary');
+    }
+
+    function chatAttachmentLinkHtml(data, hasContentAbove) {
+        const url = data.attachment_url;
+        if (!url) return '';
+        const name = data.attachment_name || '';
+        const kind = chatAttachmentKind(url, name);
+        if (kind === 'image') {
+            const mod = hasContentAbove ? ' chat-msg-attachment-image--after-text' : ' chat-msg-attachment-image--bleed-tb';
+            return '<div class="chat-msg-attachment chat-msg-attachment-image' + mod + '"><button type="button" class="chat-msg-image-open" data-full-url="' + escapeHtml(url) + '"><img src="' + escapeHtml(url) + '" alt=""></button></div>';
+        }
+        let label;
+        if (kind === 'pdf' && chatAttachmentLooksLikeItinerary(data)) {
+            label = 'View trip itinerary (PDF)';
+        } else if (kind === 'pdf') {
+            label = (name ? ('PDF · ' + name) : 'Open PDF');
+        } else {
+            label = (name ? ('📎 ' + name) : '📎 Download file');
+        }
+        return '<div class="chat-msg-attachment"><a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(label) + '</a></div>';
+    }
+
     function messageBodyHtml(data) {
         const pkg = data.custom_package_detail || null;
         let text = (data.text || '').trim();
@@ -937,7 +1124,8 @@
             inner += '<div class="chat-msg-pkg-text">' + escapeHtml(text) + '</div>';
         }
         if (data.attachment_url) {
-            inner += '<div class="chat-msg-attachment"><a href="' + escapeHtml(data.attachment_url) + '" target="_blank" rel="noopener">📎 Download itinerary PDF</a></div>';
+            const hasContentAbove = !!(pkg && (pkg.image_url || pkg.title)) || !!text;
+            inner += chatAttachmentLinkHtml(data, hasContentAbove);
         }
         if (!inner) inner = '<div class="chat-msg-pkg-text">' + escapeHtml(data.text || '') + '</div>';
         if (pkg && pkg.id) {

@@ -1,3 +1,4 @@
+import os
 from datetime import date
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
@@ -869,6 +870,26 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._last_message_row_cache = {}
+
+    def _get_last_message_row(self, obj):
+        pk = obj.pk
+        if pk not in self._last_message_row_cache:
+            self._last_message_row_cache[pk] = (
+                obj.messages.order_by("-created_at").select_related("sender").first()
+            )
+        return self._last_message_row_cache[pk]
+
+    @staticmethod
+    def _attachment_is_image(attachment_field):
+        if not attachment_field:
+            return False
+        name = os.path.basename(attachment_field.name).lower()
+        ext = os.path.splitext(name)[1].lstrip(".")
+        return ext in ("jpg", "jpeg", "png", "gif", "webp")
+
     def _get_other_user(self, obj):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
@@ -896,11 +917,31 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         return _user_avatar_url(other, request)
 
     def get_last_message(self, obj):
-        last = obj.messages.order_by("-created_at").first()
-        return last.text[:100] + "..." if last and len(last.text) > 100 else (last.text if last else None)
+        last = self._get_last_message_row(obj)
+        if not last:
+            return None
+        text = (last.text or "").strip()
+        if text:
+            return text[:100] + ("..." if len(text) > 100 else "")
+        if last.attachment:
+            if self._attachment_is_image(last.attachment):
+                request = self.context.get("request")
+                viewer = request.user if request and request.user.is_authenticated else None
+                sender = last.sender
+                if viewer and sender == viewer:
+                    preview = "You sent an image."
+                elif sender == obj.traveler:
+                    preview = f"{_user_display_name(obj.traveler)} sent an image."
+                else:
+                    preview = f"{_user_display_name(obj.agent)} sent an image."
+                return preview[:100] + ("..." if len(preview) > 100 else "")
+            name = os.path.basename(last.attachment.name)
+            preview = f"📎 {name}" if name else "📎 Attachment"
+            return preview[:100] + ("..." if len(preview) > 100 else "")
+        return None
 
     def get_last_message_at(self, obj):
-        last = obj.messages.order_by("-created_at").first()
+        last = self._get_last_message_row(obj)
         return last.created_at.isoformat() if last else obj.updated_at.isoformat()
 
     def get_unread_count(self, obj):
