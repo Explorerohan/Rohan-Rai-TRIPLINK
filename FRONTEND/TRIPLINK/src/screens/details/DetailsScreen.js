@@ -91,6 +91,31 @@ const formatReviewDate = (dateStr) => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
+const todayYmdLocal = () => {
+  const n = new Date();
+  const p = (x) => String(x).padStart(2, "0");
+  return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
+};
+
+const toYmdSlice = (value) => {
+  if (value == null || value === "") return null;
+  const s = String(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+};
+
+/** Matches bookmarked "past" logic: completed status, or trip window ended before today. */
+const isPackageTripCompleted = (pkg) => {
+  if (!pkg) return false;
+  const st = String(pkg.status || "").toLowerCase();
+  if (st === "completed") return true;
+  const end = toYmdSlice(pkg.trip_end_date);
+  const start = toYmdSlice(pkg.trip_start_date);
+  const t = todayYmdLocal();
+  if (end) return end < t;
+  if (start) return start < t;
+  return false;
+};
+
 const toValidCoordinate = (value, min, max) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
@@ -717,6 +742,12 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
     }
   }
 
+  const tripCompleted = isPackageTripCompleted({
+    status: packageDetail?.status ?? trip?.status ?? trip?.packageData?.status,
+    trip_start_date: packageDetail?.trip_start_date ?? trip.trip_start_date ?? trip?.packageData?.trip_start_date,
+    trip_end_date: packageDetail?.trip_end_date ?? trip.trip_end_date ?? trip?.packageData?.trip_end_date,
+  });
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#f2f3f5" />
@@ -989,6 +1020,11 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
           <View style={styles.alreadyBookedBadge}>
             <Ionicons name="checkmark-circle" size={20} color="#1f6b2a" />
             <Text style={styles.alreadyBookedText}>{t("alreadyBooked")}</Text>
+          </View>
+        ) : tripCompleted ? (
+          <View style={styles.alreadyBookedBadge}>
+            <Ionicons name="checkmark-circle" size={20} color="#047857" />
+            <Text style={styles.alreadyBookedText}>{t("bookmarkTripCompleted")}</Text>
           </View>
         ) : hasTripStarted ? (
           <View style={styles.alreadyBookedBadge}>

@@ -19,14 +19,21 @@ import { getBookmarkedPackages, removeBookmarkedPackage } from "../../utils/api"
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80";
 
-const formatPrice = (price) => {
-  const numeric =
-    typeof price === "number"
-      ? price
-      : typeof price === "string"
-        ? parseFloat(price.replace(/[^0-9.]/g, "")) || 0
-        : 0;
-  return `Rs. ${numeric.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+/** Parses API money (number, Decimal string, or numeric string). */
+const parseMoneyValue = (v) => {
+  if (v == null || v === "") return NaN;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : NaN;
+};
+
+const formatRs = (num) =>
+  `Rs. ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+const normalizeBookmarkPayload = (data) => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  return [];
 };
 
 const formatDateRange = (start, end) => {
@@ -43,12 +50,45 @@ const formatDateRange = (start, end) => {
   return "Dates not set";
 };
 
+/** YYYY-MM-DD for local calendar day (compare date-only fields from API). */
+const todayYmd = () => {
+  const n = new Date();
+  const p = (x) => String(x).padStart(2, "0");
+  return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`;
+};
+
+const toYmd = (value) => {
+  if (value == null || value === "") return null;
+  const s = String(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+};
+
+/** Past bookmarks: same rules as package details (for Active vs Past sections). */
+const isTripCompletedBookmark = (item) => {
+  const st = String(item.status || "").toLowerCase();
+  if (st === "completed") return true;
+  const end = toYmd(item.trip_end_date);
+  const start = toYmd(item.trip_start_date);
+  const t = todayYmd();
+  if (end) return end < t;
+  if (start) return start < t;
+  return false;
+};
+
 const mapPackages = (rawList) =>
-  (Array.isArray(rawList) ? rawList : []).filter(Boolean).map((pkg) => {
-    const hasDeal = Boolean(pkg.has_active_deal && pkg.deal_price != null);
+  normalizeBookmarkPayload(rawList)
+    .filter(Boolean)
+    .map((pkg) => {
+    const hasDeal = Boolean(
+      pkg.has_active_deal && pkg.deal_price != null && pkg.deal_price !== ""
+    );
     const displayPrice = hasDeal ? pkg.deal_price : pkg.price_per_person;
-    const num = typeof displayPrice === "number" ? displayPrice : parseFloat(String(displayPrice || "0")) || 0;
-    const priceStr = `Rs. ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    let num = parseMoneyValue(displayPrice);
+    if (!Number.isFinite(num) || num < 0) {
+      num = parseMoneyValue(pkg.price_per_person);
+    }
+    if (!Number.isFinite(num)) num = 0;
+    const priceStr = formatRs(num);
     return {
     id: String(pkg.id),
     title: pkg.title || "Package",
@@ -126,9 +166,82 @@ const BookmarkedScreen = ({
     }
   };
 
-  const headerSubtitle = useMemo(
-    () => `${bookmarks.length} saved package${bookmarks.length === 1 ? "" : "s"}`,
-    [bookmarks.length]
+  const { activeBookmarks, pastBookmarks } = useMemo(() => {
+    const active = [];
+    const past = [];
+    for (const row of bookmarks) {
+      if (isTripCompletedBookmark(row)) past.push(row);
+      else active.push(row);
+    }
+    return { activeBookmarks: active, pastBookmarks: past };
+  }, [bookmarks]);
+
+  const headerSubtitle = useMemo(() => {
+    const n = bookmarks.length;
+    if (n === 0) return "";
+    const a = activeBookmarks.length;
+    const p = pastBookmarks.length;
+    if (p > 0 && a > 0) {
+      return t("bookmarksSummaryMixed")
+        .replace("{{total}}", String(n))
+        .replace("{{active}}", String(a))
+        .replace("{{ended}}", String(p));
+    }
+    return `${n} saved package${n === 1 ? "" : "s"}`;
+  }, [bookmarks.length, activeBookmarks.length, pastBookmarks.length, t]);
+
+  const renderBookmarkCard = (item, isPast) => (
+    <TouchableOpacity
+      key={item.id}
+      style={[styles.card, isPast && styles.cardPast]}
+      activeOpacity={0.9}
+      onPress={() => onTripPress(item.raw || item)}
+    >
+      <View style={styles.cardImageColumn}>
+        <Image
+          source={{ uri: item.image }}
+          style={styles.cardImage}
+          resizeMode="cover"
+        />
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.cardTopRow}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <TouchableOpacity
+            style={[styles.removeBtn, busyIds.includes(item.id) && styles.removeBtnDisabled]}
+            activeOpacity={0.8}
+            disabled={busyIds.includes(item.id)}
+            onPress={(event) => {
+              event?.stopPropagation?.();
+              handleRemove(item);
+            }}
+          >
+            <Ionicons name="bookmark" size={16} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.metaRow}>
+          <Ionicons name="location-outline" size={14} color="#64748b" />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {item.location}
+          </Text>
+        </View>
+
+        <View style={styles.metaRow}>
+          <Ionicons name="calendar-outline" size={14} color="#64748b" />
+          <Text style={styles.metaText}>
+            {formatDateRange(item.trip_start_date, item.trip_end_date)}
+          </Text>
+        </View>
+
+        <View style={styles.footerRow}>
+          <Text style={[styles.priceText, isPast && styles.priceTextPast]}>{item.price}</Text>
+          <Text style={styles.durationText}>{item.duration}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -172,47 +285,20 @@ const BookmarkedScreen = ({
               </Text>
             </View>
           ) : (
-            bookmarks.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                activeOpacity={0.9}
-                onPress={() => onTripPress(item.raw || item)}
-              >
-                <Image source={{ uri: item.image }} style={styles.cardImage} />
-                <View style={styles.cardBody}>
-                  <View style={styles.cardTopRow}>
-                    <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-                    <TouchableOpacity
-                      style={[styles.removeBtn, busyIds.includes(item.id) && styles.removeBtnDisabled]}
-                      activeOpacity={0.8}
-                      disabled={busyIds.includes(item.id)}
-                      onPress={(event) => {
-                        event?.stopPropagation?.();
-                        handleRemove(item);
-                      }}
-                    >
-                      <Ionicons name="bookmark" size={16} color="#ffffff" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.metaRow}>
-                    <Ionicons name="location-outline" size={14} color="#64748b" />
-                    <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
-                  </View>
-
-                  <View style={styles.metaRow}>
-                    <Ionicons name="calendar-outline" size={14} color="#64748b" />
-                    <Text style={styles.metaText}>{formatDateRange(item.trip_start_date, item.trip_end_date)}</Text>
-                  </View>
-
-                  <View style={styles.footerRow}>
-                    <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
-                    <Text style={styles.durationText}>{item.duration}</Text>
-                  </View>
+            <>
+              {activeBookmarks.length > 0 ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>{t("bookmarksSectionActive")}</Text>
+                  {activeBookmarks.map((item) => renderBookmarkCard(item, false))}
                 </View>
-              </TouchableOpacity>
-            ))
+              ) : null}
+              {pastBookmarks.length > 0 ? (
+                <View style={[styles.section, activeBookmarks.length > 0 && styles.sectionAfterActive]}>
+                  <Text style={styles.sectionTitle}>{t("bookmarksSectionEnded")}</Text>
+                  {pastBookmarks.map((item) => renderBookmarkCard(item, true))}
+                </View>
+              ) : null}
+            </>
           )}
         </ScrollView>
       )}
@@ -272,8 +358,20 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
-    gap: 12,
     paddingBottom: 28,
+  },
+  section: {
+    gap: 12,
+  },
+  sectionAfterActive: {
+    marginTop: 22,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748b",
+    letterSpacing: 0.2,
+    marginBottom: 2,
   },
   emptyCard: {
     marginTop: 16,
@@ -300,22 +398,34 @@ const styles = StyleSheet.create({
   },
   card: {
     flexDirection: "row",
+    alignItems: "stretch",
     borderWidth: 1,
     borderColor: "#e3e6ea",
     borderRadius: 16,
     backgroundColor: "#ffffff",
     overflow: "hidden",
   },
-  cardImage: {
+  cardPast: {
+    opacity: 0.96,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#fafafa",
+  },
+  cardImageColumn: {
     width: 118,
-    height: 132,
+    minHeight: 132,
+    alignSelf: "stretch",
     backgroundColor: "#eef2f7",
+    overflow: "hidden",
+  },
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
   },
   cardBody: {
     flex: 1,
-    padding: 12,
-    justifyContent: "space-between",
-    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    justifyContent: "flex-start",
+    gap: 8,
   },
   cardTopRow: {
     flexDirection: "row",
@@ -348,17 +458,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     color: "#64748b",
+    lineHeight: 18,
   },
   footerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 2,
   },
   priceText: {
     fontSize: 16,
     fontWeight: "800",
     color: "#1f6b2a",
+  },
+  priceTextPast: {
+    color: "#64748b",
   },
   durationText: {
     fontSize: 12,
