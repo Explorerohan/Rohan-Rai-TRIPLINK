@@ -746,17 +746,47 @@ def _user_avatar_url(user, request):
     return None
 
 
+_MAX_CHAT_ATTACHMENT_BYTES = 15 * 1024 * 1024  # 15 MB
+
+
 class ChatMessageSerializer(serializers.ModelSerializer):
     """Serializer for chat messages. Room and sender are set by the view on create."""
     sender_id = serializers.IntegerField(source="sender.id", read_only=True)
     sender_name = serializers.SerializerMethodField()
     custom_package_detail = serializers.SerializerMethodField()
     attachment_url = serializers.SerializerMethodField()
+    attachment_name = serializers.SerializerMethodField()
+    attachment = serializers.FileField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = ChatMessage
-        fields = ["id", "room", "sender_id", "sender_name", "text", "is_read", "created_at", "custom_package_detail", "attachment_url"]
-        read_only_fields = ["id", "room", "sender_id", "sender_name", "is_read", "created_at", "custom_package_detail", "attachment_url"]
+        fields = [
+            "id",
+            "room",
+            "sender_id",
+            "sender_name",
+            "text",
+            "is_read",
+            "created_at",
+            "custom_package_detail",
+            "attachment_url",
+            "attachment_name",
+            "attachment",
+        ]
+        read_only_fields = [
+            "id",
+            "room",
+            "sender_id",
+            "sender_name",
+            "is_read",
+            "created_at",
+            "custom_package_detail",
+            "attachment_url",
+            "attachment_name",
+        ]
+        extra_kwargs = {
+            "text": {"required": False, "allow_blank": True},
+        }
 
     def get_attachment_url(self, obj):
         if not obj.attachment:
@@ -765,6 +795,26 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.attachment.url)
         return obj.attachment.url
+
+    def get_attachment_name(self, obj):
+        if not obj.attachment:
+            return None
+        import os
+
+        return os.path.basename(getattr(obj.attachment, "name", "") or "")
+
+    def validate_attachment(self, value):
+        if value and value.size > _MAX_CHAT_ATTACHMENT_BYTES:
+            raise serializers.ValidationError("File is too large (maximum 15 MB).")
+        return value
+
+    def validate(self, attrs):
+        text = (attrs.get("text") or "").strip()
+        file_obj = attrs.get("attachment")
+        if not text and not file_obj:
+            raise serializers.ValidationError("Provide message text and/or attach a file.")
+        attrs["text"] = text
+        return attrs
 
     def get_sender_name(self, obj):
         return _user_display_name(obj.sender)

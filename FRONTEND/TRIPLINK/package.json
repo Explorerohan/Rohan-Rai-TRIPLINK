@@ -17,6 +17,7 @@
     "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.8",
     "expo-device": "~7.0.3",
+    "expo-document-picker": "~13.0.2",
     "expo-font": "~13.0.4",
     "expo-image-picker": "~16.0.6",
     "expo-notifications": "^0.29.14",

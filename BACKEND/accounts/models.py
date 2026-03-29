@@ -694,7 +694,7 @@ class ChatMessage(models.Model):
         on_delete=models.CASCADE,
         related_name="chat_messages_sent",
     )
-    text = models.TextField()
+    text = models.TextField(blank=True, default="", help_text="Caption; may be empty when an attachment is sent.")
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     custom_package = models.ForeignKey(

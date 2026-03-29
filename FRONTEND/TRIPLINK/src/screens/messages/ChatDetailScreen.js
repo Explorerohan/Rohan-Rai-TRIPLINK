@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Image,
@@ -18,9 +19,12 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import {
   getChatMessages,
   sendChatMessage,
+  sendChatMessageMultipart,
   markRoomRead,
   getWebSocketBase,
   getChatItinerary,
@@ -59,7 +63,102 @@ const getMessageBody = (msg) => {
   if (/^Re: \[.+\]\s*[\r\n]+/.test(text)) {
     text = text.replace(/^Re: \[.+\]\s*[\r\n]+/, "").trim();
   }
-  return { pkg, text: text || msg?.text || "", attachmentUrl: msg?.attachment_url };
+  return {
+    pkg,
+    text: text || msg?.text || "",
+    attachmentUrl: msg?.attachment_url,
+    attachmentName: msg?.attachment_name,
+  };
+};
+
+const attachmentKindFromMeta = (url, name) => {
+  const pickExt = (s) => {
+    if (!s || typeof s !== "string") return "";
+    const base = s.split("?")[0];
+    const i = base.lastIndexOf(".");
+    return i >= 0 ? base.slice(i + 1).toLowerCase() : "";
+  };
+  const ext = pickExt(name) || pickExt(url);
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
+  if (ext === "pdf") return "pdf";
+  return "file";
+};
+
+const isBrandedItineraryPdf = (displayText, fileName) => {
+  const t = (displayText || "").toLowerCase();
+  const n = (fileName || "").toLowerCase();
+  return t.includes("itinerary") || n.includes("itinerary");
+};
+
+/** Generic file row (non-itinerary PDFs and other types). */
+const GenericFileAttachment = ({ url, fileLabel, variant, t }) => {
+  const isDark = variant === "incomingDark";
+  const isOutgoing = variant === "outgoing";
+  const open = () => {
+    if (url) Linking.openURL(url);
+  };
+  return (
+    <TouchableOpacity
+      style={[
+        styles.pdfAttachCard,
+        isOutgoing && styles.pdfAttachCardOutgoing,
+        variant === "incoming" && styles.pdfAttachCardIncoming,
+        isDark && styles.pdfAttachCardIncomingDark,
+      ]}
+      onPress={open}
+      activeOpacity={0.88}
+      accessibilityRole="button"
+      accessibilityLabel={`${fileLabel}. ${t("chatAttachmentTapToOpen")}`}
+    >
+      <View style={[styles.pdfAttachIconWrap, isDark && styles.pdfAttachIconWrapDark]}>
+        <Ionicons name="document-attach" size={22} color={isDark ? "#fecaca" : "#b91c1c"} />
+      </View>
+      <View style={styles.pdfAttachTextCol}>
+        <Text style={[styles.pdfAttachTitle, isDark && styles.pdfAttachTitleDark]} numberOfLines={2}>
+          {fileLabel}
+        </Text>
+        <Text style={[styles.pdfAttachSub, isDark && styles.pdfAttachSubDark]} numberOfLines={1}>
+          {t("chatAttachmentTapToOpen")}
+        </Text>
+      </View>
+      <View style={[styles.pdfAttachAction, isDark && styles.pdfAttachActionDark]}>
+        <Ionicons name="open-outline" size={20} color={isDark ? "#ffffff" : "#1f6b2a"} />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+/** Renders image, itinerary PDF card, or generic file row. */
+const ChatAttachmentBlock = ({ url, name, variant, t, displayText }) => {
+  const kind = attachmentKindFromMeta(url, name);
+  if (kind === "image" && url) {
+    return (
+      <TouchableOpacity onPress={() => Linking.openURL(url)} activeOpacity={0.9} accessibilityRole="button">
+        <Image source={{ uri: url }} style={styles.chatAttachImage} resizeMode="cover" />
+      </TouchableOpacity>
+    );
+  }
+  if (kind === "pdf" && isBrandedItineraryPdf(displayText, name)) {
+    return <ItineraryPdfAttachment url={url} variant={variant} t={t} />;
+  }
+  if (kind === "pdf") {
+    return (
+      <GenericFileAttachment
+        url={url}
+        fileLabel={name || "document.pdf"}
+        variant={variant}
+        t={t}
+      />
+    );
+  }
+  return (
+    <GenericFileAttachment
+      url={url}
+      fileLabel={name || t("chatAttachmentFile")}
+      variant={variant}
+      t={t}
+    />
+  );
 };
 
 /** Inline card for itinerary PDF links in chat (traveler + agent bubbles). */
@@ -278,6 +377,92 @@ const ChatDetailScreen = ({
     const pollInterval = setInterval(poll, 1000);
     return () => clearInterval(pollInterval);
   }, [roomId, accessToken, loading, otherUserId]);
+
+  const uploadChatAttachment = useCallback(
+    async (uri, filename, mimeType) => {
+      if (!roomId || !accessToken) return;
+      setSending(true);
+      try {
+        const formData = new FormData();
+        formData.append("text", (inputText || "").trim());
+        formData.append("attachment", {
+          uri,
+          name: filename || "file",
+          type: mimeType || "application/octet-stream",
+        });
+        await sendChatMessageMultipart(roomId, formData, accessToken);
+        setInputText("");
+        await loadMessages(false);
+      } catch (err) {
+        Alert.alert(t("error"), err?.message || t("chatAttachmentUploadFailed"));
+      } finally {
+        setSending(false);
+      }
+    },
+    [roomId, accessToken, inputText, loadMessages, t]
+  );
+
+  const pickImageFromLibrary = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(t("error"), t("chatMediaLibraryPermission"));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const a = result.assets[0];
+    await uploadChatAttachment(a.uri, a.fileName || "photo.jpg", a.mimeType || "image/jpeg");
+  }, [uploadChatAttachment, t]);
+
+  const pickFromCamera = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(t("error"), t("chatCameraPermission"));
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+    if (result.canceled || !result.assets?.[0]) return;
+    const a = result.assets[0];
+    await uploadChatAttachment(a.uri, a.fileName || "photo.jpg", a.mimeType || "image/jpeg");
+  }, [uploadChatAttachment, t]);
+
+  const pickDocument = useCallback(async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: "*/*",
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const a = result.assets[0];
+    await uploadChatAttachment(a.uri, a.name || "file", a.mimeType || "application/octet-stream");
+  }, [uploadChatAttachment]);
+
+  const openAttachMenu = useCallback(() => {
+    if (sending || !roomId || !accessToken) return;
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [t("chatAttachPhotoLibrary"), t("chatAttachCamera"), t("chatAttachDocument"), t("cancel")],
+          cancelButtonIndex: 3,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) pickImageFromLibrary();
+          else if (buttonIndex === 1) pickFromCamera();
+          else if (buttonIndex === 2) pickDocument();
+        }
+      );
+    } else {
+      Alert.alert(t("chatAttachTitle"), "", [
+        { text: t("chatAttachPhotoLibrary"), onPress: () => pickImageFromLibrary() },
+        { text: t("chatAttachCamera"), onPress: () => pickFromCamera() },
+        { text: t("chatAttachDocument"), onPress: () => pickDocument() },
+        { text: t("cancel"), style: "cancel" },
+      ]);
+    }
+  }, [sending, roomId, accessToken, t, pickImageFromLibrary, pickFromCamera, pickDocument]);
 
   const sendMessage = async (messageOverride = null) => {
     const baseText = messageOverride !== null && messageOverride !== undefined ? messageOverride : inputText;
@@ -628,27 +813,38 @@ const ChatDetailScreen = ({
                   </View>
                 </View>
                 {msgs.map((msg) =>
-                  isOutgoing(msg) ? (
-                    <View key={msg.id} style={styles.msgRowRight}>
-                      <View style={styles.msgBubbleRight}>
-                        <Text style={styles.msgText}>{msg.text}</Text>
-                        {msg.attachment_url ? (
-                          <ItineraryPdfAttachment url={msg.attachment_url} variant="outgoing" t={t} />
-                        ) : null}
-                        <View style={styles.msgMetaRight}>
-                          <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
-                          <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                  isOutgoing(msg) ? (() => {
+                    const { text: bodyText, attachmentUrl, attachmentName } = getMessageBody(msg);
+                    const showText = !!(bodyText && String(bodyText).trim());
+                    return (
+                      <View key={msg.id} style={styles.msgRowRight}>
+                        <View style={styles.msgBubbleRight}>
+                          {showText ? <Text style={styles.msgText}>{bodyText}</Text> : null}
+                          {attachmentUrl ? (
+                            <ChatAttachmentBlock
+                              url={attachmentUrl}
+                              name={attachmentName}
+                              variant="outgoing"
+                              t={t}
+                              displayText={bodyText}
+                            />
+                          ) : null}
+                          <View style={styles.msgMetaRight}>
+                            <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
+                            <Ionicons name="checkmark-done" size={16} color="#22c55e" />
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ) : (
+                    );
+                  })() : (
                     (() => {
-                      const { pkg, text, attachmentUrl } = getMessageBody(msg);
+                      const { pkg, text, attachmentUrl, attachmentName } = getMessageBody(msg);
                       const hasPkg = !!(pkg && (pkg.image_url || pkg.title));
                       const BubbleWrapper = hasPkg && pkg?.id && onPackagePress ? TouchableOpacity : View;
                       const bubbleProps = hasPkg && pkg?.id && onPackagePress
                         ? { activeOpacity: 0.85, onPress: () => onPackagePress(pkg.id) }
                         : {};
+                      const showText = !!(text && String(text).trim());
                       return (
                         <View key={msg.id} style={styles.msgRowLeft}>
                           <Image
@@ -669,12 +865,16 @@ const ChatDetailScreen = ({
                                 </Text>
                               </View>
                             )}
-                            <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{text}</Text>
+                            {showText ? (
+                              <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{text}</Text>
+                            ) : null}
                             {attachmentUrl ? (
-                              <ItineraryPdfAttachment
+                              <ChatAttachmentBlock
                                 url={attachmentUrl}
+                                name={attachmentName}
                                 variant={hasPkg ? "incomingDark" : "incoming"}
                                 t={t}
+                                displayText={text}
                               />
                             ) : null}
                             <View style={styles.msgMetaLeft}>
@@ -705,8 +905,14 @@ const ChatDetailScreen = ({
               returnKeyType="send"
               blurOnSubmit={false}
             />
-            <TouchableOpacity style={styles.attachBtn} activeOpacity={0.8}>
-              <Ionicons name="attach" size={22} color="#7a7f85" />
+            <TouchableOpacity
+              style={styles.attachBtn}
+              activeOpacity={0.8}
+              onPress={openAttachMenu}
+              disabled={sending || !roomId || !accessToken}
+              accessibilityLabel={t("chatAttachTitle")}
+            >
+              <Ionicons name="attach" size={22} color={sending || !accessToken ? "#cbd5e1" : "#7a7f85"} />
             </TouchableOpacity>
           </View>
           {isAgent && (
@@ -1008,6 +1214,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderRadius: 16,
     borderTopRightRadius: 4,
+  },
+  chatAttachImage: {
+    width: 220,
+    maxWidth: "100%",
+    height: 160,
+    borderRadius: 12,
+    marginTop: 6,
+    backgroundColor: "#e2e8f0",
   },
   msgText: {
     fontSize: 15,

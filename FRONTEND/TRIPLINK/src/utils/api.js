@@ -115,11 +115,11 @@ export const apiRequest = async (endpoint, options = {}, accessToken = null) => 
  * @param {string} accessToken - JWT access token
  * @returns {Promise<Response>}
  */
-export const apiRequestMultipart = async (endpoint, formData, accessToken) => {
+export const apiRequestMultipart = async (endpoint, formData, accessToken, method = "PUT") => {
   const doRequest = async (token) => {
     const url = `${API_BASE}${endpoint}`;
     const response = await fetch(url, {
-      method: "PUT",
+      method,
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
@@ -618,6 +618,17 @@ export const sendChatMessage = async (roomId, payload, accessToken) => {
     method: "POST",
     body: JSON.stringify(payload),
   }, accessToken);
+};
+
+/**
+ * Send a message with an optional file (multipart). Field names: text (optional caption), attachment (file).
+ * @param {number|string} roomId
+ * @param {FormData} formData
+ * @param {string} accessToken
+ */
+export const sendChatMessageMultipart = async (roomId, formData, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequestMultipart(`/api/auth/chat/rooms/${id}/messages/`, formData, accessToken, "POST");
 };
 
 /**

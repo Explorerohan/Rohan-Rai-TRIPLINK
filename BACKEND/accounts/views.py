@@ -3711,6 +3711,7 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
     serializer_class = ChatMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = ChatMessagePagination
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_queryset(self):
         room_id = self.kwargs.get("room_id")
