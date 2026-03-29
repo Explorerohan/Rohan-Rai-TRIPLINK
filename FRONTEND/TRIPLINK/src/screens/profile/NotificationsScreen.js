@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../../context/LanguageContext";
 import { getNotifications, markNotificationRead } from "../../utils/api";
 
 const NOTIFICATION_ICONS = {
@@ -31,6 +32,7 @@ const NotificationsScreen = ({
   onBack = () => {},
   onReadStateChange = () => {},
 }) => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [markAllBusy, setMarkAllBusy] = useState(false);
@@ -127,24 +129,47 @@ const NotificationsScreen = ({
 
   const renderItem = ({ item }) => {
     const { icon, color } = getNotificationIcon(item.notification_type);
+    const unread = !item.is_read;
+    const titleText =
+      item.title && String(item.title).trim() ? String(item.title).trim() : t("notificationDefaultTitle");
     return (
-    <TouchableOpacity
-      style={[styles.notificationCard, !item.is_read && styles.notificationCardUnread]}
-      activeOpacity={0.8}
-      onPress={() => handleMarkRead(item)}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderLeft}>
-          <View style={[styles.notificationIconWrap, { backgroundColor: color }]}>
-            <Ionicons name={icon} size={18} color="#ffffff" />
+      <TouchableOpacity
+        style={[
+          styles.notificationCard,
+          unread ? styles.notificationCardUnread : styles.notificationCardRead,
+        ]}
+        activeOpacity={0.8}
+        onPress={() => handleMarkRead(item)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <View
+              style={[
+                styles.notificationIconWrap,
+                { backgroundColor: color },
+                unread && styles.notificationIconWrapUnread,
+              ]}
+            >
+              <Ionicons name={icon} size={18} color="#ffffff" />
+            </View>
+            <View style={styles.titleRow}>
+              <Text
+                style={[styles.notificationTitle, unread ? styles.notificationTitleUnread : styles.notificationTitleRead]}
+                numberOfLines={2}
+              >
+                {titleText}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.notificationLabel}>Notification</Text>
+          <Text style={[styles.notificationTime, unread ? styles.notificationTimeUnread : styles.notificationTimeRead]}>
+            {formatTimeAgo(item.created_at)}
+          </Text>
         </View>
-        <Text style={styles.notificationTime}>{formatTimeAgo(item.created_at)}</Text>
-      </View>
-      <View style={styles.cardDivider} />
-      <Text style={styles.notificationMessage}>{item.message}</Text>
-    </TouchableOpacity>
+        <View style={[styles.cardDivider, unread ? styles.cardDividerUnread : styles.cardDividerRead]} />
+        <Text style={[styles.notificationMessage, unread ? styles.notificationMessageUnread : styles.notificationMessageRead]}>
+          {item.message}
+        </Text>
+      </TouchableOpacity>
     );
   };
 
@@ -157,7 +182,7 @@ const NotificationsScreen = ({
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
             <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>{t("notifications")}</Text>
         </View>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#1f6b2a" />
@@ -173,7 +198,7 @@ const NotificationsScreen = ({
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t("notifications")}</Text>
         <TouchableOpacity
           style={[styles.markAllButton, markAllBusy && styles.markAllButtonDisabled]}
           onPress={handleMarkAllRead}
@@ -190,10 +215,8 @@ const NotificationsScreen = ({
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="notifications-off-outline" size={48} color="#cbd5e1" />
-            <Text style={styles.emptyText}>No notifications yet</Text>
-            <Text style={styles.emptySubtext}>
-              You'll see updates and alerts here
-            </Text>
+            <Text style={styles.emptyText}>{t("notificationsEmptyTitle")}</Text>
+            <Text style={styles.emptySubtext}>{t("notificationsEmptySubtitle")}</Text>
           </View>
         }
         refreshControl={
@@ -248,38 +271,78 @@ const styles = StyleSheet.create({
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
   listContent: { padding: 16, paddingBottom: 32 },
   notificationCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
   },
   notificationCardUnread: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#f59e0b",
+    backgroundColor: "#ecfdf5",
+    borderColor: "#6ee7b7",
+    shadowColor: "#1f6b2a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  notificationCardRead: {
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    opacity: 0.97,
   },
   cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
+    gap: 8,
   },
-  cardHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  cardHeaderLeft: { flex: 1, flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  titleRow: { flex: 1, minWidth: 0 },
   notificationIconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: "#f59e0b",
     justifyContent: "center",
     alignItems: "center",
   },
-  notificationLabel: { fontSize: 15, fontWeight: "600", color: "#1e293b" },
-  notificationTime: { fontSize: 13, color: "#94a3b8" },
-  cardDivider: { height: 1, backgroundColor: "#e2e8f0", marginVertical: 12 },
+  notificationIconWrapUnread: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  notificationTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: "#1e293b",
+  },
+  notificationTitleUnread: {
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  notificationTitleRead: {
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  notificationTime: { fontSize: 12, flexShrink: 0 },
+  notificationTimeUnread: { color: "#047857", fontWeight: "600" },
+  notificationTimeRead: { color: "#94a3b8", fontWeight: "400" },
+  cardDivider: { height: 1, marginVertical: 12 },
+  cardDividerUnread: { backgroundColor: "#a7f3d0" },
+  cardDividerRead: { backgroundColor: "#f1f5f9" },
   notificationMessage: {
     fontSize: 14,
-    color: "#334155",
     lineHeight: 21,
+  },
+  notificationMessageUnread: {
+    color: "#1e293b",
+    fontWeight: "500",
+  },
+  notificationMessageRead: {
+    color: "#64748b",
+    fontWeight: "400",
   },
   emptyState: {
     alignItems: "center",

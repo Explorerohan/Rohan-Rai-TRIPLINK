@@ -328,8 +328,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
         setRefundQrUri(null);
       }
       if (onSave) onSave(response.data);
-
-      if (onBack) onBack();
+      else if (onBack) onBack();
     } catch (error) {
       console.error("Error updating profile:", error);
       Alert.alert("Error", error.message || "Failed to update profile");
