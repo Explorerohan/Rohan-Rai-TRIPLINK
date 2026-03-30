@@ -64,6 +64,7 @@ from .permissions import IsAdminRole, IsAgent, IsTraveler
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
+    ChangePasswordSerializer,
     UserSerializer,
     UserProfileSerializer,
     AgentProfileSerializer,
@@ -216,6 +217,18 @@ class LoginView(TokenObtainPairView):
 
 class RefreshView(TokenRefreshView):
     permission_classes = [permissions.AllowAny]
+
+
+class ChangePasswordView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data["new_password"])
+        request.user.save(update_fields=["password"])
+        return response.Response({"detail": "Password updated successfully."}, status=200)
 
 
 class MeView(generics.RetrieveAPIView):

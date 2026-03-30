@@ -409,5 +409,14 @@
   "couldNotDeletePackage": "Could not delete package.",
   "deleted": "Deleted",
   "doneTitle": "Done",
-  "cancelRequestUpTo2Days": "You can only cancel this request up to 2 days before the trip start date."
+  "cancelRequestUpTo2Days": "You can only cancel this request up to 2 days before the trip start date.",
+  "changePasswordTitle": "Change Password",
+  "changePasswordSubtitle": "Keep your account secure by updating your password regularly.",
+  "changePasswordFillAll": "Please fill in all password fields.",
+  "currentPassword": "Current Password",
+  "newPassword": "New Password",
+  "confirmNewPassword": "Confirm New Password",
+  "updatePassword": "Update Password",
+  "changePasswordSuccess": "Your password has been updated successfully.",
+  "changePasswordFailed": "Could not update password. Please try again."
 }

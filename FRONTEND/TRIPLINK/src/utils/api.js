@@ -810,3 +810,30 @@ export const verifyTravelerPasswordReset = async (email, otp) => {
   }
   return data;
 };
+
+/**
+ * Change password for logged-in user.
+ * @param {string} currentPassword
+ * @param {string} newPassword
+ * @param {string} confirmNewPassword
+ * @param {string} accessToken
+ */
+export const changePassword = async (
+  currentPassword,
+  newPassword,
+  confirmNewPassword,
+  accessToken
+) => {
+  return apiRequest(
+    "/api/auth/change-password/",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_new_password: confirmNewPassword,
+      }),
+    },
+    accessToken
+  );
+};

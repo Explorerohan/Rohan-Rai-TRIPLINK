@@ -10,7 +10,7 @@ import { DetailsScreen } from "./src/screens/details";
 import HomeScreen from "./src/screens/home/HomeScreen";
 import TopPicksScreen from "./src/screens/home/TopPicksScreen";
 import RunningNowScreen from "./src/screens/home/RunningNowScreen";
-import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen, LeaderboardScreen, NotificationsScreen, CancelRefundScreen } from "./src/screens/profile";
+import ProfileScreen, { BookmarkedScreen, EditProfileScreen, ProfileDetailsScreen, PastTripsScreen, UpcomingTripsScreen, LeaderboardScreen, NotificationsScreen, CancelRefundScreen, ChangePasswordScreen } from "./src/screens/profile";
 import MessagesScreen, { ChatDetailScreen } from "./src/screens/messages";
 import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
@@ -600,6 +600,7 @@ export default function App() {
           onEdit={() => navigate("editProfile")}
           onProfileDetailsPress={() => navigate("profileDetails")}
           onBookmarkedPress={() => navigate("bookmarked")}
+          onSettingsPress={() => navigate("changePassword")}
           onPastTripsPress={() => navigate("pastTrips")}
           onUpcomingTripsPress={() => navigate("upcomingTrips")}
           onLeaderboardPress={() => navigate("leaderboard")}
@@ -725,6 +726,12 @@ export default function App() {
             setProfileRefreshKey((prev) => prev + 1);
             goBack();
           }}
+        />
+      )}
+      {screen === "changePassword" && (
+        <ChangePasswordScreen
+          session={session}
+          onBack={goBack}
         />
       )}
     </SafeAreaView>

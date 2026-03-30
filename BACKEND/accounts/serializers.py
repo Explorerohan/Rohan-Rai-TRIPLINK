@@ -1,6 +1,7 @@
 import os
 from datetime import date
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, ItineraryItem, Notification, NotificationRecipient, Roles, get_active_deal
@@ -25,6 +26,28 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    confirm_new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_current_password(self, value):
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+    def validate(self, attrs):
+        new_password = attrs.get("new_password")
+        confirm_new_password = attrs.get("confirm_new_password")
+        if new_password != confirm_new_password:
+            raise serializers.ValidationError(
+                {"confirm_new_password": "New password and confirm password do not match."}
+            )
+        validate_password(new_password, self.context["request"].user)
+        return attrs
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

@@ -409,5 +409,14 @@
   "couldNotDeletePackage": "प्याकेज मेट्न सकिएन।",
   "deleted": "मेटियो",
   "doneTitle": "सम्पन्न",
-  "cancelRequestUpTo2Days": "यात्रा सुरु मितिभन्दा २ दिन अघि मात्र यो अनुरोध रद्द गर्न सकिन्छ।"
+  "cancelRequestUpTo2Days": "यात्रा सुरु मितिभन्दा २ दिन अघि मात्र यो अनुरोध रद्द गर्न सकिन्छ।",
+  "changePasswordTitle": "पासवर्ड परिवर्तन गर्नुहोस्",
+  "changePasswordSubtitle": "आफ्नो खाता सुरक्षित राख्न समय-समयमा पासवर्ड अपडेट गर्नुहोस्।",
+  "changePasswordFillAll": "कृपया सबै पासवर्ड फिल्डहरू भर्नुहोस्।",
+  "currentPassword": "हालको पासवर्ड",
+  "newPassword": "नयाँ पासवर्ड",
+  "confirmNewPassword": "नयाँ पासवर्ड पुष्टि गर्नुहोस्",
+  "updatePassword": "पासवर्ड अपडेट गर्नुहोस्",
+  "changePasswordSuccess": "तपाईंको पासवर्ड सफलतापूर्वक अपडेट भयो।",
+  "changePasswordFailed": "पासवर्ड अपडेट गर्न सकिएन। कृपया पुन: प्रयास गर्नुहोस्।"
 }

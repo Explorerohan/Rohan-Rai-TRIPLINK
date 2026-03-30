@@ -46,6 +46,7 @@ const ProfileScreen = ({
   onEdit = () => {},
   onProfileDetailsPress = () => {},
   onBookmarkedPress = () => {},
+  onSettingsPress = () => {},
   onPastTripsPress = () => {},
   onUpcomingTripsPress = () => {},
   onLeaderboardPress = () => {},
@@ -242,6 +243,8 @@ const ProfileScreen = ({
                       ? onProfileDetailsPress
                       : item.id === "bookmarked"
                         ? onBookmarkedPress
+                        : item.id === "settings"
+                          ? onSettingsPress
                         : item.id === "leaderboard"
                           ? onLeaderboardPress
                           : item.id === "notifications"
