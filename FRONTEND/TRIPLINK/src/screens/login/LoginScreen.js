@@ -13,12 +13,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const HERO = require("../../Assets/Login.jpg");
 const GOOGLE_ICON = require("../../Assets/google.png");
 const EMAIL_ICON = require("../../Assets/email.png");
 const LOCK_ICON = require("../../Assets/lock.png");
-const EYE_ICON = require("../../Assets/eye.png");
 
 const LOGIN_ENDPOINT = `${API_BASE}/api/auth/login/`;
 
@@ -103,7 +103,11 @@ const LoginScreen = ({
             onPress={() => setShowPassword((prev) => !prev)}
             activeOpacity={0.7}
           >
-            <Image source={EYE_ICON} style={styles.eyeImage} resizeMode="contain" />
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#6b7280"
+            />
           </TouchableOpacity>
         </View>
 
@@ -198,10 +202,6 @@ const styles = StyleSheet.create({
     top: "50%",
     marginTop: -15,
     padding: 4,
-  },
-  eyeImage: {
-    width: 20,
-    height: 20,
   },
   forgotWrap: {
     alignSelf: "flex-end",

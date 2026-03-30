@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import { API_BASE } from "../../config";
 import {
@@ -16,9 +16,6 @@ import { Ionicons } from "@expo/vector-icons";
 
 const HERO = require("../../Assets/Login.jpg");
 const GOOGLE_ICON = require("../../Assets/google.png");
-const EMAIL_ICON = require("../../Assets/email.png");
-const LOCK_ICON = require("../../Assets/lock.png");
-const EYE_ICON = require("../../Assets/eye.png");
 
 const REGISTER_ENDPOINT = `${API_BASE}/api/auth/register/`;
 
@@ -33,9 +30,6 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
-  const successTimerRef = useRef(null);
 
   const parseError = (data) => {
     if (!data) return "Signup failed";
@@ -50,10 +44,6 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
 
   const handleSignup = async () => {
     setError("");
-    setInfo("");
-    if (successTimerRef.current) {
-      clearTimeout(successTimerRef.current);
-    }
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
       setError(t("pleaseFillAllFields"));
       return;
@@ -84,12 +74,7 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
       if (!res.ok) {
         throw new Error(parseError(data));
       }
-      setInfo(t("accountCreatedContinue"));
-      setShowSuccess(true);
-      successTimerRef.current = setTimeout(() => {
-        setShowSuccess(false);
-        onSignupComplete({ email: email.trim() });
-      }, 3000);
+      onSignupComplete({ email: email.trim() });
     } catch (e) {
       setError(e.message || t("signupFailed"));
     } finally {
@@ -97,118 +82,113 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (successTimerRef.current) clearTimeout(successTimerRef.current);
-    };
-  }, []);
-
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <View style={styles.pageContent}>
+        <View style={styles.contentInset}>
         <View style={styles.heroWrapper}>
           <Image source={HERO} style={styles.hero} resizeMode="contain" />
         </View>
 
         <View style={styles.content}>
           <Text style={styles.heading}>
-            {t("createYourAccount")}<Text style={styles.headingAccent}>TRIPLINK</Text>{t("accountText")}
+            {t("createYourAccount")}
+            <Text style={styles.headingAccent}>TRIPLINK</Text>
+            {t("accountText")}
           </Text>
+            <View style={styles.inputGroup}>
+              <View style={styles.inputIconWrap}>
+                <Ionicons name="person-outline" size={18} color="#9aa0a6" />
+              </View>
+              <TextInput
+                placeholder={t("firstName")}
+                placeholderTextColor="#9aa0a6"
+                style={[styles.input, styles.inputWithIcon]}
+                value={firstName}
+                onChangeText={setFirstName}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
-            <TextInput
-              placeholder={t("firstName")}
-              placeholderTextColor="#9aa0a6"
-              style={[styles.input, styles.inputWithIcon]}
-              value={firstName}
-              onChangeText={setFirstName}
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <View style={styles.inputIconWrap}>
+                <Ionicons name="person-outline" size={18} color="#9aa0a6" />
+              </View>
+              <TextInput
+                placeholder={t("lastName")}
+                placeholderTextColor="#9aa0a6"
+                style={[styles.input, styles.inputWithIcon]}
+                value={lastName}
+                onChangeText={setLastName}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
-            <TextInput
-              placeholder={t("lastName")}
-              placeholderTextColor="#9aa0a6"
-              style={[styles.input, styles.inputWithIcon]}
-              value={lastName}
-              onChangeText={setLastName}
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <View style={styles.inputIconWrap}>
+                <Ionicons name="mail-outline" size={18} color="#9aa0a6" />
+              </View>
+              <TextInput
+                placeholder={t("email")}
+                placeholderTextColor="#9aa0a6"
+                style={[styles.input, styles.inputWithIcon]}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
-            <TextInput
-              placeholder={t("email")}
-              placeholderTextColor="#9aa0a6"
-              style={[styles.input, styles.inputWithIcon]}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <View style={styles.inputIconWrap}>
+                <Ionicons name="lock-closed-outline" size={18} color="#9aa0a6" />
+              </View>
+              <TextInput
+                placeholder={t("password")}
+                placeholderTextColor="#9aa0a6"
+                style={[styles.input, styles.inputWithIcon]}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity style={styles.eye} onPress={() => setShowPassword((prev) => !prev)} activeOpacity={0.7}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Image source={LOCK_ICON} style={styles.inputIcon} resizeMode="contain" />
-            <TextInput
-              placeholder={t("password")}
-              placeholderTextColor="#9aa0a6"
-              style={[styles.input, styles.inputWithIcon]}
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <TouchableOpacity
-              style={styles.eye}
-              onPress={() => setShowPassword((prev) => !prev)}
-              activeOpacity={0.7}
-            >
-              <Image source={EYE_ICON} style={styles.eyeImage} resizeMode="contain" />
+            <View style={styles.inputGroup}>
+              <View style={styles.inputIconWrap}>
+                <Ionicons name="lock-closed-outline" size={18} color="#9aa0a6" />
+              </View>
+              <TextInput
+                placeholder={t("confirmPassword")}
+                placeholderTextColor="#9aa0a6"
+                style={[styles.input, styles.inputWithIcon]}
+                secureTextEntry={!showConfirm}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity style={styles.eye} onPress={() => setShowConfirm((prev) => !prev)} activeOpacity={0.7}>
+                <Ionicons name={showConfirm ? "eye-off-outline" : "eye-outline"} size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.helper}>{t("passwordHelper")}</Text>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={handleSignup} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryText}>{t("createAccount")}</Text>
+              )}
             </TouchableOpacity>
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Image source={LOCK_ICON} style={styles.inputIcon} resizeMode="contain" />
-            <TextInput
-              placeholder={t("confirmPassword")}
-              placeholderTextColor="#9aa0a6"
-              style={[styles.input, styles.inputWithIcon]}
-              secureTextEntry={!showConfirm}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-            <TouchableOpacity
-              style={styles.eye}
-              onPress={() => setShowConfirm((prev) => !prev)}
-              activeOpacity={0.7}
-            >
-              <Image source={EYE_ICON} style={styles.eyeImage} resizeMode="contain" />
+            <Text style={styles.or}>{t("or")}</Text>
+
+            <TouchableOpacity style={styles.googleButton} activeOpacity={0.85}>
+              <Image source={GOOGLE_ICON} style={styles.googleIcon} />
+              <Text style={styles.googleText}>{t("continueWithGoogle")}</Text>
             </TouchableOpacity>
-          </View>
-
-          <Text style={styles.helper}>{t("passwordHelper")}</Text>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {!showSuccess && info ? <Text style={styles.success}>{info}</Text> : null}
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            activeOpacity={0.85}
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t("createAccount")}</Text>}
-          </TouchableOpacity>
-
-          <Text style={styles.or}>{t("or")}</Text>
-
-          <TouchableOpacity style={styles.googleButton} activeOpacity={0.85}>
-            <Image source={GOOGLE_ICON} style={styles.googleIcon} />
-            <Text style={styles.googleText}>{t("continueWithGoogle")}</Text>
-          </TouchableOpacity>
 
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>{t("alreadyHaveAccount")} </Text>
@@ -217,21 +197,9 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
             </TouchableOpacity>
           </View>
         </View>
+        </View>
       </View>
 
-      {showSuccess && (
-        <View style={styles.overlayBackdrop}>
-          <View style={styles.overlayCard}>
-            <View style={styles.overlayIconWrap}>
-              <Ionicons name="checkmark" size={26} color="#ffffff" />
-            </View>
-            <Text style={styles.overlayTitle}>{t("accountCreated")}</Text>
-            <Text style={styles.overlaySubtitle}>
-              {t("accountCreatedSubtitle")}
-            </Text>
-          </View>
-        </View>
-      )}
     </SafeAreaView>
   );
 };
@@ -240,7 +208,6 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#ffffff",
-    paddingHorizontal: 22,
     position: "relative",
   },
   heroWrapper: {
@@ -255,6 +222,10 @@ const styles = StyleSheet.create({
   pageContent: {
     flex: 1,
   },
+  contentInset: {
+    flex: 1,
+    paddingHorizontal: 22,
+  },
   content: {
     flex: 1,
     alignItems: "center",
@@ -263,7 +234,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: "#1f6b2a",
-    marginBottom: 14,
+    marginBottom: 6,
     textAlign: "center",
   },
   headingAccent: {
@@ -288,15 +259,13 @@ const styles = StyleSheet.create({
   inputWithIcon: {
     paddingLeft: 42,
   },
-  inputIcon: {
+  inputIconWrap: {
     position: "absolute",
-    width: 18,
-    height: 18,
     left: 12,
     top: "50%",
     marginTop: -9,
     zIndex: 1,
-    pointerEvents: "none",
+    justifyContent: "center",
   },
   eye: {
     position: "absolute",
@@ -304,10 +273,6 @@ const styles = StyleSheet.create({
     top: "50%",
     marginTop: -15,
     padding: 4,
-  },
-  eyeImage: {
-    width: 20,
-    height: 20,
   },
   helper: {
     width: "100%",
@@ -318,12 +283,6 @@ const styles = StyleSheet.create({
   },
   error: {
     color: "#c0392b",
-    fontSize: 13,
-    alignSelf: "flex-start",
-    marginBottom: 8,
-  },
-  success: {
-    color: "#1f6b2a",
     fontSize: 13,
     alignSelf: "flex-start",
     marginBottom: 8,
@@ -382,47 +341,6 @@ const styles = StyleSheet.create({
     color: "#1f6b2a",
     fontSize: 13,
     fontWeight: "700",
-  },
-  overlayBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    zIndex: 50,
-    elevation: 50,
-  },
-  overlayCard: {
-    width: "90%",
-    maxWidth: 340,
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    paddingVertical: 30,
-    paddingHorizontal: 18,
-    alignItems: "center",
-    zIndex: 60,
-  },
-  overlayIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "#1f6b2a",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  overlayTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#1f1f1f",
-    marginBottom: 6,
-  },
-  overlaySubtitle: {
-    fontSize: 14,
-    color: "#6f747a",
-    textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 8,
   },
 });
 
