@@ -31,6 +31,11 @@
 .btn{height:44px;padding:0 14px;border-radius:10px;border:1px solid transparent;font-size:14px;font-weight:700;cursor:pointer}
 .btn.primary{background:#1f6b2a;border-color:#1f6b2a;color:#fff}
 .btn.primary:hover{background:#185323}
+.strength-wrap{margin-top:8px;display:none}
+.strength-wrap.active{display:block}
+.strength-track{width:100%;height:6px;border-radius:999px;background:#e5e7eb;overflow:hidden}
+.strength-fill{height:100%;width:0%;border-radius:999px;background:#e5e7eb;transition:width .2s ease}
+.strength-text{margin-top:4px;font-size:12px;font-weight:700;color:#64748b}
 </style>
 {% endblock agent_extra_css %}
 
@@ -88,6 +93,10 @@
             </svg>
           </button>
         </div>
+        <div class="strength-wrap" data-strength-for="new_password">
+          <div class="strength-track"><div class="strength-fill"></div></div>
+          <div class="strength-text">Password strength</div>
+        </div>
       </div>
       <div class="row">
         <label for="confirm_password">Confirm new password</label>
@@ -106,6 +115,10 @@
             </svg>
           </button>
         </div>
+        <div class="strength-wrap" data-strength-for="confirm_password">
+          <div class="strength-track"><div class="strength-fill"></div></div>
+          <div class="strength-text">Password strength</div>
+        </div>
       </div>
       <div class="actions">
         <button type="submit" class="btn primary">Update password</button>
@@ -114,6 +127,39 @@
   </section>
 </div>
 <script>
+  function evaluatePasswordStrength(password) {
+    if (!password) return { level: "none", progress: 0, label: "Password strength", color: "#e5e7eb" };
+    var score = 0;
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    if (score <= 2) return { level: "basic", progress: 33, label: "Password strength: Basic", color: "#d97706" };
+    if (score <= 4) return { level: "good", progress: 66, label: "Password strength: Good", color: "#2563eb" };
+    return { level: "strong", progress: 100, label: "Password strength: Strong", color: "#16a34a" };
+  }
+
+  function attachStrengthMeter(inputId) {
+    var input = document.getElementById(inputId);
+    var wrap = document.querySelector('.strength-wrap[data-strength-for="' + inputId + '"]');
+    if (!input || !wrap) return;
+    var fill = wrap.querySelector(".strength-fill");
+    var text = wrap.querySelector(".strength-text");
+    var update = function() {
+      var state = evaluatePasswordStrength(input.value || "");
+      fill.style.width = state.progress + "%";
+      fill.style.backgroundColor = state.color;
+      text.textContent = state.label;
+      text.style.color = state.progress ? state.color : "#64748b";
+    };
+    input.addEventListener("focus", function() { wrap.classList.add("active"); });
+    input.addEventListener("blur", function() { wrap.classList.remove("active"); });
+    input.addEventListener("input", update);
+    update();
+  }
+
   document.querySelectorAll(".toggle-visibility").forEach(function(btn) {
     btn.addEventListener("click", function() {
       var targetId = btn.getAttribute("data-target");
@@ -125,5 +171,7 @@
       btn.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
     });
   });
+  attachStrengthMeter("new_password");
+  attachStrengthMeter("confirm_password");
 </script>
 {% endblock main_content %}

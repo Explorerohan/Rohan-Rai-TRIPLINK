@@ -425,4 +425,8 @@
   "updatePassword": "पासवर्ड अपडेट गर्नुहोस्",
   "changePasswordSuccess": "तपाईंको पासवर्ड सफलतापूर्वक अपडेट भयो।",
   "changePasswordFailed": "पासवर्ड अपडेट गर्न सकिएन। कृपया पुन: प्रयास गर्नुहोस्।"
+  ,"passwordStrength": "पासवर्ड बलियोपन"
+  ,"passwordStrengthBasic": "सामान्य"
+  ,"passwordStrengthGood": "राम्रो"
+  ,"passwordStrengthStrong": "बलियो"
 }

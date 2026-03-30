@@ -425,4 +425,8 @@
   "updatePassword": "Update Password",
   "changePasswordSuccess": "Your password has been updated successfully.",
   "changePasswordFailed": "Could not update password. Please try again."
+  ,"passwordStrength": "Password strength"
+  ,"passwordStrengthBasic": "Basic"
+  ,"passwordStrengthGood": "Good"
+  ,"passwordStrengthStrong": "Strong"
 }

@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -13,6 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../context/LanguageContext";
 import { changePassword } from "../../utils/api";
+import { getPasswordStrength } from "../../utils/passwordStrength";
 
 const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
   const { t } = useLanguage();
@@ -22,7 +26,17 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [focusedPasswordField, setFocusedPasswordField] = useState("");
   const [saving, setSaving] = useState(false);
+  const newPasswordStrength = getPasswordStrength(newPassword);
+  const confirmStrength = getPasswordStrength(confirmPassword);
+
+  const getStrengthColor = (level) => {
+    if (level === "basic") return "#d97706";
+    if (level === "good") return "#2563eb";
+    if (level === "strong") return "#16a34a";
+    return "#e5e7eb";
+  };
 
   const handleSubmit = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -59,18 +73,29 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
-            <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t("changePasswordTitle")}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+      <KeyboardAvoidingView
+        style={styles.safe}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
+      >
+        <ScrollView
+          style={styles.safe}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.8}>
+                <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>{t("changePasswordTitle")}</Text>
+              <View style={styles.headerSpacer} />
+            </View>
 
-        <Text style={styles.subtitle}>{t("changePasswordSubtitle")}</Text>
+            <Text style={styles.subtitle}>{t("changePasswordSubtitle")}</Text>
 
-        <View style={styles.formCard}>
+            <View style={styles.formCard}>
           <Text style={styles.label}>{t("currentPassword")}</Text>
           <View style={styles.inputRow}>
             <TextInput
@@ -105,6 +130,8 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
               style={styles.input}
               placeholder={t("newPassword")}
               placeholderTextColor="#9ca3af"
+              onFocus={() => setFocusedPasswordField("newPassword")}
+              onBlur={() => setFocusedPasswordField("")}
             />
             <TouchableOpacity
               onPress={() => setShowNewPassword((v) => !v)}
@@ -118,6 +145,24 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
               />
             </TouchableOpacity>
           </View>
+          {focusedPasswordField === "newPassword" ? (
+            <View style={styles.strengthWrap}>
+              <View style={styles.strengthTrack}>
+                <View
+                  style={[
+                    styles.strengthFill,
+                    {
+                      width: `${Math.round(newPasswordStrength.progress * 100)}%`,
+                      backgroundColor: getStrengthColor(newPasswordStrength.level),
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.strengthText, { color: getStrengthColor(newPasswordStrength.level) }]}>
+                {t("passwordStrength")}: {t(`passwordStrength${newPasswordStrength.level.charAt(0).toUpperCase()}${newPasswordStrength.level.slice(1)}`)}
+              </Text>
+            </View>
+          ) : null}
 
           <Text style={styles.label}>{t("confirmNewPassword")}</Text>
           <View style={styles.inputRow}>
@@ -129,6 +174,8 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
               style={styles.input}
               placeholder={t("confirmNewPassword")}
               placeholderTextColor="#9ca3af"
+              onFocus={() => setFocusedPasswordField("confirmPassword")}
+              onBlur={() => setFocusedPasswordField("")}
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword((v) => !v)}
@@ -142,21 +189,41 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
               />
             </TouchableOpacity>
           </View>
-        </View>
+          {focusedPasswordField === "confirmPassword" ? (
+            <View style={styles.strengthWrap}>
+              <View style={styles.strengthTrack}>
+                <View
+                  style={[
+                    styles.strengthFill,
+                    {
+                      width: `${Math.round(confirmStrength.progress * 100)}%`,
+                      backgroundColor: getStrengthColor(confirmStrength.level),
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.strengthText, { color: getStrengthColor(confirmStrength.level) }]}>
+                {t("passwordStrength")}: {t(`passwordStrength${confirmStrength.level.charAt(0).toUpperCase()}${confirmStrength.level.slice(1)}`)}
+              </Text>
+            </View>
+          ) : null}
+            </View>
 
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={saving}
-          activeOpacity={0.9}
-        >
-          {saving ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={styles.saveText}>{t("updatePassword")}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={saving}
+              activeOpacity={0.9}
+            >
+              {saving ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.saveText}>{t("updatePassword")}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -164,6 +231,7 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#ffffff" },
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 12 },
+  scrollContent: { flexGrow: 1, paddingBottom: 24 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -242,6 +310,26 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: { opacity: 0.7 },
   saveText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  strengthWrap: {
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  strengthTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: "#e5e7eb",
+    overflow: "hidden",
+  },
+  strengthFill: {
+    height: "100%",
+    borderRadius: 99,
+  },
+  strengthText: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: "600",
+  },
 });
 
 export default ChangePasswordScreen;

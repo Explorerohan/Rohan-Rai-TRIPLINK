@@ -4,7 +4,10 @@ import { API_BASE } from "../../config";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -13,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getPasswordStrength } from "../../utils/passwordStrength";
 
 const HERO = require("../../Assets/Login.jpg");
 const GOOGLE_ICON = require("../../Assets/google.png");
@@ -28,8 +32,18 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [focusedPasswordField, setFocusedPasswordField] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const passwordStrength = getPasswordStrength(password);
+  const confirmStrength = getPasswordStrength(confirmPassword);
+
+  const getStrengthColor = (level) => {
+    if (level === "basic") return "#d97706";
+    if (level === "good") return "#2563eb";
+    if (level === "strong") return "#16a34a";
+    return "#e5e7eb";
+  };
 
   const parseError = (data) => {
     if (!data) return "Signup failed";
@@ -88,18 +102,28 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <View style={styles.pageContent}>
-        <View style={styles.contentInset}>
-        <View style={styles.heroWrapper}>
-          <Image source={HERO} style={styles.hero} resizeMode="contain" />
-        </View>
+      <KeyboardAvoidingView
+        style={styles.pageContent}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
+      >
+        <ScrollView
+          style={styles.pageContent}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentInset}>
+          <View style={styles.heroWrapper}>
+            <Image source={HERO} style={styles.hero} resizeMode="contain" />
+          </View>
 
-        <View style={styles.content}>
-          <Text style={styles.heading}>
-            {t("createYourAccount")}
-            <Text style={styles.headingAccent}>TRIPLINK</Text>
-            {t("accountText")}
-          </Text>
+          <View style={styles.content}>
+            <Text style={styles.heading}>
+              {t("createYourAccount")}
+              <Text style={styles.headingAccent}>TRIPLINK</Text>
+              {t("accountText")}
+            </Text>
             <View style={styles.inputGroup}>
               <View style={styles.inputIconWrap}>
                 <Ionicons name="person-outline" size={18} color="#9aa0a6" />
@@ -112,7 +136,6 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
                 onChangeText={setFirstName}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <View style={styles.inputIconWrap}>
                 <Ionicons name="person-outline" size={18} color="#9aa0a6" />
@@ -125,7 +148,6 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
                 onChangeText={setLastName}
               />
             </View>
-
             <View style={styles.inputGroup}>
               <View style={styles.inputIconWrap}>
                 <Ionicons name="mail-outline" size={18} color="#9aa0a6" />
@@ -152,11 +174,31 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
+                onFocus={() => setFocusedPasswordField("password")}
+                onBlur={() => setFocusedPasswordField("")}
               />
               <TouchableOpacity style={styles.eye} onPress={() => setShowPassword((prev) => !prev)} activeOpacity={0.7}>
                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color="#6b7280" />
               </TouchableOpacity>
             </View>
+            {focusedPasswordField === "password" ? (
+              <View style={styles.strengthWrap}>
+                <View style={styles.strengthTrack}>
+                  <View
+                    style={[
+                      styles.strengthFill,
+                      {
+                        width: `${Math.round(passwordStrength.progress * 100)}%`,
+                        backgroundColor: getStrengthColor(passwordStrength.level),
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.strengthText, { color: getStrengthColor(passwordStrength.level) }]}>
+                  {t("passwordStrength")}: {t(`passwordStrength${passwordStrength.level.charAt(0).toUpperCase()}${passwordStrength.level.slice(1)}`)}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.inputGroup}>
               <View style={styles.inputIconWrap}>
@@ -169,11 +211,31 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
                 secureTextEntry={!showConfirm}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
+                onFocus={() => setFocusedPasswordField("confirmPassword")}
+                onBlur={() => setFocusedPasswordField("")}
               />
               <TouchableOpacity style={styles.eye} onPress={() => setShowConfirm((prev) => !prev)} activeOpacity={0.7}>
                 <Ionicons name={showConfirm ? "eye-off-outline" : "eye-outline"} size={20} color="#6b7280" />
               </TouchableOpacity>
             </View>
+            {focusedPasswordField === "confirmPassword" ? (
+              <View style={styles.strengthWrap}>
+                <View style={styles.strengthTrack}>
+                  <View
+                    style={[
+                      styles.strengthFill,
+                      {
+                        width: `${Math.round(confirmStrength.progress * 100)}%`,
+                        backgroundColor: getStrengthColor(confirmStrength.level),
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.strengthText, { color: getStrengthColor(confirmStrength.level) }]}>
+                  {t("passwordStrength")}: {t(`passwordStrength${confirmStrength.level.charAt(0).toUpperCase()}${confirmStrength.level.slice(1)}`)}
+                </Text>
+              </View>
+            ) : null}
 
             <Text style={styles.helper}>{t("passwordHelper")}</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -193,15 +255,16 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
               <Text style={styles.googleText}>{t("continueWithGoogle")}</Text>
             </TouchableOpacity>
 
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>{t("alreadyHaveAccount")} </Text>
-            <TouchableOpacity onPress={onBackToLogin}>
-              <Text style={styles.footerLink}>{t("login")}</Text>
-            </TouchableOpacity>
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>{t("alreadyHaveAccount")} </Text>
+              <TouchableOpacity onPress={onBackToLogin}>
+                <Text style={styles.footerLink}>{t("login")}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
     </SafeAreaView>
   );
@@ -224,6 +287,10 @@ const styles = StyleSheet.create({
   },
   pageContent: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
   },
   contentInset: {
     flex: 1,
@@ -283,6 +350,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: -2,
     marginBottom: 6,
+  },
+  strengthWrap: {
+    width: "100%",
+    marginTop: -4,
+    marginBottom: 8,
+  },
+  strengthTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: "#e5e7eb",
+    overflow: "hidden",
+  },
+  strengthFill: {
+    height: "100%",
+    borderRadius: 99,
+  },
+  strengthText: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: "600",
   },
   error: {
     color: "#c0392b",
