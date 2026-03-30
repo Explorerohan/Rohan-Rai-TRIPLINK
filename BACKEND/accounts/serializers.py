@@ -13,19 +13,50 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "role", "is_active", "is_staff", "date_joined"]
+        fields = [
+            "id",
+            "email",
+            "role",
+            "first_name",
+            "last_name",
+            "is_active",
+            "is_staff",
+            "date_joined",
+        ]
         read_only_fields = ["id", "is_active", "is_staff", "date_joined"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    first_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    last_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
     class Meta:
         model = User
-        fields = ["email", "password", "role"]
+        fields = ["email", "password", "role", "first_name", "last_name"]
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        first_name = (validated_data.pop("first_name", "") or "").strip()
+        last_name = (validated_data.pop("last_name", "") or "").strip()
+
+        user = User.objects.create_user(**validated_data)
+
+        # Keep names on auth user too so login payload can greet with first name
+        # even before profile API finishes loading.
+        if first_name or last_name:
+            user.first_name = first_name
+            user.last_name = last_name
+            user.save(update_fields=["first_name", "last_name"])
+
+        # Ensure traveler profile has names set from signup.
+        # (Agents/admin-created users can manage their own profiles separately.)
+        if user.role == Roles.TRAVELER:
+            UserProfile.objects.update_or_create(
+                user=user,
+                defaults={"first_name": first_name, "last_name": last_name},
+            )
+
+        return user
 
 
 class ChangePasswordSerializer(serializers.Serializer):

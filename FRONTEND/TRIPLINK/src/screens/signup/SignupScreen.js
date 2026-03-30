@@ -24,7 +24,8 @@ const REGISTER_ENDPOINT = `${API_BASE}/api/auth/register/`;
 
 const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} }) => {
   const { t } = useLanguage();
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,7 +54,7 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
     if (successTimerRef.current) {
       clearTimeout(successTimerRef.current);
     }
-    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
       setError(t("pleaseFillAllFields"));
       return;
     }
@@ -68,7 +69,6 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
 
     setLoading(true);
     try {
-      const displayName = name.trim() || email.trim() || "traveler";
       const res = await fetch(REGISTER_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,6 +76,8 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
           email: email.trim(),
           password,
           role: "traveler",
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
         }),
       });
       const data = await res.json();
@@ -117,11 +119,22 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
           <View style={styles.inputGroup}>
             <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
             <TextInput
-              placeholder={t("fullName")}
+              placeholder={t("firstName")}
               placeholderTextColor="#9aa0a6"
               style={[styles.input, styles.inputWithIcon]}
-              value={name}
-              onChangeText={setName}
+              value={firstName}
+              onChangeText={setFirstName}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Image source={EMAIL_ICON} style={styles.inputIcon} resizeMode="contain" />
+            <TextInput
+              placeholder={t("lastName")}
+              placeholderTextColor="#9aa0a6"
+              style={[styles.input, styles.inputWithIcon]}
+              value={lastName}
+              onChangeText={setLastName}
             />
           </View>
 
