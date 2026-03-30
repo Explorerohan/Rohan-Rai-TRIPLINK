@@ -209,6 +209,80 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
+    def post(self, request, *args, **kwargs):
+        return response.Response(
+            {"detail": "Use /api/auth/register/request-otp/ and /api/auth/register/verify-otp/."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+TRAVELER_SIGNUP_CACHE_KEY = "traveler_signup_otp:{}"
+
+
+class TravelerSignupOtpRequestView(generics.GenericAPIView):
+    """POST: send OTP email for traveler signup flow."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip().lower()
+        if not email or "@" not in email:
+            return response.Response(
+                {"detail": "A valid email address is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if User.objects.filter(email__iexact=email).exists():
+            return response.Response(
+                {"detail": "An account with this email already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        otp = generate_otp()
+        cache.set(TRAVELER_SIGNUP_CACHE_KEY.format(email), otp, timeout=300)
+        try:
+            send_otp_email(email, otp)
+        except Exception:
+            logger.exception("Traveler signup OTP email failed")
+            return response.Response(
+                {"detail": "Unable to send email. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return response.Response(
+            {"detail": "Verification code sent to your email."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class TravelerSignupOtpVerifyView(generics.GenericAPIView):
+    """POST: verify signup OTP and create traveler account."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip().lower()
+        otp = (request.data.get("otp") or "").strip()
+        if not email or not otp:
+            return response.Response(
+                {"detail": "Email and verification code are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        key = TRAVELER_SIGNUP_CACHE_KEY.format(email)
+        stored = cache.get(key)
+        if not stored or stored != otp:
+            return response.Response(
+                {"detail": "Invalid or expired verification code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = request.data.copy()
+        data["email"] = email
+        data["role"] = Roles.TRAVELER
+        serializer = RegisterSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        cache.delete(key)
+        return response.Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
 
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer

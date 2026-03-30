@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 const HERO = require("../../Assets/Login.jpg");
 const GOOGLE_ICON = require("../../Assets/google.png");
 
-const REGISTER_ENDPOINT = `${API_BASE}/api/auth/register/`;
+const REGISTER_REQUEST_OTP_ENDPOINT = `${API_BASE}/api/auth/register/request-otp/`;
 
 const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} }) => {
   const { t } = useLanguage();
@@ -59,22 +59,25 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
 
     setLoading(true);
     try {
-      const res = await fetch(REGISTER_ENDPOINT, {
+      const normalizedEmail = email.trim().toLowerCase();
+      const res = await fetch(REGISTER_REQUEST_OTP_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-          role: "traveler",
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-        }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(parseError(data));
       }
-      onSignupComplete({ email: email.trim() });
+      onSignupComplete({
+        email: normalizedEmail,
+        password,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        resendsUsed: 0,
+        maxResends: 3,
+      });
     } catch (e) {
       setError(e.message || t("signupFailed"));
     } finally {
@@ -179,7 +182,7 @@ const SignupScreen = ({ onSignupComplete = () => {}, onBackToLogin = () => {} })
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.primaryText}>{t("createAccount")}</Text>
+                <Text style={styles.primaryText}>{t("signup")}</Text>
               )}
             </TouchableOpacity>
 

@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
 import LoginScreen from "./src/screens/login/LoginScreen";
 import { SignupScreen } from "./src/screens/signup";
+import { SignupVerificationScreen } from "./src/screens/signupVerification";
 import { ForgotPasswordScreen } from "./src/screens/forgotPassword";
 import { VerificationScreen } from "./src/screens/verification";
 import { DetailsScreen } from "./src/screens/details";
@@ -16,7 +17,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
 import { MapScreen } from "./src/screens/map";
-import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, getNotificationUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken, requestTravelerPasswordReset, verifyTravelerPasswordReset } from "./src/utils/api";
+import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, getNotificationUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken, requestTravelerPasswordReset, verifyTravelerPasswordReset, requestTravelerSignupOtp, verifyTravelerSignupOtp } from "./src/utils/api";
 import { registerForExpoPushTokenAsync, subscribeToNotificationResponse, consumeInitialNotificationResponse } from "./src/utils/pushNotifications";
 import { LanguageProvider } from "./src/context/LanguageContext";
 import { API_BASE } from "./src/config";
@@ -34,6 +35,7 @@ export default function App() {
   }, [session]);
   const [lastEmail, setLastEmail] = useState("");
   const [otpSession, setOtpSession] = useState(null);
+  const [signupSession, setSignupSession] = useState(null);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedMapData, setSelectedMapData] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
@@ -270,7 +272,10 @@ export default function App() {
       AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(auth)).catch((e) => console.warn("Save session failed:", e));
     }
   };
-  const handleSignupComplete = () => navigate("login", { resetHistory: true });
+  const handleSignupComplete = (payload) => {
+    setSignupSession(payload);
+    navigate("signupVerification");
+  };
   const handleForgotComplete = (payload) => {
     setLastEmail(payload.email);
     setOtpSession(payload);
@@ -413,6 +418,38 @@ export default function App() {
         <SignupScreen
           onSignupComplete={handleSignupComplete}
           onBackToLogin={goToLogin}
+        />
+      )}
+      {screen === "signupVerification" && (
+        <SignupVerificationScreen
+          email={signupSession?.email}
+          expiresAt={signupSession?.expiresAt}
+          resendsUsed={signupSession?.resendsUsed ?? 0}
+          maxResends={signupSession?.maxResends ?? 3}
+          onBack={() => navigate("signup")}
+          onVerify={async (code) => {
+            if (!signupSession?.email) throw new Error("Signup session expired. Please sign up again.");
+            await verifyTravelerSignupOtp({
+              email: signupSession.email,
+              otp: code,
+              password: signupSession.password,
+              first_name: signupSession.first_name,
+              last_name: signupSession.last_name,
+            });
+            setSignupSession(null);
+            navigate("login", { resetHistory: true });
+          }}
+          onResend={async () => {
+            if (!signupSession) return;
+            if (signupSession.resendsUsed >= signupSession.maxResends) return;
+            await requestTravelerSignupOtp(signupSession.email);
+            const expiresAt = Date.now() + 5 * 60 * 1000;
+            setSignupSession((prev) => ({
+              ...prev,
+              expiresAt,
+              resendsUsed: (prev?.resendsUsed || 0) + 1,
+            }));
+          }}
         />
       )}
       {screen === "home" && (

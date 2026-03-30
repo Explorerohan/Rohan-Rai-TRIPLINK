@@ -790,6 +790,48 @@ export const requestTravelerPasswordReset = async (email) => {
 };
 
 /**
+ * Request a signup verification code (OTP) for traveler registration.
+ * @param {string} email
+ */
+export const requestTravelerSignupOtp = async (email) => {
+  const url = `${API_BASE}/api/auth/register/request-otp/`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (_) {}
+  if (!response.ok) {
+    throw new Error(data.detail || `Request failed (${response.status})`);
+  }
+  return data;
+};
+
+/**
+ * Verify signup OTP and create traveler account.
+ * @param {{ email: string, otp: string, password: string, first_name: string, last_name: string }} payload
+ */
+export const verifyTravelerSignupOtp = async (payload) => {
+  const url = `${API_BASE}/api/auth/register/verify-otp/`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (_) {}
+  if (!response.ok) {
+    throw new Error(data.detail || `Verification failed (${response.status})`);
+  }
+  return data;
+};
+
+/**
  * Verify password-reset code issued by requestTravelerPasswordReset.
  * @param {string} email
  * @param {string} otp
