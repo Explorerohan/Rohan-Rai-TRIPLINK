@@ -994,64 +994,118 @@ def admin_users_view(request):
         'location': '',
     }
 
-    if request.method == 'POST' and request.POST.get('form_type') == 'create_agent':
-        email = (request.POST.get('email') or '').strip()
-        password = request.POST.get('password') or ''
-        confirm_password = request.POST.get('confirm_password') or ''
-        first_name = (request.POST.get('first_name') or '').strip()
-        last_name = (request.POST.get('last_name') or '').strip()
-        phone_number = (request.POST.get('phone_number') or '').strip()
-        location = (request.POST.get('location') or '').strip()
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
 
-        create_agent_form.update({
-            'email': email,
-            'first_name': first_name,
-            'last_name': last_name,
-            'phone_number': phone_number,
-            'location': location,
-        })
+        if form_type == 'create_agent':
+            email = (request.POST.get('email') or '').strip()
+            password = request.POST.get('password') or ''
+            confirm_password = request.POST.get('confirm_password') or ''
+            first_name = (request.POST.get('first_name') or '').strip()
+            last_name = (request.POST.get('last_name') or '').strip()
+            phone_number = (request.POST.get('phone_number') or '').strip()
+            location = (request.POST.get('location') or '').strip()
 
-        if not email or not password or not confirm_password:
-            messages.error(request, 'Email, password, and confirm password are required.')
-        elif password != confirm_password:
-            messages.error(request, 'Password and confirm password do not match.')
-        elif len(password) < 8:
-            messages.error(request, 'Password must be at least 8 characters long.')
-        elif User.objects.filter(email__iexact=email).exists():
-            messages.error(request, 'A user with this email already exists.')
-        else:
-            try:
-                with transaction.atomic():
-                    new_agent = User.objects.create_user(
-                        email=email,
-                        password=password,
-                        role=Roles.AGENT,
-                    )
-                    AgentProfile.objects.update_or_create(
-                        user=new_agent,
-                        defaults={
-                            'first_name': first_name,
-                            'last_name': last_name,
-                            'phone_number': phone_number,
-                            'location': location,
-                        },
-                    )
+            create_agent_form.update({
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'phone_number': phone_number,
+                'location': location,
+            })
 
-                agent_name = f"{first_name} {last_name}".strip() or email.split('@')[0]
+            if not email or not password or not confirm_password:
+                messages.error(request, 'Email, password, and confirm password are required.')
+            elif password != confirm_password:
+                messages.error(request, 'Password and confirm password do not match.')
+            elif len(password) < 8:
+                messages.error(request, 'Password must be at least 8 characters long.')
+            elif User.objects.filter(email__iexact=email).exists():
+                messages.error(request, 'A user with this email already exists.')
+            else:
                 try:
-                    send_agent_credentials_email(
-                        email=new_agent.email,
-                        password=password,
-                        login_url=request.build_absolute_uri(reverse('login')),
-                        agent_name=agent_name,
-                    )
-                    messages.success(request, f'Agent created successfully and credentials email sent to {new_agent.email}.')
-                except Exception as exc:
-                    messages.warning(request, f'Agent created successfully, but email could not be sent: {exc}')
+                    with transaction.atomic():
+                        new_agent = User.objects.create_user(
+                            email=email,
+                            password=password,
+                            role=Roles.AGENT,
+                        )
+                        AgentProfile.objects.update_or_create(
+                            user=new_agent,
+                            defaults={
+                                'first_name': first_name,
+                                'last_name': last_name,
+                                'phone_number': phone_number,
+                                'location': location,
+                            },
+                        )
 
+                    agent_name = f"{first_name} {last_name}".strip() or email.split('@')[0]
+                    try:
+                        send_agent_credentials_email(
+                            email=new_agent.email,
+                            password=password,
+                            login_url=request.build_absolute_uri(reverse('login')),
+                            agent_name=agent_name,
+                        )
+                        messages.success(request, f'Agent created successfully and credentials email sent to {new_agent.email}.')
+                    except Exception as exc:
+                        messages.warning(request, f'Agent created successfully, but email could not be sent: {exc}')
+
+                    return redirect('admin_users')
+                except Exception as exc:
+                    messages.error(request, f'Could not create agent: {exc}')
+
+        elif form_type == 'user_action':
+            action = (request.POST.get('action') or '').strip().lower()
+            raw_user_id = request.POST.get('user_id')
+
+            try:
+                target_user_id = int(raw_user_id)
+            except (TypeError, ValueError):
+                messages.error(request, 'Invalid user selected for action.')
                 return redirect('admin_users')
-            except Exception as exc:
-                messages.error(request, f'Could not create agent: {exc}')
+
+            target = User.objects.filter(id=target_user_id).first()
+            if target is None:
+                messages.error(request, 'Selected user was not found.')
+                return redirect('admin_users')
+
+            if target.role == Roles.ADMIN:
+                messages.error(request, 'Admin accounts cannot be modified from this page.')
+                return redirect('admin_users')
+
+            if target.id == request.user.id:
+                messages.error(request, 'You cannot perform this action on your own account.')
+                return redirect('admin_users')
+
+            if action == 'ban':
+                if not target.is_active:
+                    messages.info(request, f'{target.email} is already banned.')
+                else:
+                    target.is_active = False
+                    target.save(update_fields=['is_active'])
+                    messages.success(request, f'{target.email} has been banned.')
+                return redirect('admin_users')
+
+            if action == 'unban':
+                if target.is_active:
+                    messages.info(request, f'{target.email} is already active.')
+                else:
+                    target.is_active = True
+                    target.save(update_fields=['is_active'])
+                    messages.success(request, f'{target.email} has been unbanned.')
+                return redirect('admin_users')
+
+            if action == 'delete':
+                target_email = target.email
+                # This cascades to related profile/bookings/chats/etc. via on_delete rules.
+                target.delete()
+                messages.success(request, f'{target_email} and all related data were deleted.')
+                return redirect('admin_users')
+
+            messages.error(request, 'Unsupported user action.')
+            return redirect('admin_users')
 
     traveler_users = (
         User.objects.filter(role=Roles.TRAVELER)

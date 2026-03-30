@@ -260,26 +260,121 @@
         background: #22c55e;
     }
     .col-actions {
-        width: 120px;
+        width: 128px;
         text-align: right;
     }
     .users-table td.col-actions {
         white-space: nowrap;
     }
-    .btn-view-details {
-        border: 1px solid #cbd5e1;
-        background: #fff;
-        color: #0f172a;
-        border-radius: 10px;
-        padding: 8px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s ease;
+    .actions-dropdown {
+        position: relative;
+        display: inline-block;
+        text-align: left;
     }
-    .btn-view-details:hover {
+    .actions-dropdown-toggle {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #334155;
+        border-radius: 8px;
+        padding: 7px 11px;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .actions-dropdown-toggle:hover {
+        background: #fafafa;
+        border-color: #cbd5e1;
+        color: #0f172a;
+    }
+    .actions-dropdown-toggle .caret {
+        font-size: 9px;
+        opacity: 0.45;
+        font-weight: 400;
+    }
+    .actions-dropdown-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        margin-top: 6px;
+        min-width: 168px;
+        background: #ffffff;
+        border: 1px solid #eef2f6;
+        border-radius: 12px;
+        box-shadow:
+            0 0 0 1px rgba(15, 23, 42, 0.03),
+            0 4px 16px rgba(15, 23, 42, 0.06),
+            0 12px 40px rgba(15, 23, 42, 0.04);
+        padding: 4px;
+        z-index: 60;
+    }
+    .actions-dropdown.is-open .actions-dropdown-menu {
+        display: block;
+    }
+    .actions-dropdown-menu > *:not(:first-child) {
+        border-top: 1px solid #f1f5f9;
+    }
+    .actions-dropdown-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        padding: 9px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #334155;
+        transition: background 0.12s ease, color 0.12s ease;
+    }
+    .actions-dropdown-item:hover {
         background: #f8fafc;
-        border-color: #94a3b8;
+        color: #0f172a;
+    }
+    .actions-dropdown .action-inline-form {
+        display: block;
+        width: 100%;
+        margin: 0;
+    }
+    .actions-dropdown .action-inline-form button[type="submit"] {
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+        padding: 9px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #64748b;
+        transition: background 0.12s ease, color 0.12s ease;
+    }
+    .actions-dropdown .action-inline-form button[type="submit"]:hover {
+        background: #f8fafc;
+    }
+    .actions-dropdown .action-inline-form button.item-ban:hover {
+        color: #a16207;
+        background: #fffbeb;
+    }
+    .actions-dropdown .action-inline-form button.item-unban:hover {
+        color: #15803d;
+        background: #f0fdf4;
+    }
+    .actions-dropdown .action-inline-form button.item-delete:hover {
+        color: #b91c1c;
+        background: #fef2f2;
+    }
+    .action-inline-form {
+        display: inline;
+        margin: 0;
     }
     .details-row {
         display: none;
@@ -344,7 +439,7 @@
         grid-template-columns: 300px repeat(3, minmax(0, 1fr));
         grid-auto-rows: minmax(50px, auto);
         grid-auto-flow: dense;
-        align-items: start;
+        align-items: stretch;
         gap: 10px;
     }
     .details-item {
@@ -434,6 +529,110 @@
         }
         .details-head { align-items: flex-start; flex-direction: column; }
         .details-photo-preview, .details-photo-placeholder { width: 180px; height: 180px; }
+    }
+
+    /* In-page confirm dialog (replaces browser alert/confirm) */
+    .admin-confirm-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        box-sizing: border-box;
+    }
+    .admin-confirm-modal.is-open {
+        display: flex;
+    }
+    .admin-confirm-backdrop {
+        position: absolute;
+        inset: 0;
+        border: none;
+        padding: 0;
+        margin: 0;
+        background: rgba(15, 23, 42, 0.42);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        cursor: pointer;
+    }
+    .admin-confirm-card {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e8edf2;
+        box-shadow:
+            0 0 0 1px rgba(15, 23, 42, 0.04),
+            0 16px 48px rgba(15, 23, 42, 0.12);
+        padding: 26px 26px 22px;
+        z-index: 1;
+    }
+    .admin-confirm-heading {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 10px;
+        line-height: 1.3;
+        letter-spacing: -0.02em;
+    }
+    .admin-confirm-text {
+        font-size: 14px;
+        line-height: 1.55;
+        color: #64748b;
+        margin: 0 0 22px;
+    }
+    .admin-confirm-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .admin-confirm-btn {
+        font-size: 14px;
+        font-weight: 600;
+        padding: 10px 18px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+        border: 1px solid transparent;
+    }
+    .admin-confirm-btn-cancel {
+        background: #ffffff;
+        border-color: #e2e8f0;
+        color: #475569;
+    }
+    .admin-confirm-btn-cancel:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #0f172a;
+    }
+    .admin-confirm-btn-ok {
+        color: #ffffff;
+        min-width: 100px;
+    }
+    .admin-confirm-btn-ok.admin-modal-btn-primary {
+        background: linear-gradient(135deg, #1f6b2a 0%, #15803d 100%);
+        box-shadow: 0 4px 14px rgba(21, 128, 61, 0.22);
+    }
+    .admin-confirm-btn-ok.admin-modal-btn-primary:hover {
+        filter: brightness(1.05);
+    }
+    .admin-confirm-btn-ok.admin-modal-btn-warning {
+        background: linear-gradient(135deg, #b45309 0%, #c2410c 100%);
+        box-shadow: 0 4px 14px rgba(180, 83, 9, 0.25);
+    }
+    .admin-confirm-btn-ok.admin-modal-btn-warning:hover {
+        filter: brightness(1.05);
+    }
+    .admin-confirm-btn-ok.admin-modal-btn-danger {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        box-shadow: 0 4px 14px rgba(220, 38, 38, 0.22);
+    }
+    .admin-confirm-btn-ok.admin-modal-btn-danger:hover {
+        filter: brightness(1.05);
     }
 </style>
 {% endblock admin_extra_css %}
@@ -559,7 +758,50 @@
                         <td>{% if item.profile and item.profile.location %}{{ item.profile.location }}{% else %}—{% endif %}</td>
                         <td>{{ item.user.date_joined|date:"M d, Y" }}</td>
                         <td class="col-actions">
-                            <button type="button" class="btn-view-details" data-detail-toggle="traveler-details-{{ item.user.id }}" aria-expanded="false">View Details</button>
+                            <div class="actions-dropdown">
+                                <button type="button" class="actions-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
+                                    Actions <span class="caret" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="actions-dropdown-menu" role="menu">
+                                    <button type="button" class="actions-dropdown-item" data-detail-toggle="traveler-details-{{ item.user.id }}">View details</button>
+                                    {% if item.user.is_active %}
+                                    <form method="post" action="{% url 'admin_users' %}" class="action-inline-form js-admin-confirm"
+                                          data-confirm-title="Ban this user?"
+                                          data-confirm-body="They will not be able to log in until you unban them."
+                                          data-confirm-variant="warning"
+                                          data-confirm-ok="Ban user">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="user_action">
+                                        <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                        <input type="hidden" name="action" value="ban">
+                                        <button type="submit" class="item-ban">Ban</button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="{% url 'admin_users' %}" class="action-inline-form js-admin-confirm"
+                                          data-confirm-title="Unban this user?"
+                                          data-confirm-body="They will be able to sign in again."
+                                          data-confirm-variant="primary"
+                                          data-confirm-ok="Unban">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="user_action">
+                                        <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                        <input type="hidden" name="action" value="unban">
+                                        <button type="submit" class="item-unban">Unban</button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="post" action="{% url 'admin_users' %}" class="action-inline-form js-admin-confirm"
+                                          data-confirm-title="Delete this user?"
+                                          data-confirm-body="This permanently removes the account and all related data. This cannot be undone."
+                                          data-confirm-variant="danger"
+                                          data-confirm-ok="Delete">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="user_action">
+                                        <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="item-delete">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     <tr class="details-row" id="traveler-details-{{ item.user.id }}">
@@ -567,19 +809,6 @@
                             <div class="details-panel">
                                 <div class="details-head">
                                     <h3 class="details-title">Traveler Details</h3>
-                                    <div class="details-badges">
-                                        <span class="role-badge role-traveler">Traveler</span>
-                                        {% if item.user.is_active %}
-                                            <span class="muted-badge success">Active account</span>
-                                        {% else %}
-                                            <span class="muted-badge warn">Inactive account</span>
-                                        {% endif %}
-                                        {% if item.profile %}
-                                            <span class="muted-badge">Profile created {{ item.profile.created_at|date:"M d, Y" }}</span>
-                                        {% else %}
-                                            <span class="muted-badge warn">Profile missing</span>
-                                        {% endif %}
-                                    </div>
                                 </div>
                                 <div class="details-grid">
                                     <div class="details-item details-photo-item">
@@ -637,12 +866,6 @@
                                         <span class="label">Chats</span>
                                         <div class="value">{{ item.stats.chats_count }}</div>
                                     </div>
-                                    {% if item.profile %}
-                                    <div class="details-item">
-                                        <span class="label">Profile Updated</span>
-                                        <div class="value">{{ item.profile.updated_at|date:"M d, Y H:i" }}</div>
-                                    </div>
-                                    {% endif %}
                                 </div>
                             </div>
                         </td>
@@ -703,7 +926,50 @@
                         <td>{% if item.profile and item.profile.location %}{{ item.profile.location }}{% else %}—{% endif %}</td>
                         <td>{{ item.user.date_joined|date:"M d, Y" }}</td>
                         <td class="col-actions">
-                            <button type="button" class="btn-view-details" data-detail-toggle="agent-details-{{ item.user.id }}" aria-expanded="false">View Details</button>
+                            <div class="actions-dropdown">
+                                <button type="button" class="actions-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
+                                    Actions <span class="caret" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="actions-dropdown-menu" role="menu">
+                                    <button type="button" class="actions-dropdown-item" data-detail-toggle="agent-details-{{ item.user.id }}">View details</button>
+                                    {% if item.user.is_active %}
+                                    <form method="post" action="{% url 'admin_users' %}" class="action-inline-form js-admin-confirm"
+                                          data-confirm-title="Ban this user?"
+                                          data-confirm-body="They will not be able to log in until you unban them."
+                                          data-confirm-variant="warning"
+                                          data-confirm-ok="Ban user">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="user_action">
+                                        <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                        <input type="hidden" name="action" value="ban">
+                                        <button type="submit" class="item-ban">Ban</button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="{% url 'admin_users' %}" class="action-inline-form js-admin-confirm"
+                                          data-confirm-title="Unban this user?"
+                                          data-confirm-body="They will be able to sign in again."
+                                          data-confirm-variant="primary"
+                                          data-confirm-ok="Unban">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="user_action">
+                                        <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                        <input type="hidden" name="action" value="unban">
+                                        <button type="submit" class="item-unban">Unban</button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="post" action="{% url 'admin_users' %}" class="action-inline-form js-admin-confirm"
+                                          data-confirm-title="Delete this user?"
+                                          data-confirm-body="This permanently removes the account and all related data. This cannot be undone."
+                                          data-confirm-variant="danger"
+                                          data-confirm-ok="Delete">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="user_action">
+                                        <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="item-delete">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     <tr class="details-row" id="agent-details-{{ item.user.id }}">
@@ -808,6 +1074,18 @@
         </div>
         {% endif %}
     </div>
+
+    <div id="admin-confirm-modal" class="admin-confirm-modal" aria-hidden="true">
+        <button type="button" class="admin-confirm-backdrop" id="admin-confirm-backdrop" aria-label="Close dialog"></button>
+        <div class="admin-confirm-card" role="dialog" aria-modal="true" aria-labelledby="admin-confirm-title">
+            <h3 id="admin-confirm-title" class="admin-confirm-heading"></h3>
+            <p id="admin-confirm-body" class="admin-confirm-text"></p>
+            <div class="admin-confirm-actions">
+                <button type="button" class="admin-confirm-btn admin-confirm-btn-cancel" id="admin-confirm-cancel">Cancel</button>
+                <button type="button" class="admin-confirm-btn admin-confirm-btn-ok admin-modal-btn-primary" id="admin-confirm-submit">Confirm</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock main_content %}
 
@@ -825,8 +1103,97 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    var detailButtons = document.querySelectorAll('[data-detail-toggle]');
-    detailButtons.forEach(function (button) {
+    function closeAllActionDropdowns() {
+        document.querySelectorAll('.actions-dropdown.is-open').forEach(function (wrap) {
+            wrap.classList.remove('is-open');
+            var t = wrap.querySelector('.actions-dropdown-toggle');
+            if (t) t.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    document.querySelectorAll('.actions-dropdown-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var wrap = btn.closest('.actions-dropdown');
+            if (!wrap) return;
+            var willOpen = !wrap.classList.contains('is-open');
+            closeAllActionDropdowns();
+            if (willOpen) {
+                wrap.classList.add('is-open');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        });
+    });
+
+    document.addEventListener('click', function () {
+        closeAllActionDropdowns();
+    });
+
+    var confirmModal = document.getElementById('admin-confirm-modal');
+    var confirmTitle = document.getElementById('admin-confirm-title');
+    var confirmBody = document.getElementById('admin-confirm-body');
+    var confirmSubmit = document.getElementById('admin-confirm-submit');
+    var confirmCancel = document.getElementById('admin-confirm-cancel');
+    var confirmBackdrop = document.getElementById('admin-confirm-backdrop');
+    var pendingConfirmForm = null;
+
+    function closeConfirmModal() {
+        if (!confirmModal) return;
+        confirmModal.classList.remove('is-open');
+        confirmModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        pendingConfirmForm = null;
+    }
+
+    function openConfirmModal(form) {
+        if (!confirmModal || !confirmTitle || !confirmBody || !confirmSubmit) return;
+        pendingConfirmForm = form;
+        confirmTitle.textContent = form.getAttribute('data-confirm-title') || 'Confirm';
+        confirmBody.textContent = form.getAttribute('data-confirm-body') || '';
+        var variant = form.getAttribute('data-confirm-variant') || 'primary';
+        confirmSubmit.className = 'admin-confirm-btn admin-confirm-btn-ok admin-modal-btn-' + variant;
+        confirmSubmit.textContent = form.getAttribute('data-confirm-ok') || 'Confirm';
+        confirmModal.classList.add('is-open');
+        confirmModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        closeAllActionDropdowns();
+    }
+
+    document.querySelectorAll('form.js-admin-confirm').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (form.getAttribute('data-confirm-skip') === 'true') {
+                form.removeAttribute('data-confirm-skip');
+                return;
+            }
+            e.preventDefault();
+            openConfirmModal(form);
+        });
+    });
+
+    if (confirmSubmit) {
+        confirmSubmit.addEventListener('click', function () {
+            if (pendingConfirmForm) {
+                pendingConfirmForm.setAttribute('data-confirm-skip', 'true');
+                pendingConfirmForm.requestSubmit();
+            }
+            closeConfirmModal();
+        });
+    }
+    if (confirmCancel) confirmCancel.addEventListener('click', closeConfirmModal);
+    if (confirmBackdrop) confirmBackdrop.addEventListener('click', closeConfirmModal);
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (confirmModal && confirmModal.classList.contains('is-open')) {
+                closeConfirmModal();
+                e.preventDefault();
+                return;
+            }
+            closeAllActionDropdowns();
+        }
+    });
+
+    document.querySelectorAll('[data-detail-toggle]').forEach(function (button) {
         button.addEventListener('click', function () {
             var targetId = button.getAttribute('data-detail-toggle');
             if (!targetId) return;
@@ -835,12 +1202,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!targetRow) return;
 
             var isOpen = targetRow.classList.toggle('is-open');
-            button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-            button.textContent = isOpen ? 'Hide Details' : 'View Details';
-
             if (isOpen) {
                 targetRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             }
+            closeAllActionDropdowns();
         });
     });
 });
