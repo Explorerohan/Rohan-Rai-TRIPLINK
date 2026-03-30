@@ -767,3 +767,46 @@ export const registerExpoPushToken = async (expoPushToken, accessToken) => {
     accessToken
   );
 };
+
+/**
+ * Request a password-reset verification code (email sent by server via SMTP).
+ * @param {string} email
+ */
+export const requestTravelerPasswordReset = async (email) => {
+  const url = `${API_BASE}/api/auth/password-reset/request/`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (_) {}
+  if (!response.ok) {
+    throw new Error(data.detail || `Request failed (${response.status})`);
+  }
+  return data;
+};
+
+/**
+ * Verify password-reset code issued by requestTravelerPasswordReset.
+ * @param {string} email
+ * @param {string} otp
+ */
+export const verifyTravelerPasswordReset = async (email, otp) => {
+  const url = `${API_BASE}/api/auth/password-reset/verify/`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+  let data = {};
+  try {
+    data = await response.json();
+  } catch (_) {}
+  if (!response.ok) {
+    throw new Error(data.detail || `Verification failed (${response.status})`);
+  }
+  return data;
+};

@@ -20,7 +20,7 @@ from .models import (
     ExpoPushToken,
     Roles,
 )
-from .emailjs_utils import send_agent_credentials_email
+from .mail_utils import send_agent_credentials_email
 
 
 @admin.register(User)

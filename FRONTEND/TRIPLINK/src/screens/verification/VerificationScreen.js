@@ -25,7 +25,6 @@ const colors = {
 
 const VerificationScreen = ({
   email = "",
-  expectedCode,
   expiresAt,
   resendsUsed = 0,
   maxResends = 3,
@@ -62,21 +61,20 @@ const VerificationScreen = ({
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!isComplete) return;
     if (isExpired) {
       setError(t("otpExpired"));
       return;
     }
-    if (expectedCode && codeValue !== expectedCode) {
-      setError(t("invalidCode"));
-      return;
-    }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await Promise.resolve(onVerify(codeValue));
+    } catch (e) {
+      setError(e?.message || t("invalidCode"));
+    } finally {
       setLoading(false);
-      onVerify(codeValue);
-    }, 500);
+    }
   };
 
   const handleResend = () => {
@@ -111,7 +109,7 @@ const VerificationScreen = ({
     setDigits(Array(CODE_LENGTH).fill(""));
     setError("");
     setInfo("");
-  }, [expectedCode, expiresAt]);
+  }, [expiresAt]);
 
   return (
     <SafeAreaView style={styles.safe}>

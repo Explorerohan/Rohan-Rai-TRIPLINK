@@ -39,12 +39,14 @@ DEBUG = config('DEBUG', default=config('DJANGO_DEBUG', default='False'), cast=bo
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1',
+    default='localhost,127.0.0.1,192.168.18.6',
     cast=Csv(),
 )
+# Note: use hostname/IP only (no :port). The Host header is e.g. 10.219.151.183:8000 but ALLOWED_HOSTS matches the host part.
 
 # Required for CSRF when accessing the site by IP or non-localhost (Django 4.0+)
 CSRF_TRUSTED_ORIGINS = [
+    'http://10.219.151.183:8000',
     'http://192.168.42.4:8000',
     'http://10.214.6.183:8000',
     'http://192.168.18.6:8000',
@@ -228,27 +230,41 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
-# EmailJS Configuration
-EMAILJS_SERVICE_ID = os.environ.get('EMAILJS_SERVICE_ID')
-EMAILJS_TEMPLATE_ID = os.environ.get('EMAILJS_TEMPLATE_ID')
-EMAILJS_AGENT_CREDENTIALS_TEMPLATE_ID = os.environ.get('EMAILJS_AGENT_CREDENTIALS_TEMPLATE_ID')
-EMAILJS_PUBLIC_KEY = os.environ.get('EMAILJS_PUBLIC_KEY')
-EMAILJS_PRIVATE_KEY = os.environ.get('EMAILJS_PRIVATE_KEY')
-EMAILJS_API_URL = os.environ.get('EMAILJS_API_URL')
+# Email: if EMAIL_HOST is set, Django sends real mail via SMTP (travelers get OTP in their inbox).
+# If EMAIL_HOST is empty, mail is only printed to the console (dev).
+EMAIL_HOST = config('EMAIL_HOST', default='').strip()
+if EMAIL_HOST:
+    EMAIL_BACKEND = config(
+        'EMAIL_BACKEND',
+        default='django.core.mail.backends.smtp.EmailBackend',
+    )
+else:
+    EMAIL_BACKEND = config(
+        'EMAIL_BACKEND',
+        default='django.core.mail.backends.console.EmailBackend',
+    )
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+# Shown as "From:" — use your real address (e.g. TRIPLINK <you@gmail.com>)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='webmaster@localhost')
 
-# Optional dedicated EmailJS configuration for agent credentials emails
-# Falls back to the main EmailJS values above when not provided.
-EMAILJS_AGENT_CREDENTIALS_SERVICE_ID = os.environ.get('EMAILJS_AGENT_CREDENTIALS_SERVICE_ID')
-EMAILJS_AGENT_CREDENTIALS_PUBLIC_KEY = os.environ.get('EMAILJS_AGENT_CREDENTIALS_PUBLIC_KEY')
-EMAILJS_AGENT_CREDENTIALS_PRIVATE_KEY = os.environ.get('EMAILJS_AGENT_CREDENTIALS_PRIVATE_KEY')
-EMAILJS_AGENT_CREDENTIALS_API_URL = os.environ.get('EMAILJS_AGENT_CREDENTIALS_API_URL')
-
-# Optional values for account-creation email content
+# Optional branding / copy for transactional email bodies
 EMAIL_APP_NAME = os.environ.get('EMAIL_APP_NAME', 'TRIPLINK')
 EMAIL_COMPANY_NAME = os.environ.get('EMAIL_COMPANY_NAME', 'TRIPLINK')
 EMAIL_SUPPORT_ADDRESS = os.environ.get('EMAIL_SUPPORT_ADDRESS', '')
 EMAIL_SYSTEM_NAME = os.environ.get('EMAIL_SYSTEM_NAME', 'TRIPLINK')
 EMAIL_CONTACT_INFORMATION = os.environ.get('EMAIL_CONTACT_INFORMATION', '')
+
+# OTP for traveler app password reset (API); use Redis cache in multi-instance production.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'triplink-default-cache',
+    }
+}
 
 # eSewa (UAT defaults; override in .env for production/live credentials)
 ESEWA_PRODUCT_CODE = os.environ.get('ESEWA_PRODUCT_CODE', 'EPAYTEST')

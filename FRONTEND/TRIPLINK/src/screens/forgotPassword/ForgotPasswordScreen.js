@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { generateOtp, sendOtpEmail } from "../../utils/otp";
+import { requestTravelerPasswordReset } from "../../utils/api";
 
 const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} }) => {
   const { t } = useLanguage();
@@ -37,10 +37,9 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
       return;
     }
     const targetEmail = email.trim();
-    const otp = generateOtp();
     const expiresAt = Date.now() + 5 * 60 * 1000;
     setLoading(true);
-    sendOtpEmail(targetEmail, otp)
+    requestTravelerPasswordReset(targetEmail)
       .then(() => {
         setInfo(t("checkInboxReset"));
         setShowOverlay(true);
@@ -48,7 +47,6 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
           setShowOverlay(false);
           onResetComplete({
             email: targetEmail,
-            otp,
             expiresAt,
             resendsUsed: 0,
             maxResends: 3,
@@ -58,9 +56,9 @@ const ForgotPasswordScreen = ({ onBack = () => {}, onResetComplete = () => {} })
       .catch((err) => {
         const msg =
           err?.message ||
-          "Failed to send OTP email. Please check EmailJS service/template/public key or network and try again.";
+          "Failed to send verification email. Check your network and try again.";
         setError(msg);
-        console.warn("OTP send failed:", err);
+        console.warn("Password reset request failed:", err);
       })
       .finally(() => {
         setLoading(false);

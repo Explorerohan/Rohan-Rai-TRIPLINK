@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.core.cache import cache
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg, Max
@@ -28,7 +29,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .emailjs_utils import generate_otp, send_otp_email, send_agent_credentials_email
+from .mail_utils import generate_otp, send_otp_email, send_agent_credentials_email
 from .models import (
     Roles,
     UserProfile,
@@ -4171,3 +4172,66 @@ class ExpoPushTokenRegisterView(generics.GenericAPIView):
             defaults={"user": request.user},
         )
         return response.Response({"status": "ok"}, status=status.HTTP_200_OK)
+
+
+TRAVELER_PWRESET_CACHE_KEY = "traveler_pwreset_otp:{}"
+
+
+class TravelerPasswordResetRequestView(generics.GenericAPIView):
+    """POST: send OTP email for traveler mobile forgot-password flow."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip().lower()
+        if not email or "@" not in email:
+            return response.Response(
+                {"detail": "A valid email address is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        User = get_user_model()
+        if not User.objects.filter(email__iexact=email, role=Roles.TRAVELER).exists():
+            return response.Response(
+                {
+                    "detail": "If an account exists for this email, a verification code was sent.",
+                }
+            )
+        otp = generate_otp()
+        cache.set(TRAVELER_PWRESET_CACHE_KEY.format(email), otp, timeout=300)
+        try:
+            send_otp_email(email, otp)
+        except Exception:
+            logger.exception("Traveler password reset email failed")
+            return response.Response(
+                {"detail": "Unable to send email. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return response.Response(
+            {
+                "detail": "If an account exists for this email, a verification code was sent.",
+            }
+        )
+
+
+class TravelerPasswordResetVerifyView(generics.GenericAPIView):
+    """POST: verify OTP for traveler mobile forgot-password flow."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip().lower()
+        otp = (request.data.get("otp") or "").strip()
+        if not email or not otp:
+            return response.Response(
+                {"detail": "Email and verification code are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        key = TRAVELER_PWRESET_CACHE_KEY.format(email)
+        stored = cache.get(key)
+        if not stored or stored != otp:
+            return response.Response(
+                {"detail": "Invalid or expired verification code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        cache.delete(key)
+        return response.Response({"valid": True})

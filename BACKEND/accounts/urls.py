@@ -40,9 +40,21 @@ from .views import (
     NotificationUnreadCountView,
     NotificationMarkReadView,
     ExpoPushTokenRegisterView,
+    TravelerPasswordResetRequestView,
+    TravelerPasswordResetVerifyView,
 )
 
 urlpatterns = [
+    path(
+        "password-reset/request/",
+        TravelerPasswordResetRequestView.as_view(),
+        name="traveler_password_reset_request",
+    ),
+    path(
+        "password-reset/verify/",
+        TravelerPasswordResetVerifyView.as_view(),
+        name="traveler_password_reset_verify",
+    ),
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="token_obtain_pair"),
     path("logout/", LogoutView.as_view(), name="logout"),

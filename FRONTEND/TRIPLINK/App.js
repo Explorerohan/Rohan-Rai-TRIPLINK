@@ -16,8 +16,7 @@ import { ScheduleScreen } from "./src/screens/schedule";
 import SearchScreen from "./src/screens/search/SearchScreen";
 import { CreateCustomPackageScreen, CustomPackagesListScreen, CustomPackageDetailScreen } from "./src/screens/createCustomPackage";
 import { MapScreen } from "./src/screens/map";
-import { generateOtp, sendOtpEmail } from "./src/utils/otp";
-import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, getNotificationUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken } from "./src/utils/api";
+import { getProfile, getPackages, getMyBookings, getCustomPackages, createChatRoom, getUnreadCount, getNotificationUnreadCount, markRoomRead, setTokenRefreshHandler, refreshAccessToken, registerExpoPushToken, requestTravelerPasswordReset, verifyTravelerPasswordReset } from "./src/utils/api";
 import { registerForExpoPushTokenAsync, subscribeToNotificationResponse, consumeInitialNotificationResponse } from "./src/utils/pushNotifications";
 import { LanguageProvider } from "./src/context/LanguageContext";
 import { API_BASE } from "./src/config";
@@ -355,13 +354,11 @@ export default function App() {
   const handleResendOtp = async () => {
     if (!otpSession) return;
     if (otpSession.resendsUsed >= otpSession.maxResends) return;
-    const nextOtp = generateOtp();
     const expiresAt = Date.now() + 5 * 60 * 1000;
     try {
-      await sendOtpEmail(otpSession.email, nextOtp);
+      await requestTravelerPasswordReset(otpSession.email);
       setOtpSession((prev) => ({
         ...prev,
-        otp: nextOtp,
         expiresAt,
         resendsUsed: (prev?.resendsUsed || 0) + 1,
       }));
@@ -400,12 +397,15 @@ export default function App() {
       {screen === "verification" && (
         <VerificationScreen
           email={otpSession?.email || lastEmail}
-          expectedCode={otpSession?.otp}
           expiresAt={otpSession?.expiresAt}
           resendsUsed={otpSession?.resendsUsed ?? 0}
           maxResends={otpSession?.maxResends ?? 3}
           onBack={goToForgot}
-          onVerify={handleVerifyComplete}
+          onVerify={async (code) => {
+            const em = otpSession?.email || lastEmail;
+            await verifyTravelerPasswordReset(em, code);
+            handleVerifyComplete();
+          }}
           onResend={handleResendOtp}
         />
       )}
