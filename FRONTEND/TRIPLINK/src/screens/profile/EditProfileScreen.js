@@ -21,17 +21,96 @@ import { getProfile, updateProfile, updateProfileWithImage } from "../../utils/a
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
 
+/** Nepal mobile: fixed +977 prefix; user enters exactly 10 local digits. */
+const NEPAL_PHONE_PREFIX = "+977";
+
+const extractNepalLocalDigits = (phone) => {
+  if (phone == null || typeof phone !== "string") return "";
+  const s = phone.replace(/\s/g, "");
+  if (s.startsWith("+977")) return s.slice(4).replace(/\D/g, "").slice(0, 10);
+  if (s.startsWith("977")) return s.slice(3).replace(/\D/g, "").slice(0, 10);
+  const digits = s.replace(/\D/g, "");
+  if (digits.length >= 10 && digits.startsWith("977")) return digits.slice(3, 13);
+  return digits.slice(0, 10);
+};
+
+const fullNepalPhone = (localDigits) => {
+  const d = String(localDigits || "").replace(/\D/g, "");
+  if (d.length !== 10) return "";
+  return `${NEPAL_PHONE_PREFIX}${d}`;
+};
+
+/** Outlined field: label sits on the top border (Material-style). */
+const OutlinedTextField = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  style,
+  inputStyle,
+  ...inputProps
+}) => (
+  <View style={[outlineStyles.field, style]}>
+    <Text style={outlineStyles.label} numberOfLines={1}>
+      {label}
+    </Text>
+    <TextInput
+      style={[outlineStyles.input, inputStyle]}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor="#9ca3af"
+      {...inputProps}
+    />
+  </View>
+);
+
+const outlineStyles = StyleSheet.create({
+  field: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingTop: 14,
+    paddingBottom: 12,
+    minHeight: 52,
+    justifyContent: "center",
+  },
+  label: {
+    position: "absolute",
+    left: 10,
+    top: -9,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 4,
+    fontSize: 12,
+    color: "#9ca3af",
+    zIndex: 1,
+    maxWidth: "90%",
+  },
+  input: {
+    fontSize: 16,
+    color: "#111827",
+    padding: 0,
+    minHeight: 22,
+  },
+});
+
 const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) => {
   const { t } = useLanguage();
   const hasInitial = initialProfile != null && typeof initialProfile === "object";
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!hasInitial);
+  const [phoneDigits, setPhoneDigits] = useState(() =>
+    hasInitial ? extractNepalLocalDigits(initialProfile.phone_number) : ""
+  );
   const [profileData, setProfileData] = useState(() => {
     if (!hasInitial) return { first_name: "", last_name: "", phone_number: "", location: "" };
+    const local = extractNepalLocalDigits(initialProfile.phone_number);
     return {
       first_name: initialProfile.first_name || "",
       last_name: initialProfile.last_name || "",
-      phone_number: initialProfile.phone_number || "",
+      phone_number: fullNepalPhone(local),
       location: initialProfile.location || "",
     };
   });
@@ -59,10 +138,12 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
 
   useEffect(() => {
     if (initialProfile && typeof initialProfile === "object" && fetching) {
+      const local = extractNepalLocalDigits(initialProfile.phone_number);
+      setPhoneDigits(local);
       setProfileData({
         first_name: initialProfile.first_name || "",
         last_name: initialProfile.last_name || "",
-        phone_number: initialProfile.phone_number || "",
+        phone_number: fullNepalPhone(local),
         location: initialProfile.location || "",
       });
       const url = initialProfile.profile_picture_url && String(initialProfile.profile_picture_url).trim();
@@ -88,10 +169,12 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       const response = await getProfile(session.access);
       const data = response?.data ?? {};
 
+      const local = extractNepalLocalDigits(data.phone_number);
+      setPhoneDigits(local);
       setProfileData({
         first_name: data.first_name || "",
         last_name: data.last_name || "",
-        phone_number: data.phone_number || "",
+        phone_number: fullNepalPhone(local),
         location: data.location || "",
       });
 
@@ -249,6 +332,14 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       return;
     }
 
+    const cleanDigits = phoneDigits.replace(/\D/g, "").slice(0, 10);
+    if (cleanDigits.length !== 10) {
+      Alert.alert(t("error"), t("phoneMustBe10Digits"));
+      return;
+    }
+    const resolvedPhone = fullNepalPhone(cleanDigits);
+    const payloadProfile = { ...profileData, phone_number: resolvedPhone };
+
     // If this is the first time profile is being completed, require all fields
     const requiredBaseFields = [
       "first_name",
@@ -258,9 +349,10 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
     ];
     const requiredFields = requiredBaseFields;
 
-    const missingRequired = requiredFields.filter(
-      (field) => !profileData[field] || String(profileData[field]).trim() === ""
-    );
+    const missingRequired = requiredFields.filter((field) => {
+      if (field === "phone_number") return false;
+      return !payloadProfile[field] || String(payloadProfile[field]).trim() === "";
+    });
 
     if (isFirstTimeProfile && missingRequired.length > 0) {
       Alert.alert(
@@ -277,13 +369,13 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       const needsMultipart = hasNewProfileImage || hasNewRefundQr;
 
       const appendTextFields = (fd) => {
-        Object.keys(profileData).forEach((key) => {
+        Object.keys(payloadProfile).forEach((key) => {
           if (
-            profileData[key] !== null &&
-            profileData[key] !== undefined &&
-            profileData[key] !== ""
+            payloadProfile[key] !== null &&
+            payloadProfile[key] !== undefined &&
+            payloadProfile[key] !== ""
           ) {
-            fd.append(key, String(profileData[key]));
+            fd.append(key, String(payloadProfile[key]));
           }
         });
       };
@@ -292,10 +384,10 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
 
       if (needsMultipart) {
         if (refundQrRemoved && !hasNewRefundQr) {
-          await updateProfile({ ...profileData, refund_qr: null }, session.access);
+          await updateProfile({ ...payloadProfile, refund_qr: null }, session.access);
         }
         if (profilePictureRemoved && !hasNewProfileImage) {
-          await updateProfile({ ...profileData, profile_picture: null }, session.access);
+          await updateProfile({ ...payloadProfile, profile_picture: null }, session.access);
         }
         const formData = new FormData();
         appendTextFields(formData);
@@ -303,7 +395,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
         if (hasNewRefundQr) appendFileToFormData(formData, "refund_qr", refundQrImage);
         response = await updateProfileWithImage(formData, session.access);
       } else {
-        const updateData = { ...profileData };
+        const updateData = { ...payloadProfile };
         if (profilePictureRemoved) updateData.profile_picture = null;
         if (refundQrRemoved) updateData.refund_qr = null;
         response = await updateProfile(updateData, session.access);
@@ -327,6 +419,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       } else if (didClearRefundQr) {
         setRefundQrUri(null);
       }
+      setProfileData((prev) => ({ ...prev, phone_number: resolvedPhone }));
       if (onSave) onSave(response.data);
       else if (onBack) onBack();
     } catch (error) {
@@ -352,6 +445,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
@@ -379,7 +473,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
           </TouchableOpacity>
         </View>
 
-        {/* Profile Image */}
+        {/* Profile image — FAB camera; tap image to change */}
         <View style={styles.imageSection}>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -395,125 +489,95 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
               style={styles.profileImage}
             />
             <View style={styles.imageEditButton}>
-              <Ionicons name="camera" size={20} color="#ffffff" />
+              <Ionicons name="camera" size={22} color="#ffffff" />
             </View>
           </TouchableOpacity>
-          <View style={styles.imageActionButtons}>
+          {profileImageUri ? (
             <TouchableOpacity
-              onPress={pickImage}
-              style={styles.changePhotoButton}
+              onPress={() => {
+                setProfileImage(null);
+                setProfileImageUri(null);
+                setProfilePictureRemoved(true);
+              }}
+              style={styles.removePhotoLink}
+              activeOpacity={0.7}
             >
-              <Ionicons name="image-outline" size={16} color="#1f6b2a" />
-              <Text style={styles.changePhotoText}>Change Photo</Text>
+              <Text style={styles.removePhotoLinkText}>{t("removePhoto")}</Text>
             </TouchableOpacity>
-            {profileImageUri && (
-              <TouchableOpacity
-                onPress={() => {
-                  setProfileImage(null);
-                  setProfileImageUri(null);
-                  setProfilePictureRemoved(true);
-                }}
-                style={styles.removePhotoButton}
-              >
-                <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                <Text style={styles.removePhotoText}>Remove</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          ) : null}
         </View>
 
-        {/* Form Fields */}
-        <View style={styles.formSection}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t("firstName")}</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={profileData.first_name}
-                onChangeText={(text) =>
-                  setProfileData({ ...profileData, first_name: text })
-                }
-                placeholder={t("firstName")}
-                placeholderTextColor="#9aa0a6"
-              />
-              <Ionicons
-                name="checkmark-circle"
-                size={18}
-                color="#1f6b2a"
-                style={styles.inputIcon}
-              />
-            </View>
+        {/* Outlined fields — two-column names, location, split phone */}
+        <View style={styles.profileContentBelowPhoto}>
+          <View style={styles.nameRow}>
+            <OutlinedTextField
+              style={styles.nameField}
+              label={t("firstName")}
+              value={profileData.first_name}
+              onChangeText={(text) =>
+                setProfileData({ ...profileData, first_name: text })
+              }
+              placeholder={t("firstName")}
+            />
+            <OutlinedTextField
+              style={styles.nameField}
+              label={t("lastName")}
+              value={profileData.last_name}
+              onChangeText={(text) =>
+                setProfileData({ ...profileData, last_name: text })
+              }
+              placeholder={t("lastName")}
+            />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t("lastName")}</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={profileData.last_name}
-                onChangeText={(text) =>
-                  setProfileData({ ...profileData, last_name: text })
-                }
-                placeholder={t("lastName")}
-                placeholderTextColor="#9aa0a6"
-              />
-              <Ionicons
-                name="checkmark-circle"
-                size={18}
-                color="#1f6b2a"
-                style={styles.inputIcon}
-              />
-            </View>
-          </View>
+          <OutlinedTextField
+            style={styles.fieldRow}
+            label={t("locationLabel")}
+            value={profileData.location}
+            onChangeText={(text) =>
+              setProfileData({ ...profileData, location: text })
+            }
+            placeholder={t("locationLabel")}
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t("locationLabel")}</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={profileData.location}
-                onChangeText={(text) =>
-                  setProfileData({ ...profileData, location: text })
-                }
-                placeholder={t("locationLabel")}
-                placeholderTextColor="#9aa0a6"
-              />
-              <Ionicons
-                name="checkmark-circle"
-                size={18}
-                color="#1f6b2a"
-                style={styles.inputIcon}
-              />
+          <View style={styles.phoneSplitRow}>
+            <View style={styles.countryOutline}>
+              <Text style={styles.countryFlag}>🇳🇵</Text>
+              <Text style={styles.countryCode}>{NEPAL_PHONE_PREFIX}</Text>
+              <Ionicons name="chevron-down" size={16} color="#6b7280" />
             </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t("phone")}</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={profileData.phone_number}
-                onChangeText={(text) =>
-                  setProfileData({ ...profileData, phone_number: text })
-                }
-                placeholder={t("phone")}
-                placeholderTextColor="#9aa0a6"
-                keyboardType="phone-pad"
-              />
-              <Ionicons
-                name="checkmark-circle"
-                size={18}
-                color="#1f6b2a"
-                style={styles.inputIcon}
-              />
-            </View>
+            <OutlinedTextField
+              style={styles.phoneField}
+              label={t("phone")}
+              value={phoneDigits}
+              onChangeText={(text) => {
+                const only = text.replace(/\D/g, "").slice(0, 10);
+                setPhoneDigits(only);
+                setProfileData((prev) => ({
+                  ...prev,
+                  phone_number: fullNepalPhone(only),
+                }));
+              }}
+              placeholder={t("phoneNumberPlaceholder")}
+              keyboardType="number-pad"
+              maxLength={10}
+              inputStyle={styles.phoneInputDigits}
+            />
           </View>
 
           {!isAgent && (
-            <View style={styles.refundQrSection}>
-              <Text style={styles.label}>{t("refundQrSectionTitle")}</Text>
+            <View style={styles.refundBlock}>
+              <Text style={styles.refundGroupTitle}>{t("refundQrSectionTitle")}</Text>
               <Text style={styles.refundQrHint}>{t("refundQrSectionHint")}</Text>
-              <View style={styles.refundQrPreviewWrap}>
+              <TouchableOpacity
+                style={styles.refundQrPreviewWrap}
+                onPress={pickRefundQr}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  refundQrUri?.trim?.() ? t("refundQrChange") : t("refundQrUpload")
+                }
+              >
                 {refundQrUri?.trim?.() ? (
                   <Image
                     source={{ uri: refundQrUri.trim() }}
@@ -522,16 +586,18 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
                   />
                 ) : (
                   <View style={styles.refundQrPlaceholder}>
-                    <Ionicons name="qr-code-outline" size={40} color="#94a3b8" />
+                    <Ionicons name="qr-code-outline" size={32} color="#d1d5db" />
                     <Text style={styles.refundQrPlaceholderText}>{t("refundQrEmpty")}</Text>
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
               <View style={styles.refundQrActions}>
-                <TouchableOpacity onPress={pickRefundQr} style={styles.refundQrBtn} activeOpacity={0.85}>
-                  <Ionicons name="image-outline" size={18} color="#1f6b2a" />
-                  <Text style={styles.refundQrBtnText}>{t("refundQrChange")}</Text>
+                <TouchableOpacity onPress={pickRefundQr} style={styles.refundLinkBtn} activeOpacity={0.7}>
+                  <Text style={styles.refundLinkBtnText}>
+                    {refundQrUri?.trim?.() ? t("refundQrChange") : t("refundQrUpload")}
+                  </Text>
                 </TouchableOpacity>
+                {refundQrUri ? <Text style={styles.refundActionSep}>·</Text> : null}
                 {refundQrUri ? (
                   <TouchableOpacity
                     onPress={() => {
@@ -539,11 +605,10 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
                       setRefundQrUri(null);
                       setRefundQrRemoved(true);
                     }}
-                    style={styles.refundQrRemoveBtn}
-                    activeOpacity={0.85}
+                    style={styles.refundLinkBtn}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                    <Text style={styles.refundQrRemoveText}>{t("refundQrRemove")}</Text>
+                    <Text style={styles.refundLinkRemoveText}>{t("refundQrRemove")}</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -560,9 +625,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
   scroll: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 36,
+    backgroundColor: "#ffffff",
   },
   loadingContainer: {
     flex: 1,
@@ -581,6 +651,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 20,
+    backgroundColor: "#ffffff",
   },
   backButton: {
     width: 40,
@@ -611,7 +682,9 @@ const styles = StyleSheet.create({
   },
   imageSection: {
     alignItems: "center",
-    paddingVertical: 24,
+    paddingTop: 8,
+    paddingBottom: 20,
+    backgroundColor: "#ffffff",
   },
   imageContainer: {
     position: "relative",
@@ -619,9 +692,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     borderWidth: 3,
     borderColor: "#f3f5f7",
   },
@@ -629,198 +702,143 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#1f6b2a",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
     borderColor: "#ffffff",
   },
-  imageActionButtons: {
-    flexDirection: "row",
-    gap: 16,
+  removePhotoLink: {
     marginTop: 12,
-    alignItems: "center",
+    paddingVertical: 4,
   },
-  changePhotoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f0f9f4",
-    borderWidth: 1,
-    borderColor: "#1f6b2a",
-  },
-  changePhotoText: {
-    fontSize: 13,
-    color: "#1f6b2a",
-    fontWeight: "600",
-  },
-  removePhotoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#fef2f2",
-    borderWidth: 1,
-    borderColor: "#fee2e2",
-  },
-  removePhotoText: {
-    fontSize: 13,
-    color: "#ef4444",
-    fontWeight: "600",
-  },
-  imageActionButtons: {
-    flexDirection: "row",
-    gap: 16,
-    marginTop: 12,
-    alignItems: "center",
-  },
-  changePhotoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#f0f9f4",
-    borderWidth: 1,
-    borderColor: "#1f6b2a",
-  },
-  changePhotoText: {
-    fontSize: 13,
-    color: "#1f6b2a",
-    fontWeight: "600",
-  },
-  removePhotoButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#fef2f2",
-    borderWidth: 1,
-    borderColor: "#fee2e2",
-  },
-  removePhotoText: {
-    fontSize: 13,
-    color: "#ef4444",
-    fontWeight: "600",
-  },
-  formSection: {
-    paddingHorizontal: 18,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputWrapper: {
-    position: "relative",
-    borderRadius: 14,
-    overflow: "hidden",
-  },
-  label: {
+  removePhotoLinkText: {
     fontSize: 14,
+    color: "#9ca3af",
+    fontWeight: "500",
+  },
+  profileContentBelowPhoto: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  nameRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 18,
+  },
+  nameField: {
+    flex: 1,
+    minWidth: 0,
+  },
+  fieldRow: {
+    marginBottom: 18,
+  },
+  phoneSplitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 18,
+  },
+  countryOutline: {
+    width: 118,
+    flexShrink: 0,
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 10,
+  },
+  countryFlag: {
+    fontSize: 20,
+  },
+  countryCode: {
+    fontSize: 16,
+    color: "#374151",
     fontWeight: "600",
-    color: "#1f1f1f",
-    marginBottom: 8,
   },
-  input: {
-    backgroundColor: "#f5f6fa",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: "#1f1f1f",
-    borderWidth: 0,
+  phoneField: {
+    flex: 1,
+    minWidth: 0,
   },
-  inputIcon: {
-    position: "absolute",
-    right: 16,
-    top: "50%",
-    marginTop: -9,
+  phoneInputDigits: {
+    letterSpacing: 0.5,
   },
-  refundQrSection: {
+  refundBlock: {
     marginTop: 8,
-    marginBottom: 24,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#eef2f7",
+    paddingTop: 20,
+    paddingBottom: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#e5e7eb",
+  },
+  refundGroupTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 6,
   },
   refundQrHint: {
     fontSize: 13,
-    color: "#64748b",
-    lineHeight: 19,
-    marginBottom: 12,
+    color: "#6b7280",
+    lineHeight: 18,
+    marginBottom: 14,
   },
   refundQrPreviewWrap: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8fafc",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    minHeight: 160,
-    padding: 12,
+    backgroundColor: "#fafafa",
+    borderRadius: 8,
+    minHeight: 112,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   refundQrPreview: {
-    width: 200,
-    height: 200,
+    width: 140,
+    height: 140,
   },
   refundQrPlaceholder: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 24,
+    paddingVertical: 8,
   },
   refundQrPlaceholderText: {
-    marginTop: 8,
+    marginTop: 6,
     fontSize: 13,
-    color: "#94a3b8",
+    color: "#9ca3af",
   },
   refundQrActions: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginTop: 12,
+    marginTop: 14,
     alignItems: "center",
+    justifyContent: "center",
   },
-  refundQrBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#f0f9f4",
-    borderWidth: 1,
-    borderColor: "#1f6b2a",
+  refundLinkBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
   },
-  refundQrBtnText: {
-    fontSize: 14,
+  refundLinkBtnText: {
+    fontSize: 16,
     color: "#1f6b2a",
     fontWeight: "600",
   },
-  refundQrRemoveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#fef2f2",
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  refundQrRemoveText: {
-    fontSize: 14,
-    color: "#ef4444",
+  refundLinkRemoveText: {
+    fontSize: 16,
+    color: "#dc2626",
     fontWeight: "600",
+  },
+  refundActionSep: {
+    fontSize: 16,
+    color: "#d1d5db",
+    marginHorizontal: 6,
   },
 });
 
