@@ -940,7 +940,7 @@ const ChatDetailScreen = ({
                     const { messages, outgoing } = cluster;
                     const first = messages[0];
                     const last = messages[messages.length - 1];
-                    const { text: bodyText } = getMessageBody(first);
+                    const { text: bodyText, pkg } = getMessageBody(first);
                     const showText = !!(bodyText && String(bodyText).trim());
                     const urls = messages
                       .map((m) => getMessageBody(m).attachmentUrl)
@@ -973,9 +973,6 @@ const ChatDetailScreen = ({
                         </View>
                       );
                     }
-                    const msg = first;
-                    const { pkg, text } = getMessageBody(msg);
-                    const showText = !!(text && String(text).trim());
                     const hasPkg = !!(pkg && (pkg.image_url || pkg.title));
                     const BubbleWrapper = hasPkg && pkg?.id && onPackagePress ? TouchableOpacity : View;
                     const bubbleProps = hasPkg && pkg?.id && onPackagePress
@@ -1007,7 +1004,7 @@ const ChatDetailScreen = ({
                             </View>
                           )}
                           {showText ? (
-                            <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{text}</Text>
+                            <Text style={[styles.msgText, hasPkg && styles.msgTextAfterPkg]}>{bodyText}</Text>
                           ) : null}
                           <View style={styles.msgImageWithMetaColIncoming}>
                             <View

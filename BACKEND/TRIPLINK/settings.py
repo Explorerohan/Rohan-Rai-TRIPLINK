@@ -13,30 +13,40 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 import os
+
+import dj_database_url
+from decouple import Csv, config
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env file
+# Load environment variables from .env file (optional; decouple also reads .env)
 load_dotenv(BASE_DIR / '.env')
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-@je^iql=!%9rtv2e_vj4yt%5(vl!(vde7f*)tp9^(^$(=5nn#k',
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default=config(
+        'DJANGO_SECRET_KEY',
+        default='django-insecure-@je^iql=!%9rtv2e_vj4yt%5(vl!(vde7f*)tp9^(^$(=5nn#k',
+    ),
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = config('DEBUG', default=config('DJANGO_DEBUG', default='False'), cast=bool)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1',
+    cast=Csv(),
+)
 
 # Required for CSRF when accessing the site by IP or non-localhost (Django 4.0+)
 CSRF_TRUSTED_ORIGINS = [
-    "http://192.168.42.4:8000",
-    "http://10.214.6.183:8000",
+    'http://192.168.42.4:8000',
+    'http://10.214.6.183:8000',
     'http://192.168.18.6:8000',
     'http://192.168.1.102:8000',
     'http://192.168.1.112:8000',
@@ -46,16 +56,25 @@ CSRF_TRUSTED_ORIGINS = [
     'http://10.52.7.183:8000',
     'http://192.168.40.62:8000',
     'http://192.168.47.30:8000',
-]
+] + config('CSRF_TRUSTED_ORIGINS_EXTRA', default='', cast=Csv())
 
 # Ensure CSRF cookie is sent on same-origin requests (default; explicit for clarity)
 CSRF_COOKIE_SAMESITE = 'Lax'
 
+CORS_ALLOW_ALL_ORIGINS = True
+
+# Security (HTTPS termination on Render uses X-Forwarded-Proto)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Application definition
 
 INSTALLED_APPS = [
     'daphne',  # Must be first for ASGI/WebSocket support
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -70,6 +89,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -110,16 +131,25 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'triplink_db'),
-        'USER': os.environ.get('DB_USER', 'Rohan'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+if config('DATABASE_URL', default=''):
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=config('DATABASE_SSL_REQUIRE', default=True, cast=bool),
+        ),
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'triplink_db'),
+            'USER': os.environ.get('DB_USER', 'Rohan'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+    }
 
 
 
@@ -157,9 +187,18 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 # Media files (user uploads)
 MEDIA_URL = '/media/'

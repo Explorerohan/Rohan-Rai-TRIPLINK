@@ -4,7 +4,14 @@ Django>=5.0
 djangorestframework
 djangorestframework-simplejwt
 python-dotenv
+python-decouple
+dj-database-url
 psycopg2-binary
+
+# Deployment
+gunicorn
+whitenoise
+django-cors-headers
 
 # Chat (WebSocket)
 channels>=4.0
