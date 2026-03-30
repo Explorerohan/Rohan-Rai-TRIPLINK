@@ -28,7 +28,7 @@ from accounts.views import (
     agent_edit_package_view, agent_delete_package_view,
     agent_package_detail_view, agent_travelers_view, agent_bookings_view, agent_calendar_view,
     agent_custom_packages_view, agent_custom_package_detail_view,
-    agent_chat_view, agent_reviews_view, agent_deals_view,
+    agent_chat_view, agent_reviews_view, agent_deals_view, agent_settings_view,
 )
 
 urlpatterns = [
@@ -47,6 +47,7 @@ urlpatterns = [
     path('refunds/agent/', agent_refunds_view, name='agent_refunds'),
     path('notifications/agent/', agent_notifications_view, name='agent_notifications'),
     path('profile/agent/', agent_profile_view, name='agent_profile'),
+    path('settings/agent/', agent_settings_view, name='agent_settings'),
     # Package management URLs
     path('packages/agent/', agent_packages_view, name='agent_packages'),
     path('packages/agent/add/', agent_add_package_view, name='agent_add_package'),

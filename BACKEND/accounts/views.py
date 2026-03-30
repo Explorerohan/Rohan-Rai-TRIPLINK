@@ -12,7 +12,7 @@ from urllib.error import URLError, HTTPError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
 from django.core.cache import cache
 from django.contrib import messages
 from django.db import transaction
@@ -1917,6 +1917,53 @@ def agent_profile_view(request):
         'active_nav': 'profile',
     }
     return render(request, 'agent_profile.html', context)
+
+
+def agent_settings_view(request):
+    """Agent settings page (currently password change)."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    if request.method == "POST":
+        current_password = (request.POST.get("current_password") or "").strip()
+        new_password = request.POST.get("new_password") or ""
+        confirm_password = request.POST.get("confirm_password") or ""
+
+        if not current_password or not new_password or not confirm_password:
+            messages.error(request, "All password fields are required.")
+            return redirect("agent_settings")
+
+        if not request.user.check_password(current_password):
+            messages.error(request, "Current password is incorrect.")
+            return redirect("agent_settings")
+
+        if len(new_password) < 8:
+            messages.error(request, "New password must be at least 8 characters.")
+            return redirect("agent_settings")
+
+        if new_password != confirm_password:
+            messages.error(request, "New password and confirm password do not match.")
+            return redirect("agent_settings")
+
+        request.user.set_password(new_password)
+        request.user.save(update_fields=["password"])
+        update_session_auth_hash(request, request.user)
+        messages.success(request, "Password updated successfully.")
+        return redirect("agent_settings")
+
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'active_nav': 'settings',
+    }
+    return render(request, 'agent_settings.html', context)
 
 
 def agent_travelers_view(request):

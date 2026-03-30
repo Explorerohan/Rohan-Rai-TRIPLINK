@@ -383,10 +383,6 @@
                 <i>&#128101;</i>
                 <span>Travelers</span>
             </a>
-            <a href="#" class="nav-item">
-                <i>&#128200;</i>
-                <span>Analytics</span>
-            </a>
             <a href="{% url 'agent_reviews' %}" class="nav-item{% if active_nav == 'reviews' %} active{% endif %}">
                 <i>&#11088;</i>
                 <span>Reviews</span>
@@ -412,6 +408,10 @@
             <a href="{% url 'agent_profile' %}" class="nav-item{% if active_nav == 'profile' %} active{% endif %}">
                 <i>&#128100;</i>
                 <span>Profile</span>
+            </a>
+            <a href="{% url 'agent_settings' %}" class="nav-item{% if active_nav == 'settings' %} active{% endif %}">
+                <i>&#9881;</i>
+                <span>Settings</span>
             </a>
             <form method="post" action="{% url 'logout' %}" style="display: contents;">
                 {% csrf_token %}
