@@ -436,18 +436,15 @@ const HomeScreen = ({
           }
         >
         <View style={styles.headerRow}>
-          {profile === null ? (
-            <View style={[styles.avatar, styles.avatarPlaceholder]} />
-          ) : (
-            <Image
-              source={
-                profile?.profile_picture_url?.trim?.()
-                  ? { uri: profile.profile_picture_url.trim() }
-                  : AVATAR
-              }
-              style={styles.avatar}
-            />
-          )}
+          <Image
+            source={
+              profile?.profile_picture_url &&
+              String(profile.profile_picture_url).trim()
+                ? { uri: String(profile.profile_picture_url).trim() }
+                : AVATAR
+            }
+            style={styles.avatar}
+          />
           <View style={styles.headerText}>
             <Text style={styles.hello}>{t("hello")} {displayName}</Text>
             <Text style={styles.prompt}>{t("whereToGo")}</Text>
