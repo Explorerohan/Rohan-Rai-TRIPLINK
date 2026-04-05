@@ -410,8 +410,8 @@
                 <span>Profile</span>
             </a>
             <a href="{% url 'agent_settings' %}" class="nav-item{% if active_nav == 'settings' %} active{% endif %}">
-                <i>&#9881;</i>
-                <span>Settings</span>
+                <i>&#128274;</i>
+                <span>Security</span>
             </a>
             <form method="post" action="{% url 'logout' %}" style="display: contents;">
                 {% csrf_token %}
