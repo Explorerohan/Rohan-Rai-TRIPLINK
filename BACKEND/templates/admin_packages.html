@@ -578,11 +578,6 @@
         margin-top: 2px;
     }
 
-    .package-list-arrow {
-        color: #94a3b8;
-        font-size: 18px;
-    }
-
     .completed-package-item {
         display: flex;
         gap: 12px;
@@ -1194,17 +1189,28 @@
         transform: translateY(-1px);
     }
 
+    /* Centered chevron (SVG) — avoids misaligned text glyphs in the circle */
     .btn-open-page::after {
-        content: "›";
-        width: 20px;
-        height: 20px;
+        content: "";
+        width: 22px;
+        height: 22px;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
         border: 1px solid #d6ead9;
-        background: #fff;
-        line-height: 1;
+        background-color: #fff;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f6b2a' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18l6-6-6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 12px 12px;
+        line-height: 0;
+    }
+
+    .btn-open-page:hover::after {
+        border-color: #b7dbbf;
+        background-color: #f7fdf9;
     }
 
     .package-features {
@@ -1348,10 +1354,20 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        background: #f8fafc;
+        background-color: #f8fafc;
         border: 1px solid #e2e8f0;
-        font-size: 15px;
-        line-height: 1;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18l6-6-6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 11px 11px;
+        line-height: 0;
+        font-size: 0;
+    }
+
+    .package-list-item:hover .package-list-arrow,
+    .completed-package-item:hover .package-list-arrow {
+        border-color: #cbd5e1;
+        background-color: #f1f5f9;
     }
 
     .empty-state {
@@ -1694,7 +1710,7 @@
                                 <div class="package-list-subtitle">{{ package.location }}, {{ package.country }}</div>
                                 <div class="package-list-date">{{ package.created_at|date:"d F Y" }}</div>
                             </div>
-                            <span class="package-list-arrow" aria-hidden="true">&#8250;</span>
+                            <span class="package-list-arrow" aria-hidden="true"></span>
                         </a>
                     {% endfor %}
                 {% else %}
@@ -1737,7 +1753,7 @@
                                 </div>
                                 <div class="completed-package-participants">{{ package.joined_travelers_count }} Person{{ package.joined_travelers_count|pluralize }} Joined</div>
                             </div>
-                            <span class="package-list-arrow" aria-hidden="true">&#8250;</span>
+                            <span class="package-list-arrow" aria-hidden="true"></span>
                         </a>
                     {% endfor %}
                 {% else %}

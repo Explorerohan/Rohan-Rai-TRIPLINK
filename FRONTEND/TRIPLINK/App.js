@@ -637,7 +637,7 @@ export default function App() {
           onEdit={() => navigate("editProfile")}
           onProfileDetailsPress={() => navigate("profileDetails")}
           onBookmarkedPress={() => navigate("bookmarked")}
-          onSettingsPress={() => navigate("changePassword")}
+          onSecurityPress={() => navigate("changePassword")}
           onPastTripsPress={() => navigate("pastTrips")}
           onUpcomingTripsPress={() => navigate("upcomingTrips")}
           onLeaderboardPress={() => navigate("leaderboard")}

@@ -30,7 +30,7 @@ const navItems = [
 const menuItems = [
   { id: "profile", label: "Profile", icon: "person-outline" },
   { id: "bookmarked", label: "Bookmarked", icon: "bookmark-outline" },
-  { id: "settings", label: "Settings", icon: "settings-outline" },
+  { id: "security", label: "Security", icon: "shield-checkmark-outline" },
   { id: "leaderboard", label: "LeaderBoard", icon: "trophy-outline" },
   { id: "notifications", label: "Notifications", icon: "notifications-outline" },
   { id: "logout", label: "Logout", icon: "log-out-outline" },
@@ -46,7 +46,7 @@ const ProfileScreen = ({
   onEdit = () => {},
   onProfileDetailsPress = () => {},
   onBookmarkedPress = () => {},
-  onSettingsPress = () => {},
+  onSecurityPress = () => {},
   onPastTripsPress = () => {},
   onUpcomingTripsPress = () => {},
   onLeaderboardPress = () => {},
@@ -243,8 +243,8 @@ const ProfileScreen = ({
                       ? onProfileDetailsPress
                       : item.id === "bookmarked"
                         ? onBookmarkedPress
-                        : item.id === "settings"
-                          ? onSettingsPress
+                        : item.id === "security"
+                          ? onSecurityPress
                         : item.id === "leaderboard"
                           ? onLeaderboardPress
                           : item.id === "notifications"
