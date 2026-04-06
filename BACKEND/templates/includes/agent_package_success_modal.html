@@ -1,0 +1,14 @@
+{# Shared success dialog for agent add/edit package — same UI for both flows. #}
+<div class="pkg-success-overlay" role="dialog" aria-modal="true" aria-labelledby="pkg-success-title">
+    <div class="pkg-success-card">
+        <div class="pkg-success-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <h2 id="pkg-success-title" class="pkg-success-heading">{{ success_heading }}</h2>
+        <p class="pkg-success-text"><strong>{{ success_package.title }}</strong> {{ success_detail }}</p>
+        <a href="{% url 'agent_packages' %}" class="pkg-success-ok">OK</a>
+    </div>
+</div>
+<script>document.body.classList.add('pkg-success-modal-open');</script>

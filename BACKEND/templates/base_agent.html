@@ -347,6 +347,88 @@
             padding: 0 16px;
         }
     }
+
+    /* Package add/update success dialog — shared (light veil, readable background) */
+    body.pkg-success-modal-open {
+        overflow: hidden;
+    }
+
+    .pkg-success-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(241, 245, 249, 0.65);
+        pointer-events: auto;
+    }
+
+    .pkg-success-card {
+        width: 100%;
+        max-width: 380px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.18);
+        padding: 28px 26px 24px;
+        text-align: center;
+    }
+
+    .pkg-success-icon {
+        width: 44px;
+        height: 44px;
+        margin: 0 auto 18px;
+        border-radius: 50%;
+        background: #ecfdf5;
+        color: #1f6b2a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pkg-success-heading {
+        font-size: 17px;
+        font-weight: 600;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+        margin: 0 0 10px 0;
+        line-height: 1.3;
+    }
+
+    .pkg-success-text {
+        font-size: 14px;
+        color: #64748b;
+        line-height: 1.5;
+        margin: 0 0 22px 0;
+    }
+
+    .pkg-success-text strong {
+        color: #334155;
+        font-weight: 600;
+    }
+
+    a.pkg-success-ok {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 20px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff !important;
+        background: linear-gradient(135deg, #1f6b2a 0%, #15803d 100%);
+        border-radius: 10px;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(31, 107, 42, 0.25);
+        border: none;
+    }
+
+    a.pkg-success-ok:hover {
+        opacity: 0.96;
+    }
 </style>
 {% block agent_extra_css %}{% endblock agent_extra_css %}
 {% endblock extra_css %}

@@ -3014,9 +3014,15 @@ def agent_add_package_view(request):
             
             if feature_objects:
                 package.features.set(feature_objects)
-            
-            messages.success(request, 'Package created successfully!')
-            return redirect('agent_packages')
+
+            context = {
+                'user': request.user,
+                'status_choices': PackageStatus.choices,
+                'active_nav': 'packages',
+                'feature_options': get_all_feature_options(),
+                'created_package': package,
+            }
+            return render(request, 'agent_add_package.html', context)
         except Exception as e:
             messages.error(request, f'Error creating package: {str(e)}')
     
@@ -3093,9 +3099,17 @@ def agent_edit_package_view(request, package_id):
                     feature_objects.append(feature)
             
             package.features.set(feature_objects)
-            
-            messages.success(request, 'Package updated successfully!')
-            return redirect('agent_packages')
+
+            context = {
+                'user': request.user,
+                'package': package,
+                'status_choices': PackageStatus.choices,
+                'existing_features': package.features.all(),
+                'feature_options': get_all_feature_options(),
+                'active_nav': 'packages',
+                'package_updated': True,
+            }
+            return render(request, 'agent_edit_package.html', context)
         except Exception as e:
             messages.error(request, f'Error updating package: {str(e)}')
     

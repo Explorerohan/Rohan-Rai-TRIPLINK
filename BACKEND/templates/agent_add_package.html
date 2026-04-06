@@ -670,6 +670,9 @@
         </div>
     </form>
 </div>
+{% if created_package %}
+{% include 'includes/agent_package_success_modal.html' with success_package=created_package success_heading="Package created" success_detail="has been added to your packages." %}
+{% endif %}
 
 <script>
 (function() {
