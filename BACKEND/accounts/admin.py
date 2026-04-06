@@ -13,6 +13,7 @@ from .models import (
     Deal,
     CustomPackage,
     Booking,
+    BookingTripReminder,
     RefundRequest,
     AgentReview,
     Notification,
@@ -137,6 +138,14 @@ class BookingAdmin(admin.ModelAdmin):
     list_display = ['user', 'package', 'status', 'created_at']
     list_filter = ['status', 'created_at']
     search_fields = ['user__email', 'package__title']
+    readonly_fields = ['created_at']
+
+
+@admin.register(BookingTripReminder)
+class BookingTripReminderAdmin(admin.ModelAdmin):
+    list_display = ['booking', 'kind', 'created_at']
+    list_filter = ['kind', 'created_at']
+    search_fields = ['booking__user__email', 'booking__package__title']
     readonly_fields = ['created_at']
 
 

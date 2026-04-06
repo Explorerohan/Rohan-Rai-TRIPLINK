@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .booking_trip_notifications import SYSTEM_NOTIFICATION_EMAIL
 from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, ItineraryItem, Notification, NotificationRecipient, Roles, get_active_deal
 from .booking_cancellation import cancel_traveler_booking
 
@@ -1051,6 +1052,8 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     def get_sender_name(self, obj):
         try:
+            if getattr(obj.sender, "email", "") == SYSTEM_NOTIFICATION_EMAIL:
+                return "TRIPLINK"
             if obj.sender.role == "admin":
                 return "TRIPLINK Admin"
             if hasattr(obj.sender, "agent_profile"):

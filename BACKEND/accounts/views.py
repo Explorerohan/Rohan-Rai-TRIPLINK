@@ -109,6 +109,19 @@ def _parse_coordinate(raw_value, min_value, max_value):
     return value
 
 
+def _parse_trip_start_time_optional(raw_value):
+    """HTML time input (HH:MM or HH:MM:SS); empty or invalid → None."""
+    raw = (raw_value or "").strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).time()
+        except ValueError:
+            continue
+    return None
+
+
 def _esewa_product_code():
     return getattr(settings, "ESEWA_PRODUCT_CODE", "EPAYTEST")
 
@@ -2929,6 +2942,7 @@ def agent_add_package_view(request):
                 duration_nights=int(request.POST.get('duration_nights', 6)),
                 trip_start_date=trip_start,
                 trip_end_date=trip_end,
+                trip_start_time=_parse_trip_start_time_optional(request.POST.get("trip_start_time")),
                 status=request.POST.get('status', PackageStatus.ACTIVE)
             )
             
@@ -3010,6 +3024,7 @@ def agent_edit_package_view(request, package_id):
                     package.trip_end_date = None
             else:
                 package.trip_end_date = None
+            package.trip_start_time = _parse_trip_start_time_optional(request.POST.get("trip_start_time"))
             # Handle image upload
             if 'main_image' in request.FILES:
                 package.main_image = request.FILES['main_image']

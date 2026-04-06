@@ -214,6 +214,11 @@ class Package(models.Model):
         blank=True,
         help_text="Trip end date (to when)",
     )
+    trip_start_time = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Planned trip start time in TIME_ZONE (used for 24h/1h reminders). Defaults to 09:00 if not set.",
+    )
     main_image = models.ImageField(upload_to=package_image_path, null=True, blank=True)
     features = models.ManyToManyField(PackageFeature, related_name='packages', blank=True)
     status = models.CharField(
@@ -475,6 +480,32 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.user.email} – {self.package.title}"
+
+
+class BookingTripReminderKind(models.TextChoices):
+    H24 = "h24", "24 hours before trip"
+    H1 = "h1", "1 hour before trip"
+    REVIEW = "review", "Post-trip review prompt"
+
+
+class BookingTripReminder(models.Model):
+    """Tracks automated trip reminders so each kind is sent at most once per booking."""
+
+    booking = models.ForeignKey(
+        Booking,
+        on_delete=models.CASCADE,
+        related_name="trip_reminder_logs",
+    )
+    kind = models.CharField(max_length=16, choices=BookingTripReminderKind.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Booking trip reminder"
+        verbose_name_plural = "Booking trip reminders"
+        unique_together = [["booking", "kind"]]
+
+    def __str__(self):
+        return f"Booking {self.booking_id} {self.kind}"
 
 
 class EsewaPaymentSessionStatus(models.TextChoices):
@@ -807,6 +838,9 @@ class NotificationType(models.TextChoices):
     UPDATE = "update", "Update"
     PROMOTION = "promotion", "Promotion"
     GENERAL = "general", "General"
+    TRIP_REMINDER_24H = "trip_reminder_24h", "Trip reminder (24h)"
+    TRIP_REMINDER_1H = "trip_reminder_1h", "Trip reminder (1h)"
+    TRIP_REVIEW_REQUEST = "trip_review_request", "Trip review request"
 
 
 class Notification(models.Model):

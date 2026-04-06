@@ -23,6 +23,9 @@ const NOTIFICATION_ICONS = {
   update: { icon: "megaphone", color: "#1f6b2a" },
   promotion: { icon: "gift", color: "#7c3aed" },
   general: { icon: "notifications", color: "#f59e0b" },
+  trip_reminder_24h: { icon: "calendar", color: "#2563eb" },
+  trip_reminder_1h: { icon: "airplane", color: "#1d4ed8" },
+  trip_review_request: { icon: "star", color: "#ca8a04" },
 };
 
 const getNotificationIcon = (type) => NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.general;

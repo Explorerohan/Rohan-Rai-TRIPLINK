@@ -39,7 +39,7 @@ DEBUG = config('DEBUG', default=config('DJANGO_DEBUG', default='False'), cast=bo
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,192.168.18.6',
+    default='localhost,127.0.0.1,192.168.18.6,10.148.97.183',
     cast=Csv(),
 )
 # Note: use hostname/IP only (no :port). The Host header is e.g. 10.219.151.183:8000 but ALLOWED_HOSTS matches the host part.
