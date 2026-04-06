@@ -17,13 +17,6 @@
         <div style="font-size: 11px; color: #166534; margin-top: 2px;">Paid with points only — no eSewa charge.</div>
         {% endif %}
     </div>
-
-    <div style="margin-top: 8px; color: #475569; font-size: 11px;">
-        <div>{{ d.payment_method|default:"—" }}{% if d.payment_reference %} · ref {{ d.payment_reference }}{% endif %}</div>
-        {% if d.transaction_uuid %}
-        <div style="word-break: break-all; margin-top: 2px;">{{ d.transaction_uuid }}</div>
-        {% endif %}
-    </div>
 </div>
 {% else %}
 <span style="color:#94a3b8;">—</span>
