@@ -1,11 +1,34 @@
 import os
 from datetime import date
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .booking_trip_notifications import SYSTEM_NOTIFICATION_EMAIL
-from .models import UserProfile, AgentProfile, Package, PackageFeature, PackageStatus, PackageBookmark, CustomPackage, Booking, BookingStatus, PaymentMethod, PaymentStatus, AgentReview, ChatRoom, ChatMessage, ItineraryItem, Notification, NotificationRecipient, Roles, get_active_deal
+from .models import (
+    UserProfile,
+    AgentProfile,
+    Package,
+    PackageFeature,
+    PackageStatus,
+    PackageBookmark,
+    CustomPackage,
+    Booking,
+    BookingStatus,
+    PaymentMethod,
+    PaymentStatus,
+    AgentReview,
+    ChatRoom,
+    ChatMessage,
+    ItineraryItem,
+    Notification,
+    NotificationRecipient,
+    Roles,
+    get_active_deal,
+    traveler_may_book_package,
+    mark_custom_package_completed_if_booked,
+)
 from .booking_cancellation import cancel_traveler_booking
 
 User = get_user_model()
@@ -214,6 +237,7 @@ class CustomPackageSerializer(serializers.ModelSerializer):
     status = serializers.CharField(required=False)
     claimed_by_name = serializers.SerializerMethodField()
     claimed_by_id = serializers.IntegerField(source="claimed_by.id", read_only=True)
+    published_package_id = serializers.SerializerMethodField()
     feature_ids = serializers.PrimaryKeyRelatedField(
         many=True, queryset=PackageFeature.objects.all(), write_only=True, required=False
     )
@@ -226,7 +250,7 @@ class CustomPackageSerializer(serializers.ModelSerializer):
             'trip_start_date', 'trip_end_date',
             'main_image', 'main_image_url', 'features', 'feature_ids',
             'additional_notes',
-            'status', 'claimed_by_id', 'claimed_by_name',
+            'status', 'claimed_by_id', 'claimed_by_name', 'published_package_id',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -275,6 +299,13 @@ class CustomPackageSerializer(serializers.ModelSerializer):
         if feature_ids is not None:
             instance.features.set(feature_ids)
         return instance
+
+    def get_published_package_id(self, obj):
+        """ID of the agent-published bookable Package, if any."""
+        try:
+            return obj.published_package.pk
+        except ObjectDoesNotExist:
+            return None
 
     def get_claimed_by_name(self, obj):
         """Human-friendly name for the agent who claimed this custom package."""
@@ -441,6 +472,8 @@ class BookingSerializer(serializers.ModelSerializer):
         validated_data.pop('total_amount', None)
         if Booking.objects.filter(user=user, package=package, status=BookingStatus.CONFIRMED).exists():
             raise serializers.ValidationError({'package_id': 'You have already booked this package.'})
+        if not traveler_may_book_package(user, package):
+            raise serializers.ValidationError({'package_id': 'You are not allowed to book this package.'})
         # Always create as confirmed; ignore any incoming status. Apply deal price if active.
         active_deal = get_active_deal(package)
         if active_deal:
@@ -459,6 +492,7 @@ class BookingSerializer(serializers.ModelSerializer):
         booking = super().create(validated_data)
         package.participants_count = (package.participants_count or 0) + traveler_count
         package.save(update_fields=['participants_count'])
+        mark_custom_package_completed_if_booked(package)
         return booking
 
     def validate_status(self, value):

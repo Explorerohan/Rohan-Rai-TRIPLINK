@@ -14,7 +14,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../context/LanguageContext";
-import { getCustomPackageById, updateCustomPackage, deleteCustomPackage } from "../../utils/api";
+import PackageBookingModal from "../../components/PackageBookingModal";
+import {
+  getCustomPackageById,
+  getPackageById,
+  updateCustomPackage,
+  deleteCustomPackage,
+} from "../../utils/api";
 
 const PLACEHOLDER_IMAGE =
   "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80";
@@ -30,7 +36,15 @@ const formatTripDate = (dateStr) => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
-const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess, onDeleteSuccess }) => {
+const CustomPackageDetailScreen = ({
+  packageId,
+  session,
+  onBack,
+  onCancelSuccess,
+  onDeleteSuccess,
+  initialProfile,
+  onBook,
+}) => {
   const { t } = useLanguage();
   const { width: windowWidth } = useWindowDimensions();
   const [pkg, setPkg] = useState(null);
@@ -38,6 +52,9 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [bookingModalVisible, setBookingModalVisible] = useState(false);
+  const [bookingPackageDetail, setBookingPackageDetail] = useState(null);
+  const [bookingPackageLoading, setBookingPackageLoading] = useState(false);
 
   useEffect(() => {
     if (!packageId || !session?.access) {
@@ -161,6 +178,36 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
         },
       ]
     );
+  };
+
+  const closeBookingModal = () => {
+    setBookingModalVisible(false);
+    setBookingPackageDetail(null);
+    setBookingPackageLoading(false);
+  };
+
+  const handleBookPublishedPackage = async () => {
+    const publishedId = pkg?.published_package_id;
+    if (publishedId == null) return;
+
+    if (!session?.access) {
+      Alert.alert(t("loginRequired"), t("pleaseLoginToBook"));
+      onBook?.({ requiresLogin: true });
+      return;
+    }
+
+    setBookingModalVisible(true);
+    setBookingPackageLoading(true);
+    setBookingPackageDetail(null);
+    try {
+      const response = await getPackageById(String(publishedId), session.access);
+      setBookingPackageDetail(response?.data ?? null);
+    } catch (err) {
+      Alert.alert(t("error"), err?.message || t("couldntLoadPackage"));
+      closeBookingModal();
+    } finally {
+      setBookingPackageLoading(false);
+    }
   };
 
   const handleDeletePackage = () => {
@@ -347,17 +394,39 @@ const CustomPackageDetailScreen = ({ packageId, session, onBack, onCancelSuccess
         </View>
       </ScrollView>
 
-      {/* Bottom Bar - same as package details */}
+      {/* Bottom Bar: "Book now" when payable; "Your request" only while in progress */}
       <View style={styles.bottomBar}>
         <View style={styles.priceWrap}>
           <Text style={styles.priceLabel}>Price</Text>
           <Text style={styles.priceValue}>{formatPrice(pkg.price_per_person)}</Text>
         </View>
-        <View style={styles.customRequestBadge}>
-          <Ionicons name="document-text-outline" size={20} color="#1f6b2a" />
-          <Text style={styles.customRequestBadgeText}>Your request</Text>
-        </View>
+        {pkg.published_package_id ? (
+          <TouchableOpacity
+            style={styles.bookButton}
+            activeOpacity={0.88}
+            onPress={handleBookPublishedPackage}
+          >
+            <Text style={styles.bookText}>{t("bookNow")}</Text>
+            <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.customRequestBadge}>
+            <Ionicons name="document-text-outline" size={20} color="#1f6b2a" />
+            <Text style={styles.customRequestBadgeText}>{t("yourTripRequest")}</Text>
+          </View>
+        )}
       </View>
+
+      <PackageBookingModal
+        visible={bookingModalVisible}
+        onClose={closeBookingModal}
+        packageId={pkg.published_package_id != null ? String(pkg.published_package_id) : ""}
+        packageDetail={bookingPackageDetail}
+        packageDetailLoading={bookingPackageLoading}
+        session={session}
+        initialProfile={initialProfile}
+        onBook={onBook}
+      />
     </SafeAreaView>
   );
 };
@@ -714,6 +783,29 @@ const styles = StyleSheet.create({
     color: "#166534",
     fontSize: 16,
     fontWeight: "700",
+  },
+  /* Same as DetailsScreen bottom bar book CTA */
+  bookButton: {
+    flexShrink: 0,
+    backgroundColor: "#1f6b2a",
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#1f6b2a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bookText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 });
 

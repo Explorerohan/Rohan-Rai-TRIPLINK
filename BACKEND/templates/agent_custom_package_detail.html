@@ -153,6 +153,28 @@
         transition: background 0.15s ease;
     }
     .cpd-btn-message-traveler:hover { background: #1e293b; }
+    .cpd-btn-publish {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 8px;
+        border: 1px solid #166534;
+        background: #166534;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+        margin-left: 10px;
+    }
+    .cpd-btn-publish:hover { background: #14532d; border-color: #14532d; }
+    .cpd-published-note {
+        font-size: 13px;
+        color: #166534;
+        font-weight: 500;
+        margin-left: 8px;
+    }
     .cpd-claimed-note {
         display: inline-flex;
         align-items: center;
@@ -280,6 +302,16 @@
                         {% endif %}>
                         Message traveler
                     </button>
+                    {% if custom_package.status == "claimed" and custom_package.claimed_by_id == user.id %}
+                        {% if published_package %}
+                            <span class="cpd-published-note">Bookable offer: <a href="{% url 'agent_package_detail' published_package.id %}">package #{{ published_package.id }}</a> (traveler pays in app)</span>
+                        {% else %}
+                            <form method="post" action="{% url 'agent_custom_package_publish' custom_package.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="cpd-btn-publish">Publish bookable offer</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
                 {% elif custom_package.status == "claimed" and custom_package.claimed_by_id != user.id %}
                     <span class="cpd-claimed-note">Another agent is already handling this request.</span>
                 {% endif %}

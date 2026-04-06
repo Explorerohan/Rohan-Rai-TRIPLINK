@@ -29,6 +29,7 @@ from .views import (
     CustomPackageListCreateView,
     CustomPackageDetailView,
     CustomPackageClaimAndChatView,
+    CustomPackagePublishView,
     PackageFeatureListView,
     ChatRoomListCreateView,
     ChatMessageListCreateView,
@@ -94,6 +95,11 @@ urlpatterns = [
         "custom-packages/<int:pk>/claim-and-chat/",
         CustomPackageClaimAndChatView.as_view(),
         name="custom_package_claim_and_chat",
+    ),
+    path(
+        "custom-packages/<int:pk>/publish/",
+        CustomPackagePublishView.as_view(),
+        name="custom_package_publish",
     ),
     # Features list (for custom package / agent forms)
     path("features/", PackageFeatureListView.as_view(), name="package_feature_list"),

@@ -3,6 +3,7 @@ import hashlib
 import logging
 import hmac
 import json
+import os
 import time
 import uuid
 from decimal import Decimal, ROUND_HALF_UP
@@ -15,6 +16,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
 from django.core.cache import cache
 from django.contrib import messages
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg, Max
 from django.db.models.functions import TruncMonth
@@ -58,6 +60,8 @@ from .models import (
     ExpoPushToken,
     RefundRequest,
     RefundRequestStatus,
+    mark_custom_package_completed_if_booked,
+    traveler_may_book_package,
 )
 from .feature_options import get_feature_icon, get_all_feature_options
 from .permissions import IsAdminRole, IsAgent, IsTraveler
@@ -82,7 +86,11 @@ from .serializers import (
     NotificationCreateSerializer,
     ExpoPushTokenRegisterSerializer,
 )
-from .push_notifications import send_expo_push_for_notification, create_and_send_deal_notification
+from .push_notifications import (
+    send_expo_push_for_notification,
+    create_and_send_deal_notification,
+    create_private_offer_published_notification,
+)
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -2900,13 +2908,50 @@ def agent_custom_package_detail_view(request, pk):
     except AgentProfile.DoesNotExist:
         display_name = request.user.email.split('@')[0]
 
+    published_package = Package.objects.filter(source_custom_package=custom_package).first()
+
     context = {
         'user': request.user,
         'display_name': display_name,
         'custom_package': custom_package,
+        'published_package': published_package,
         'active_nav': 'custom_package',
     }
     return render(request, 'agent_custom_package_detail.html', context)
+
+
+def agent_custom_package_publish_view(request, pk):
+    """POST: publish claimed custom package as a private bookable Package (agent web UI)."""
+    if request.method != 'POST':
+        return redirect('agent_custom_package_detail', pk=pk)
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+    try:
+        custom_package = CustomPackage.objects.filter(user__role=Roles.TRAVELER).prefetch_related('features').get(pk=pk)
+    except CustomPackage.DoesNotExist:
+        messages.error(request, 'Custom package not found.')
+        return redirect('agent_custom_packages')
+    try:
+        pkg, publish_notification = _create_bookable_package_from_custom(request.user, custom_package)
+    except PermissionError:
+        messages.error(request, 'Only the agent who claimed this request can publish.')
+        return redirect('agent_custom_package_detail', pk=pk)
+    except ValueError as e:
+        if str(e) == 'wrong_status':
+            messages.error(request, 'This custom package must be claimed before you can publish a bookable offer.')
+        elif str(e) == 'already_published':
+            messages.warning(request, 'A bookable package was already created for this request.')
+        else:
+            messages.error(request, 'Could not publish.')
+        return redirect('agent_custom_package_detail', pk=pk)
+    if publish_notification is not None:
+        send_expo_push_for_notification(publish_notification, [custom_package.user_id])
+    messages.success(
+        request,
+        f'Bookable package created. The traveler can pay from the app (package #{pkg.id}).',
+    )
+    return redirect('agent_package_detail', package_id=pkg.id)
 
 
 def agent_add_package_view(request):
@@ -3167,13 +3212,20 @@ def _mark_overdue_packages_completed():
 
 
 class PackageListView(generics.ListAPIView):
-    """API view to list all active packages. Packages with trip_end_date in the past are auto-marked completed and excluded."""
+    """API view to list all active packages. Packages with trip_end_date in the past are auto-marked completed and excluded.
+
+    Private offers (custom-package publish) are never included here — not even for the invited traveler.
+    Those packages only appear in the custom-packages flow; travelers open them by id via booking/detail after publish.
+    """
     serializer_class = PackageSerializer
     permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
         _mark_overdue_packages_completed()
-        queryset = Package.objects.filter(status=PackageStatus.ACTIVE).order_by('-created_at')
+        queryset = (
+            Package.objects.filter(status=PackageStatus.ACTIVE, private_offer_for_user__isnull=True)
+            .order_by("-created_at")
+        )
         # Optional filters
         location = self.request.query_params.get('location', None)
         country = self.request.query_params.get('country', None)
@@ -3207,8 +3259,17 @@ class PackageDetailView(generics.RetrieveAPIView):
     """API view to get package details with reviews and participants. Marks package completed if trip_end_date has passed."""
     serializer_class = PackageDetailSerializer
     permission_classes = [permissions.AllowAny]
-    queryset = Package.objects.all()  # Allow viewing completed packages too for detail
     lookup_field = 'id'
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Package.objects.all()
+        if user.is_authenticated:
+            if getattr(user, "role", None) == Roles.AGENT:
+                return qs.filter(Q(private_offer_for_user__isnull=True) | Q(agent=user))
+            if getattr(user, "role", None) == Roles.TRAVELER:
+                return qs.filter(Q(private_offer_for_user__isnull=True) | Q(private_offer_for_user=user))
+        return qs.filter(private_offer_for_user__isnull=True)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -3241,7 +3302,10 @@ class TravelerBookmarkListCreateView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         _mark_overdue_packages_completed()
         queryset = (
-            Package.objects.filter(bookmarks__user=request.user)
+            Package.objects.filter(
+                bookmarks__user=request.user,
+                private_offer_for_user__isnull=True,
+            )
             .order_by("-bookmarks__created_at", "-created_at")
             .distinct()
         )
@@ -3258,6 +3322,11 @@ class TravelerBookmarkListCreateView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         package = get_object_or_404(Package, pk=package_id)
+        if package.private_offer_for_user_id:
+            return response.Response(
+                {"package_id": "Private custom offers cannot be bookmarked; open them from Custom packages."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         _, created = PackageBookmark.objects.get_or_create(user=request.user, package=package)
         return response.Response(
             {"bookmarked": True, "created": created, "package_id": package.id},
@@ -3386,6 +3455,12 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        if not traveler_may_book_package(request.user, package):
+            return response.Response(
+                {"package_id": "You are not allowed to book this package."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         if Booking.objects.filter(user=request.user, package=package, status=BookingStatus.CONFIRMED).exists():
             return response.Response(
                 {"detail": "You have already booked this package."},
@@ -3453,6 +3528,7 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
 
                 package.participants_count = (package.participants_count or 0) + booking.traveler_count
                 package.save(update_fields=["participants_count"])
+                mark_custom_package_completed_if_booked(package)
 
             serialized = BookingSerializer(booking, context={"request": request})
             return response.Response(
@@ -3700,6 +3776,7 @@ class EsewaPaymentVerifyView(generics.GenericAPIView):
                 package = payment_session.package
                 package.participants_count = (package.participants_count or 0) + booking.traveler_count
                 package.save(update_fields=["participants_count"])
+                mark_custom_package_completed_if_booked(package)
 
                 payment_session.booking = booking
 
@@ -3758,7 +3835,11 @@ class CustomPackageListCreateView(generics.ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        return CustomPackage.objects.filter(user=self.request.user).prefetch_related('features').order_by('-created_at')
+        return (
+            CustomPackage.objects.filter(user=self.request.user)
+            .prefetch_related("features", "published_package")
+            .order_by("-created_at")
+        )
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -3776,7 +3857,7 @@ class CustomPackageDetailView(generics.RetrieveUpdateDestroyAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        return CustomPackage.objects.filter(user=self.request.user).prefetch_related('features')
+        return CustomPackage.objects.filter(user=self.request.user).prefetch_related("features", "published_package")
 
 
 class CustomPackageClaimAndChatView(generics.GenericAPIView):
@@ -3839,6 +3920,99 @@ class CustomPackageClaimAndChatView(generics.GenericAPIView):
                 "status": custom_package.status,
             },
             status=status.HTTP_200_OK,
+        )
+
+
+@transaction.atomic
+def _create_bookable_package_from_custom(agent, custom_package):
+    """
+    Create an agent-owned Package from a claimed CustomPackage (private offer for the traveler).
+    Raises ValueError with a short code, or PermissionError.
+    """
+    if custom_package.claimed_by_id != agent.id:
+        raise PermissionError("not_claiming_agent")
+    if custom_package.status != CustomPackage.CustomPackageStatus.CLAIMED:
+        raise ValueError("wrong_status")
+    if Package.objects.filter(source_custom_package=custom_package).exists():
+        raise ValueError("already_published")
+
+    pkg = Package.objects.create(
+        agent=agent,
+        title=custom_package.title,
+        location=custom_package.location,
+        country=custom_package.country,
+        description=custom_package.description,
+        price_per_person=custom_package.price_per_person,
+        duration_days=custom_package.duration_days,
+        duration_nights=custom_package.duration_nights,
+        trip_start_date=custom_package.trip_start_date,
+        trip_end_date=custom_package.trip_end_date,
+        status=PackageStatus.ACTIVE,
+        source_custom_package=custom_package,
+        private_offer_for_user=custom_package.user,
+    )
+    pkg.features.set(custom_package.features.all())
+    if custom_package.main_image:
+        custom_package.main_image.open("rb")
+        try:
+            data = custom_package.main_image.read()
+            name = os.path.basename(custom_package.main_image.name) or "custom_image.jpg"
+            pkg.main_image.save(name, ContentFile(data), save=True)
+        finally:
+            custom_package.main_image.close()
+
+    notification = create_private_offer_published_notification(agent, pkg, custom_package.user)
+    # Return notification so callers can send Expo push *after* this atomic block commits.
+    # (Registering transaction.on_commit inside nested @transaction.atomic can miss hooks in some setups.)
+    return pkg, notification
+
+
+class CustomPackagePublishView(generics.GenericAPIView):
+    """Agent-only: publish a claimed custom request as a bookable private Package."""
+
+    permission_classes = [permissions.IsAuthenticated, IsAgent]
+
+    def post(self, request, *args, **kwargs):
+        pk = kwargs.get("pk")
+        try:
+            custom_package = CustomPackage.objects.select_related("user", "claimed_by").prefetch_related(
+                "features"
+            ).get(pk=pk, user__role=Roles.TRAVELER)
+        except CustomPackage.DoesNotExist:
+            return response.Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            pkg, publish_notification = _create_bookable_package_from_custom(request.user, custom_package)
+        except PermissionError:
+            return response.Response(
+                {"detail": "Only the agent who claimed this request can publish."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except ValueError as e:
+            code = str(e)
+            if code == "wrong_status":
+                return response.Response(
+                    {"detail": "The custom package must be claimed before publishing."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if code == "already_published":
+                existing = Package.objects.get(source_custom_package=custom_package)
+                return response.Response(
+                    {
+                        "detail": "Already published.",
+                        "published_package_id": existing.id,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            raise
+
+        if publish_notification is not None:
+            send_expo_push_for_notification(publish_notification, [custom_package.user_id])
+
+        ser = PackageSerializer(pkg, context={"request": request})
+        return response.Response(
+            {"package": ser.data, "published_package_id": pkg.id},
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -4212,8 +4386,14 @@ class ChatItineraryTripSendView(generics.GenericAPIView):
         if request.user != room.agent or request.user.role != Roles.AGENT:
             raise permissions.PermissionDenied("Only the agent can send itinerary for this room.")
         trip = get_object_or_404(ItineraryTrip, pk=trip_id, room=room)
-        from django.core.files.base import ContentFile
         from .itinerary_pdf import build_itinerary_pdf
+
+        custom_pkg_for_thread = (
+            CustomPackage.objects.filter(user=room.traveler, claimed_by=room.agent)
+            .exclude(status=CustomPackage.CustomPackageStatus.CANCELLED)
+            .order_by("-updated_at")
+            .first()
+        )
 
         buf = build_itinerary_pdf(trip)
         pdf_content = buf.getvalue()
@@ -4222,6 +4402,7 @@ class ChatItineraryTripSendView(generics.GenericAPIView):
             room=room,
             sender=request.user,
             text=f"Your trip itinerary ({trip.start_date}, {trip.days_count} Days / {trip.nights_count} Nights) is attached.",
+            custom_package=custom_pkg_for_thread,
         )
         msg.attachment.save(filename, ContentFile(pdf_content), save=True)
         room.updated_at = msg.created_at

@@ -227,6 +227,23 @@ class Package(models.Model):
         default=PackageStatus.ACTIVE
     )
     participants_count = models.PositiveIntegerField(default=0, help_text="Number of people who joined")
+    source_custom_package = models.OneToOneField(
+        "CustomPackage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="published_package",
+        help_text="When set, this package was published from a traveler custom request.",
+    )
+    private_offer_for_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="private_offer_packages",
+        limit_choices_to={"role": Roles.TRAVELER},
+        help_text="If set, only this traveler can book; hidden from public package list.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -918,3 +935,37 @@ class ExpoPushToken(models.Model):
 
     def __str__(self):
         return f"{self.user.email} — {self.token[:40]}…"
+
+
+def traveler_may_view_package(user, package):
+    """Public packages visible to anyone; private offers only to that traveler or owning agent."""
+    if not package.private_offer_for_user_id:
+        return True
+    if user and user.is_authenticated:
+        if getattr(user, "role", None) == Roles.AGENT and package.agent_id == user.id:
+            return True
+        if getattr(user, "role", None) == Roles.TRAVELER and package.private_offer_for_user_id == user.id:
+            return True
+    return False
+
+
+def traveler_may_book_package(user, package):
+    """Only the designated traveler may book a private-offer package."""
+    if not package.private_offer_for_user_id:
+        return True
+    if (
+        user
+        and user.is_authenticated
+        and getattr(user, "role", None) == Roles.TRAVELER
+        and package.private_offer_for_user_id == user.id
+    ):
+        return True
+    return False
+
+
+def mark_custom_package_completed_if_booked(package):
+    """After a confirmed booking for a package published from a custom request."""
+    src = getattr(package, "source_custom_package_id", None)
+    if not src:
+        return
+    CustomPackage.objects.filter(pk=src).update(status=CustomPackage.CustomPackageStatus.COMPLETED)

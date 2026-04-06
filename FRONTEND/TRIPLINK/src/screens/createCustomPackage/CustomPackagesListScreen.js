@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
@@ -100,23 +100,109 @@ const CustomPackagesListScreen = ({
     const value = String(status).toLowerCase();
     if (value === "claimed") {
       return {
-        label: "Claimed",
+        label: t("claimed"),
         containerStyle: styles.statusPillClaimed,
         textStyle: styles.statusPillTextClaimed,
       };
     }
     if (value === "cancelled") {
       return {
-        label: "Cancelled",
+        label: t("cancelled"),
         containerStyle: styles.statusPillCancelled,
         textStyle: styles.statusPillTextCancelled,
       };
     }
+    if (value === "completed") {
+      return {
+        label: t("completed"),
+        containerStyle: styles.statusPillCompleted,
+        textStyle: styles.statusPillTextCompleted,
+      };
+    }
     return {
-      label: "Open",
+      label: t("open"),
       containerStyle: styles.statusPillOpen,
       textStyle: styles.statusPillTextOpen,
     };
+  };
+
+  const { inProgressList, readyList } = useMemo(() => {
+    const inProgress = [];
+    const ready = [];
+    for (const p of list) {
+      if (p.published_package_id) ready.push(p);
+      else inProgress.push(p);
+    }
+    return { inProgressList: inProgress, readyList: ready };
+  }, [list]);
+
+  const renderPackageCard = (pkg) => {
+    const statusCfg = getStatusConfig(pkg.status);
+    const hasDates = pkg.trip_start_date || pkg.trip_end_date;
+    let tripSummary = null;
+    if (pkg.trip_start_date && pkg.trip_end_date) {
+      tripSummary = `${formatTripDate(pkg.trip_start_date)} – ${formatTripDate(pkg.trip_end_date)}`;
+    } else if (pkg.trip_start_date) {
+      tripSummary = `From ${formatTripDate(pkg.trip_start_date)}`;
+    } else if (pkg.trip_end_date) {
+      tripSummary = `To ${formatTripDate(pkg.trip_end_date)}`;
+    }
+    const isReadySection = !!pkg.published_package_id;
+
+    return (
+      <TouchableOpacity
+        key={pkg.id}
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => onPackagePress?.(pkg.id)}
+      >
+        <View style={styles.cardImageWrap}>
+          <Image
+            source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
+        </View>
+        <View style={styles.cardBody}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {pkg.title}
+          </Text>
+          <Text style={styles.cardLocation} numberOfLines={1}>
+            {pkg.location}, {pkg.country}
+          </Text>
+          {isReadySection ? (
+            <View style={styles.readyTagRow}>
+              <Ionicons name="checkmark-circle" size={14} color="#166534" />
+              <Text style={styles.readyTagText}>{t("readyToBookBadge")}</Text>
+            </View>
+          ) : null}
+          <View style={styles.cardMetaBlock}>
+            {(tripSummary || pkg.trip_start_date || pkg.trip_end_date) && (
+              <View style={styles.cardMetaRow}>
+                <Ionicons name="calendar-outline" size={12} color="#94a3b8" />
+                <Text style={styles.cardMetaText} numberOfLines={1}>
+                  {tripSummary || (pkg.trip_start_date ? formatTripDate(pkg.trip_start_date) : formatTripDate(pkg.trip_end_date))}
+                </Text>
+              </View>
+            )}
+            {pkg.duration_display ? (
+              <View style={styles.cardMetaRow}>
+                <Ionicons name="time-outline" size={12} color="#94a3b8" />
+                <Text style={styles.cardMetaText}>{pkg.duration_display}</Text>
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.cardFooter}>
+            {statusCfg ? (
+              <View style={[styles.statusPill, statusCfg.containerStyle]}>
+                <Text style={[styles.statusPillText, statusCfg.textStyle]}>{statusCfg.label}</Text>
+              </View>
+            ) : null}
+            <Text style={styles.priceText}>{formatPrice(pkg.price_per_person)}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -141,8 +227,6 @@ const CustomPackagesListScreen = ({
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#1f6b2a"]} tintColor="#1f6b2a" />
           }
         >
-          <Text style={styles.sectionHeading}>{t("allCustomPackages")}</Text>
-
           {loading ? (
             <ActivityIndicator size="large" color="#1f6b2a" style={styles.loader} />
           ) : list.length === 0 ? (
@@ -152,71 +236,27 @@ const CustomPackagesListScreen = ({
               <Text style={styles.emptySubtext}>{t("tapToCreateCustom")}</Text>
             </View>
           ) : (
-            <View style={styles.list}>
-              {list.map((pkg) => {
-                const statusCfg = getStatusConfig(pkg.status);
-                const hasDates = pkg.trip_start_date || pkg.trip_end_date;
-                let tripSummary = null;
-                if (pkg.trip_start_date && pkg.trip_end_date) {
-                  tripSummary = `${formatTripDate(pkg.trip_start_date)} – ${formatTripDate(pkg.trip_end_date)}`;
-                } else if (pkg.trip_start_date) {
-                  tripSummary = `From ${formatTripDate(pkg.trip_start_date)}`;
-                } else if (pkg.trip_end_date) {
-                  tripSummary = `To ${formatTripDate(pkg.trip_end_date)}`;
-                }
+            <>
+              <View style={styles.sectionBlock}>
+                <Text style={styles.sectionHeading}>{t("customPackagesInProgress")}</Text>
+                <Text style={styles.sectionDesc}>{t("customPackagesInProgressDesc")}</Text>
+                {inProgressList.length === 0 ? (
+                  <Text style={styles.sectionEmpty}>{t("customPackagesEmptyInProgress")}</Text>
+                ) : (
+                  <View style={styles.list}>{inProgressList.map((pkg) => renderPackageCard(pkg))}</View>
+                )}
+              </View>
 
-                return (
-                  <TouchableOpacity
-                    key={pkg.id}
-                    style={styles.card}
-                    activeOpacity={0.9}
-                    onPress={() => onPackagePress?.(pkg.id)}
-                  >
-                    <View style={styles.cardImageWrap}>
-                      <Image
-                        source={{ uri: pkg.main_image_url || PLACEHOLDER_IMAGE }}
-                        style={styles.cardImage}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={styles.cardBody}>
-                      <Text style={styles.cardTitle} numberOfLines={2}>
-                        {pkg.title}
-                      </Text>
-                      <Text style={styles.cardLocation} numberOfLines={1}>
-                        {pkg.location}, {pkg.country}
-                      </Text>
-                      <View style={styles.cardMetaBlock}>
-                        {(tripSummary || pkg.trip_start_date || pkg.trip_end_date) && (
-                          <View style={styles.cardMetaRow}>
-                            <Ionicons name="calendar-outline" size={12} color="#94a3b8" />
-                            <Text style={styles.cardMetaText} numberOfLines={1}>
-                              {tripSummary || (pkg.trip_start_date ? formatTripDate(pkg.trip_start_date) : formatTripDate(pkg.trip_end_date))}
-                            </Text>
-                          </View>
-                        )}
-                        {pkg.duration_display ? (
-                          <View style={styles.cardMetaRow}>
-                            <Ionicons name="time-outline" size={12} color="#94a3b8" />
-                            <Text style={styles.cardMetaText}>{pkg.duration_display}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-                      <View style={styles.cardFooter}>
-                        {statusCfg ? (
-                          <View style={[styles.statusPill, statusCfg.containerStyle]}>
-                            <Text style={[styles.statusPillText, statusCfg.textStyle]}>
-                              {statusCfg.label}
-                            </Text>
-                          </View>
-                        ) : null}
-                        <Text style={styles.priceText}>{formatPrice(pkg.price_per_person)}</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+              <View style={[styles.sectionBlock, styles.sectionBlockSecond]}>
+                <Text style={styles.sectionHeading}>{t("customPackagesReadyToBook")}</Text>
+                <Text style={styles.sectionDesc}>{t("customPackagesReadyToBookDesc")}</Text>
+                {readyList.length === 0 ? (
+                  <Text style={styles.sectionEmpty}>{t("customPackagesEmptyReady")}</Text>
+                ) : (
+                  <View style={styles.list}>{readyList.map((pkg) => renderPackageCard(pkg))}</View>
+                )}
+              </View>
+            </>
           )}
         </ScrollView>
 
@@ -321,11 +361,33 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 110,
   },
+  sectionBlock: {
+    marginBottom: 8,
+  },
+  sectionBlockSecond: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
   sectionHeading: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#1f1f1f",
-    marginBottom: 16,
+    color: "#0f172a",
+    marginBottom: 6,
+  },
+  sectionDesc: {
+    fontSize: 13,
+    color: "#64748b",
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  sectionEmpty: {
+    fontSize: 13,
+    color: "#94a3b8",
+    fontStyle: "italic",
+    marginBottom: 12,
+    lineHeight: 19,
   },
   loader: {
     marginVertical: 32,
@@ -396,6 +458,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: "500",
   },
+  readyTagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  readyTagText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#166534",
+  },
   cardMetaBlock: {
     marginTop: 8,
     gap: 4,
@@ -439,6 +512,15 @@ const styles = StyleSheet.create({
   statusPillCancelled: {},
   statusPillTextCancelled: {
     color: "#b91c1c",
+  },
+  statusPillCompleted: {
+    backgroundColor: "#f5f3ff",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusPillTextCompleted: {
+    color: "#5b21b6",
   },
   navBar: {
     position: "absolute",

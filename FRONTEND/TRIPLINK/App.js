@@ -543,6 +543,8 @@ export default function App() {
         <CustomPackageDetailScreen
           packageId={selectedCustomPackageId}
           session={session}
+          initialProfile={userProfile}
+          onBook={handleBookTrip}
           onBack={() => {
             setSelectedCustomPackageId(null);
             goBack();

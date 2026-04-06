@@ -27,7 +27,7 @@ from accounts.views import (
     agent_profile_view, agent_packages_view, agent_add_package_view,
     agent_edit_package_view, agent_delete_package_view,
     agent_package_detail_view, agent_travelers_view, agent_bookings_view, agent_calendar_view,
-    agent_custom_packages_view, agent_custom_package_detail_view,
+    agent_custom_packages_view, agent_custom_package_detail_view, agent_custom_package_publish_view,
     agent_chat_view, agent_reviews_view, agent_deals_view, agent_settings_view,
 )
 
@@ -59,6 +59,7 @@ urlpatterns = [
     path('calendar/agent/', agent_calendar_view, name='agent_calendar'),
     path('custom-packages/agent/', agent_custom_packages_view, name='agent_custom_packages'),
     path('custom-packages/agent/<int:pk>/', agent_custom_package_detail_view, name='agent_custom_package_detail'),
+    path('custom-packages/agent/<int:pk>/publish/', agent_custom_package_publish_view, name='agent_custom_package_publish'),
     path('chat/agent/', agent_chat_view, name='agent_chat'),
     path('reviews/agent/', agent_reviews_view, name='agent_reviews'),
     path('deals/agent/', agent_deals_view, name='agent_deals'),

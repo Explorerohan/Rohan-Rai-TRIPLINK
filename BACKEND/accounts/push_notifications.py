@@ -33,6 +33,12 @@ def send_expo_push_for_notification(notification, recipient_user_ids):
         ExpoPushToken.objects.filter(user_id__in=user_ids).values_list("token", flat=True).distinct()
     )
     if not tokens:
+        logger.info(
+            "Expo push skipped: no device tokens for user_ids=%s (notification_id=%s). "
+            "User must open the app on a physical device with notifications allowed.",
+            user_ids,
+            getattr(notification, "id", None),
+        )
         return
 
     title = (notification.title or "TRIPLINK")[:200]
@@ -113,3 +119,53 @@ def create_and_send_deal_notification(deal):
 
     recipient_ids = list(recipients.values_list("id", flat=True))
     send_expo_push_for_notification(notification, recipient_ids)
+
+
+def _agent_display_name(agent):
+    """Best-effort display name for an agent user."""
+    from .models import AgentProfile
+
+    try:
+        ap = agent.agent_profile
+        name = ap.full_name
+        if name and str(name).strip():
+            return str(name).strip()
+    except AgentProfile.DoesNotExist:
+        pass
+    fn = agent.get_full_name()
+    if fn and str(fn).strip():
+        return str(fn).strip()
+    email = getattr(agent, "email", "") or ""
+    return email.split("@")[0] if email else "Your agent"
+
+
+def create_private_offer_published_notification(agent, package, traveler_user):
+    """
+    In-app notification for the traveler when their custom request is turned into a payable package.
+
+    Does not send push; caller should call send_expo_push_for_notification inside transaction.on_commit.
+    """
+    from .models import Notification, NotificationRecipient, NotificationType
+
+    traveler_id = getattr(traveler_user, "pk", None) or getattr(traveler_user, "id", None)
+    if not traveler_id:
+        logger.warning("create_private_offer_published_notification: missing traveler id")
+        return None
+
+    agent_name = _agent_display_name(agent)
+    pkg_title = (package.title or "Your trip")[:180]
+
+    title = "Your trip is ready to book"
+    message = (
+        f"{agent_name} published a bookable offer for “{pkg_title}”. "
+        "Open your custom trip in the TRIPLINK app to review details and pay."
+    )
+
+    notification = Notification.objects.create(
+        title=title[:200],
+        message=message[:2000],
+        notification_type=NotificationType.UPDATE,
+        sender=agent,
+    )
+    NotificationRecipient.objects.create(notification=notification, user_id=traveler_id)
+    return notification
