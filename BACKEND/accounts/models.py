@@ -1,6 +1,13 @@
+import secrets
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+
+def _random_five_digit_booking_code():
+    """Random 5-character code using digits 0-9 only (digits may repeat)."""
+    return "".join(secrets.choice("0123456789") for _ in range(5))
 
 
 class Roles(models.TextChoices):
@@ -488,6 +495,13 @@ class Booking(models.Model):
         blank=True,
         help_text="eSewa reference after refund (e.g. ref_id from status API).",
     )
+    booking_code = models.CharField(
+        max_length=5,
+        unique=True,
+        db_index=True,
+        editable=False,
+        help_text="Public 5-digit code (0-9, repeatable). Unique per booking for lookup and filtering.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -497,6 +511,20 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.user.email} – {self.package.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.booking_code:
+            for _ in range(500):
+                candidate = _random_five_digit_booking_code()
+                qs = Booking.objects.filter(booking_code=candidate)
+                if self.pk:
+                    qs = qs.exclude(pk=self.pk)
+                if not qs.exists():
+                    self.booking_code = candidate
+                    break
+            else:
+                raise RuntimeError("Unable to allocate a unique booking_code; try again.")
+        super().save(*args, **kwargs)
 
 
 class BookingTripReminderKind(models.TextChoices):
