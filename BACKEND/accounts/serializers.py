@@ -21,7 +21,14 @@ from .models import (
     AgentReview,
     ChatRoom,
     ChatMessage,
+    ItineraryTrip,
     ItineraryItem,
+    ItineraryTripProfile,
+    ItineraryTransportSegment,
+    ItineraryHotelStay,
+    ItineraryActivityPlan,
+    ItineraryCarryItem,
+    ItineraryDocumentItem,
     Notification,
     NotificationRecipient,
     Roles,
@@ -1073,6 +1080,56 @@ class ItineraryItemSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         return _user_display_name(obj.created_by)
+
+
+class ItineraryTripProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItineraryTripProfile
+        exclude = ["id", "trip", "created_at", "updated_at"]
+
+
+class _TripChildSerializerMixin:
+    def validate(self, attrs):
+        room = self.context.get("room")
+        trip = attrs.get("trip") or getattr(self.instance, "trip", None)
+        if trip and room and trip.room_id != room.id:
+            raise serializers.ValidationError({"trip": "Trip does not belong to this room."})
+        return super().validate(attrs)
+
+
+class ItineraryTransportSegmentSerializer(_TripChildSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = ItineraryTransportSegment
+        fields = "__all__"
+        extra_kwargs = {"trip": {"read_only": True}}
+
+
+class ItineraryHotelStaySerializer(_TripChildSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = ItineraryHotelStay
+        fields = "__all__"
+        extra_kwargs = {"trip": {"read_only": True}}
+
+
+class ItineraryActivityPlanSerializer(_TripChildSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = ItineraryActivityPlan
+        fields = "__all__"
+        extra_kwargs = {"trip": {"read_only": True}}
+
+
+class ItineraryCarryItemSerializer(_TripChildSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = ItineraryCarryItem
+        fields = "__all__"
+        extra_kwargs = {"trip": {"read_only": True}}
+
+
+class ItineraryDocumentItemSerializer(_TripChildSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = ItineraryDocumentItem
+        fields = "__all__"
+        extra_kwargs = {"trip": {"read_only": True}}
 
 
 class NotificationSerializer(serializers.ModelSerializer):

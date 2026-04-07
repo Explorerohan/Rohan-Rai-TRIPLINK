@@ -54,6 +54,12 @@ from .models import (
     ChatMessage,
     ItineraryTrip,
     ItineraryItem,
+    ItineraryTripProfile,
+    ItineraryTransportSegment,
+    ItineraryHotelStay,
+    ItineraryActivityPlan,
+    ItineraryCarryItem,
+    ItineraryDocumentItem,
     Notification,
     NotificationRecipient,
     NotificationType,
@@ -82,6 +88,12 @@ from .serializers import (
     ChatRoomSerializer,
     ChatMessageSerializer,
     ItineraryItemSerializer,
+    ItineraryTripProfileSerializer,
+    ItineraryTransportSegmentSerializer,
+    ItineraryHotelStaySerializer,
+    ItineraryActivityPlanSerializer,
+    ItineraryCarryItemSerializer,
+    ItineraryDocumentItemSerializer,
     NotificationSerializer,
     NotificationCreateSerializer,
     ExpoPushTokenRegisterSerializer,
@@ -4348,6 +4360,82 @@ class ChatItineraryDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
 
 
+def _normalize_booking_code(raw):
+    if raw is None:
+        return ""
+    return "".join(c for c in str(raw) if c.isdigit())[:5]
+
+
+def _booking_payment_amounts_for_profile(booking):
+    """Return (amount_paid, remaining_balance) for itinerary profile defaults."""
+    if not booking:
+        return None, None
+    total = _money(booking.total_amount)
+    if booking.payment_status == PaymentStatus.PAID:
+        return total, Decimal("0.00")
+    if booking.payment_status in (PaymentStatus.PENDING, PaymentStatus.FAILED):
+        return Decimal("0.00"), total
+    if booking.payment_status == PaymentStatus.REFUNDED:
+        return Decimal("0.00"), Decimal("0.00")
+    return Decimal("0.00"), total
+
+
+class ChatRoomBookingLookupView(generics.GenericAPIView):
+    """GET: Resolve a 5-digit booking code for the room's traveler (agent-only). Prefills itinerary details."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, room_id):
+        room = get_object_or_404(ChatRoom, pk=room_id)
+        if request.user != room.agent or request.user.role != Roles.AGENT:
+            raise permissions.PermissionDenied("Only the agent can look up bookings for this room.")
+        code = _normalize_booking_code(request.query_params.get("code"))
+        if len(code) != 5:
+            return response.Response({"detail": "Enter a 5-digit booking ID."}, status=status.HTTP_400_BAD_REQUEST)
+        booking = (
+            Booking.objects.filter(booking_code=code, user=room.traveler)
+            .select_related("package", "user", "user__user_profile")
+            .first()
+        )
+        if not booking:
+            return response.Response(
+                {"detail": "No booking found for this code and traveler."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        pkg = booking.package
+        profile = getattr(booking.user, "user_profile", None)
+        traveler_name = (getattr(profile, "full_name", None) or "").strip() or (booking.user.email or "")
+        traveler_phone = (getattr(profile, "phone_number", None) or "").strip()
+        paid, balance = _booking_payment_amounts_for_profile(booking)
+        return response.Response(
+            {
+                "booking_id": booking.id,
+                "booking_code": booking.booking_code,
+                "booking_status": booking.status,
+                "traveler_name": traveler_name,
+                "traveler_email": booking.user.email or "",
+                "traveler_phone": traveler_phone,
+                "traveler_count": booking.traveler_count,
+                "package_name": pkg.title if pkg else "",
+                "package_location": pkg.location if pkg else "",
+                "package_country": pkg.country if pkg else "",
+                "destinations_line": f"{pkg.location}, {pkg.country}" if pkg else "",
+                "trip_start_date": pkg.trip_start_date.isoformat() if pkg and pkg.trip_start_date else None,
+                "trip_end_date": pkg.trip_end_date.isoformat() if pkg and pkg.trip_end_date else None,
+                "duration_days": pkg.duration_days if pkg else 1,
+                "duration_nights": pkg.duration_nights if pkg else 0,
+                "total_amount": _money_str(booking.total_amount),
+                "price_per_person_snapshot": _money_str(booking.price_per_person_snapshot),
+                "payment_method": booking.payment_method,
+                "payment_method_display": booking.get_payment_method_display(),
+                "payment_status": booking.payment_status,
+                "payment_status_display": booking.get_payment_status_display(),
+                "amount_paid": _money_str(paid) if paid is not None else None,
+                "remaining_balance": _money_str(balance) if balance is not None else None,
+            }
+        )
+
+
 class ChatItineraryTripCreateView(generics.GenericAPIView):
     """POST: Create an itinerary trip with bulk items (agent-only). Used by the day/night wizard."""
 
@@ -4362,22 +4450,40 @@ class ChatItineraryTripCreateView(generics.GenericAPIView):
         days_count = int(data.get("days_count") or 1)
         nights_count = int(data.get("nights_count") or 0)
         items_data = data.get("items") or []
+        booking_id = data.get("booking_id")
+        booking_code_raw = data.get("booking_code")
         if not start_date:
             return response.Response({"start_date": "Required."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             start = datetime.strptime(start_date, "%Y-%m-%d").date()
         except ValueError:
             return response.Response({"start_date": "Use YYYY-MM-DD format."}, status=status.HTTP_400_BAD_REQUEST)
+        booking = None
+        if booking_id:
+            booking = Booking.objects.filter(pk=booking_id, user=room.traveler).first()
+            if not booking:
+                return response.Response({"booking_id": "Invalid booking for this traveler."}, status=status.HTTP_400_BAD_REQUEST)
+        elif booking_code_raw:
+            code = _normalize_booking_code(booking_code_raw)
+            if len(code) != 5:
+                return response.Response({"booking_code": "Enter a 5-digit booking ID."}, status=status.HTTP_400_BAD_REQUEST)
+            booking = Booking.objects.filter(booking_code=code, user=room.traveler).first()
+            if not booking:
+                return response.Response(
+                    {"booking_code": "No booking found for this code and traveler."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         trip = ItineraryTrip.objects.create(
             room=room,
             created_by=request.user,
             start_date=start,
             days_count=days_count,
             nights_count=nights_count,
+            booking=booking,
         )
-        expected_slots = days_count + nights_count
+        expected_slots = days_count  # One itinerary step per day (no separate night slots)
         created = []
-        for item_data in items_data[: 24 * expected_slots]:  # Max 24 entries per slot
+        for item_data in items_data[: 24 * expected_slots]:  # Max 24 entries per day
             day_num = item_data.get("day_number", 1)
             is_night = item_data.get("is_night", False)
             travel_date = start + timedelta(days=(day_num if isinstance(day_num, int) else int(day_num)) - 1)
@@ -4390,16 +4496,184 @@ class ChatItineraryTripCreateView(generics.GenericAPIView):
                 travel_date=travel_date,
                 day_label=(item_data.get("day_label") or "").strip(),
                 time_label=(item_data.get("time_label") or "").strip() or "—",
-                place=(item_data.get("place") or "").strip() or "—",
+                place=(item_data.get("place") or "").strip(),
                 activity=(item_data.get("activity") or "").strip() or "—",
                 food_name=(item_data.get("food_name") or "").strip(),
                 notes=(item_data.get("notes") or "").strip(),
             )
             created.append(item)
+        paid_amt, bal_amt = _booking_payment_amounts_for_profile(booking)
+        t_user = booking.user if booking else room.traveler
+        t_profile = getattr(t_user, "user_profile", None)
+        ItineraryTripProfile.objects.get_or_create(
+            trip=trip,
+            defaults={
+                "traveler_full_names": (getattr(t_profile, "full_name", None) or "").strip() or (t_user.email or ""),
+                "traveler_contact_number": (getattr(t_profile, "phone_number", None) or "").strip(),
+                "traveler_email": t_user.email or "",
+                "booking_reference": booking.booking_code if booking else "",
+                "travelers_adults": booking.traveler_count if booking else 1,
+                "package_name": booking.package.title if booking and booking.package else "",
+                "destinations": (
+                    f"{booking.package.location}, {booking.package.country}"
+                    if booking and booking.package
+                    else ""
+                ),
+                "support_agent_name": (
+                    getattr(getattr(room.agent, "agent_profile", None), "full_name", "") or room.agent.email
+                ),
+                "support_contact_number": getattr(getattr(room.agent, "agent_profile", None), "phone_number", "") or "",
+                "support_email": room.agent.email or "",
+                "total_package_cost": booking.total_amount if booking else None,
+                "amount_paid": paid_amt,
+                "remaining_balance": bal_amt,
+                "payment_method": booking.get_payment_method_display() if booking else "",
+                "trip_highlights": " ".join(
+                    (
+                        f"- {x.place}: {x.activity}"
+                        if (x.place or "").strip()
+                        else f"- {x.activity}"
+                    )
+                    for x in created[:5]
+                    if (x.activity or "").strip()
+                ),
+            },
+        )
         return response.Response(
             {"id": trip.id, "message": "Itinerary trip created.", "items_count": len(created)},
             status=status.HTTP_201_CREATED,
         )
+
+
+class _ChatTripAccessMixin:
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _get_room_trip(self):
+        room_id = self.kwargs.get("room_id")
+        trip_id = self.kwargs.get("trip_id")
+        room = get_object_or_404(ChatRoom, pk=room_id)
+        if self.request.user not in (room.traveler, room.agent):
+            raise permissions.PermissionDenied("Access denied.")
+        trip = get_object_or_404(ItineraryTrip, pk=trip_id, room=room)
+        return room, trip
+
+    def _agent_guard(self, room):
+        if self.request.user != room.agent or self.request.user.role != Roles.AGENT:
+            raise permissions.PermissionDenied("Only the agent can modify itinerary trip details.")
+
+
+class ChatItineraryTripProfileView(_ChatTripAccessMixin, generics.GenericAPIView):
+    serializer_class = ItineraryTripProfileSerializer
+
+    def get(self, request, room_id, trip_id):
+        _, trip = self._get_room_trip()
+        profile, _ = ItineraryTripProfile.objects.get_or_create(trip=trip)
+        return response.Response(self.get_serializer(profile).data)
+
+    def put(self, request, room_id, trip_id):
+        room, trip = self._get_room_trip()
+        self._agent_guard(room)
+        profile, _ = ItineraryTripProfile.objects.get_or_create(trip=trip)
+        serializer = self.get_serializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return response.Response(serializer.data)
+
+
+class _TripChildListCreateView(_ChatTripAccessMixin, generics.ListCreateAPIView):
+    serializer_class = None
+    model = None
+
+    def get_queryset(self):
+        _, trip = self._get_room_trip()
+        return self.model.objects.filter(trip=trip).order_by("display_order", "id")
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        room, _ = self._get_room_trip()
+        ctx["room"] = room
+        return ctx
+
+    def perform_create(self, serializer):
+        room, trip = self._get_room_trip()
+        self._agent_guard(room)
+        serializer.save(trip=trip)
+
+
+class _TripChildDetailView(_ChatTripAccessMixin, generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = None
+    model = None
+    lookup_url_kwarg = "pk"
+
+    def get_queryset(self):
+        _, trip = self._get_room_trip()
+        return self.model.objects.filter(trip=trip)
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        room, _ = self._get_room_trip()
+        ctx["room"] = room
+        return ctx
+
+    def perform_update(self, serializer):
+        room, _ = self._get_room_trip()
+        self._agent_guard(room)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        room, _ = self._get_room_trip()
+        self._agent_guard(room)
+        instance.delete()
+
+
+class ChatItineraryTripTransportListCreateView(_TripChildListCreateView):
+    serializer_class = ItineraryTransportSegmentSerializer
+    model = ItineraryTransportSegment
+
+
+class ChatItineraryTripTransportDetailView(_TripChildDetailView):
+    serializer_class = ItineraryTransportSegmentSerializer
+    model = ItineraryTransportSegment
+
+
+class ChatItineraryTripHotelListCreateView(_TripChildListCreateView):
+    serializer_class = ItineraryHotelStaySerializer
+    model = ItineraryHotelStay
+
+
+class ChatItineraryTripHotelDetailView(_TripChildDetailView):
+    serializer_class = ItineraryHotelStaySerializer
+    model = ItineraryHotelStay
+
+
+class ChatItineraryTripActivityListCreateView(_TripChildListCreateView):
+    serializer_class = ItineraryActivityPlanSerializer
+    model = ItineraryActivityPlan
+
+
+class ChatItineraryTripActivityDetailView(_TripChildDetailView):
+    serializer_class = ItineraryActivityPlanSerializer
+    model = ItineraryActivityPlan
+
+
+class ChatItineraryTripCarryListCreateView(_TripChildListCreateView):
+    serializer_class = ItineraryCarryItemSerializer
+    model = ItineraryCarryItem
+
+
+class ChatItineraryTripCarryDetailView(_TripChildDetailView):
+    serializer_class = ItineraryCarryItemSerializer
+    model = ItineraryCarryItem
+
+
+class ChatItineraryTripDocumentListCreateView(_TripChildListCreateView):
+    serializer_class = ItineraryDocumentItemSerializer
+    model = ItineraryDocumentItem
+
+
+class ChatItineraryTripDocumentDetailView(_TripChildDetailView):
+    serializer_class = ItineraryDocumentItemSerializer
+    model = ItineraryDocumentItem
 
 
 class ChatItineraryTripPdfView(generics.GenericAPIView):

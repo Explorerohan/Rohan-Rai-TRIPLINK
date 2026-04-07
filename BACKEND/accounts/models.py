@@ -814,6 +814,14 @@ class ItineraryTrip(models.Model):
     start_date = models.DateField()
     days_count = models.PositiveSmallIntegerField(default=1)
     nights_count = models.PositiveSmallIntegerField(default=0)
+    booking = models.ForeignKey(
+        Booking,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="itinerary_trips",
+        help_text="Optional linked booking for richer PDF details.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -858,7 +866,7 @@ class ItineraryItem(models.Model):
     travel_date = models.DateField()
     day_label = models.CharField(max_length=50, blank=True, help_text="Day label, e.g. Day 1 / Monday")
     time_label = models.CharField(max_length=50, help_text="Time text, e.g. 09:00 AM")
-    place = models.CharField(max_length=200)
+    place = models.CharField(max_length=200, blank=True, default="")
     activity = models.CharField(max_length=300)
     food_name = models.CharField(max_length=150, blank=True)
     notes = models.TextField(blank=True)
@@ -873,6 +881,177 @@ class ItineraryItem(models.Model):
     def __str__(self):
         period = f"Night {self.day_number}" if self.is_night else f"Day {self.day_number}"
         return f"{self.room_id} | {period} | {self.travel_date} {self.time_label} - {self.place}"
+
+
+class ItineraryTripProfile(models.Model):
+    """Structured trip profile for premium itinerary PDF rendering."""
+
+    class TravelType(models.TextChoices):
+        LUXURY = "luxury", "Luxury"
+        BUDGET = "budget", "Budget"
+        ADVENTURE = "adventure", "Adventure"
+        FAMILY = "family", "Family"
+        BUSINESS = "business", "Business"
+        OTHER = "other", "Other"
+
+    trip = models.OneToOneField(
+        ItineraryTrip,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    traveler_full_names = models.CharField(max_length=300, blank=True)
+    traveler_contact_number = models.CharField(max_length=30, blank=True)
+    traveler_email = models.EmailField(blank=True)
+    booking_reference = models.CharField(max_length=80, blank=True)
+    travelers_adults = models.PositiveSmallIntegerField(default=1)
+    travelers_children = models.PositiveSmallIntegerField(default=0)
+    package_name = models.CharField(max_length=220, blank=True)
+
+    destinations = models.CharField(max_length=400, blank=True)
+    travel_type = models.CharField(max_length=24, choices=TravelType.choices, blank=True)
+    trip_highlights = models.TextField(blank=True)
+    weather_information = models.TextField(blank=True)
+    time_zone = models.CharField(max_length=80, blank=True)
+
+    meal_breakfast = models.CharField(max_length=40, blank=True, default="Included")
+    meal_lunch = models.CharField(max_length=40, blank=True, default="Included")
+    meal_dinner = models.CharField(max_length=40, blank=True, default="Included")
+    meal_locations = models.TextField(blank=True)
+    meal_preferences = models.CharField(max_length=140, blank=True)
+
+    important_instructions = models.TextField(blank=True)
+    support_agent_name = models.CharField(max_length=140, blank=True)
+    support_contact_number = models.CharField(max_length=30, blank=True)
+    support_email = models.EmailField(blank=True)
+
+    total_package_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    remaining_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    payment_method = models.CharField(max_length=60, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Itinerary Trip Profile"
+        verbose_name_plural = "Itinerary Trip Profiles"
+
+    def __str__(self):
+        return f"TripProfile {self.trip_id}"
+
+
+class ItineraryTransportSegment(models.Model):
+    class SegmentType(models.TextChoices):
+        HOME_PICKUP = "home_pickup", "Home Pickup"
+        MAIN_TRAVEL = "main_travel", "Main Travel"
+        ARRIVAL_TRANSFER = "arrival_transfer", "Arrival Transfer"
+
+    class TransportType(models.TextChoices):
+        FLIGHT = "flight", "Flight"
+        BUS = "bus", "Bus"
+        TRAIN = "train", "Train"
+        CAR = "car", "Car"
+        VAN = "van", "Van"
+        OTHER = "other", "Other"
+
+    trip = models.ForeignKey(ItineraryTrip, on_delete=models.CASCADE, related_name="transport_segments")
+    segment_type = models.CharField(max_length=30, choices=SegmentType.choices)
+    transport_type = models.CharField(max_length=30, choices=TransportType.choices, blank=True)
+    pickup_time = models.CharField(max_length=40, blank=True)
+    pickup_location = models.CharField(max_length=300, blank=True)
+    departure_time = models.CharField(max_length=40, blank=True)
+    departure_location = models.CharField(max_length=300, blank=True)
+    arrival_time = models.CharField(max_length=40, blank=True)
+    arrival_location = models.CharField(max_length=300, blank=True)
+    operator_name = models.CharField(max_length=120, blank=True)
+    operator_contact = models.CharField(max_length=30, blank=True)
+    vehicle_type = models.CharField(max_length=120, blank=True)
+    ticket_details = models.CharField(max_length=180, blank=True)
+    baggage_allowance = models.CharField(max_length=120, blank=True)
+    transfer_travel_time = models.CharField(max_length=80, blank=True)
+    display_order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["display_order", "id"]
+        verbose_name = "Itinerary Transport Segment"
+        verbose_name_plural = "Itinerary Transport Segments"
+
+    def __str__(self):
+        return f"{self.trip_id} | {self.segment_type}"
+
+
+class ItineraryHotelStay(models.Model):
+    trip = models.ForeignKey(ItineraryTrip, on_delete=models.CASCADE, related_name="hotel_stays")
+    hotel_name = models.CharField(max_length=180)
+    full_address = models.CharField(max_length=320, blank=True)
+    contact_number = models.CharField(max_length=30, blank=True)
+    stay_check_in_date = models.DateField(null=True, blank=True)
+    stay_check_out_date = models.DateField(null=True, blank=True)
+    check_in_time = models.CharField(max_length=40, blank=True)
+    check_out_time = models.CharField(max_length=40, blank=True)
+    room_type = models.CharField(max_length=120, blank=True)
+    amenities = models.TextField(blank=True)
+    display_order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["display_order", "id"]
+        verbose_name = "Itinerary Hotel Stay"
+        verbose_name_plural = "Itinerary Hotel Stays"
+
+    def __str__(self):
+        return f"{self.trip_id} | {self.hotel_name}"
+
+
+class ItineraryActivityPlan(models.Model):
+    trip = models.ForeignKey(ItineraryTrip, on_delete=models.CASCADE, related_name="activity_plans")
+    activity_name = models.CharField(max_length=220)
+    activity_timing = models.CharField(max_length=120, blank=True)
+    location = models.CharField(max_length=200, blank=True)
+    entry_tickets_included = models.BooleanField(default=False)
+    guide_available = models.BooleanField(default=False)
+    prebooked = models.BooleanField(default=False)
+    notes = models.TextField(blank=True)
+    display_order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["display_order", "id"]
+        verbose_name = "Itinerary Activity Plan"
+        verbose_name_plural = "Itinerary Activity Plans"
+
+    def __str__(self):
+        return f"{self.trip_id} | {self.activity_name}"
+
+
+class ItineraryCarryItem(models.Model):
+    trip = models.ForeignKey(ItineraryTrip, on_delete=models.CASCADE, related_name="carry_items")
+    category = models.CharField(max_length=100, blank=True)
+    item_name = models.CharField(max_length=220)
+    display_order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["display_order", "id"]
+        verbose_name = "Itinerary Carry Item"
+        verbose_name_plural = "Itinerary Carry Items"
+
+    def __str__(self):
+        return f"{self.trip_id} | {self.item_name}"
+
+
+class ItineraryDocumentItem(models.Model):
+    trip = models.ForeignKey(ItineraryTrip, on_delete=models.CASCADE, related_name="document_items")
+    document_type = models.CharField(max_length=100, blank=True)
+    document_name = models.CharField(max_length=220)
+    included = models.BooleanField(default=True)
+    notes = models.CharField(max_length=220, blank=True)
+    display_order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ["display_order", "id"]
+        verbose_name = "Itinerary Document Item"
+        verbose_name_plural = "Itinerary Document Items"
+
+    def __str__(self):
+        return f"{self.trip_id} | {self.document_name}"
 
 
 class NotificationType(models.TextChoices):

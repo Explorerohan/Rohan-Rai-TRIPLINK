@@ -23,6 +23,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   getChatMessages,
   sendChatMessage,
@@ -56,6 +57,47 @@ const formatDateLabel = (iso, t) => {
   yesterday.setDate(yesterday.getDate() - 1);
   if (d.toDateString() === yesterday.toDateString()) return t("yesterday");
   return d.toLocaleDateString();
+};
+
+const DEFAULT_ITINERARY_TIME_LABEL = "9:00 AM";
+
+/** Parse stored time_label into a Date (defaults to 9:00 today). */
+const parseTimeLabelToDate = (label) => {
+  const trimmed = (label || "").trim();
+  const d = new Date();
+  d.setSeconds(0, 0);
+  if (!trimmed) {
+    d.setHours(9, 0, 0, 0);
+    return d;
+  }
+  const m12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (m12) {
+    let hh = parseInt(m12[1], 10);
+    const mm = parseInt(m12[2], 10);
+    const ap = m12[3].toUpperCase();
+    if (ap === "PM" && hh !== 12) hh += 12;
+    if (ap === "AM" && hh === 12) hh = 0;
+    d.setHours(hh, mm, 0, 0);
+    return d;
+  }
+  const m24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) {
+    d.setHours(parseInt(m24[1], 10), parseInt(m24[2], 10), 0, 0);
+    return d;
+  }
+  d.setHours(9, 0, 0, 0);
+  return d;
+};
+
+const formatTimeLabelFromDate = (date) => {
+  if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) return DEFAULT_ITINERARY_TIME_LABEL;
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const period = h >= 12 ? "PM" : "AM";
+  let h12 = h % 12;
+  if (h12 === 0) h12 = 12;
+  const mm = String(m).padStart(2, "0");
+  return `${h12}:${mm} ${period}`;
 };
 
 /** Strip "Re: [Title - Location]\n\n" from text (e.g. agent reply about a custom package). Works even when the package was deleted. */
@@ -302,7 +344,9 @@ const buildItineraryTemplate = (item) => {
   const dateText = (item?.travel_date || "").trim();
   const heading = [dayText, dateText].filter(Boolean).join(" - ");
   const intro = heading ? `Itinerary update (${heading})` : "Itinerary update";
-  const main = `At ${timeText}, we will visit ${placeText} for ${activityText}.`;
+  const main = placeText
+    ? `At ${timeText}, we will visit ${placeText} for ${activityText}.`
+    : `At ${timeText}: ${activityText}.`;
   const food = foodText ? ` Food plan: ${foodText}.` : "";
   return `${intro}\n${main}${food}`;
 };
@@ -340,12 +384,10 @@ const ChatDetailScreen = ({
   const [savingItinerary, setSavingItinerary] = useState(false);
   const [imageLightboxUri, setImageLightboxUri] = useState(null);
   const [itineraryForm, setItineraryForm] = useState({
-    time_label: "",
-    place: "",
+    time_label: DEFAULT_ITINERARY_TIME_LABEL,
     activity: "",
-    food_name: "",
-    notes: "",
   });
+  const [itineraryTimePickerVisible, setItineraryTimePickerVisible] = useState(false);
   const scrollRef = useRef(null);
   const wsRef = useRef(null);
 
@@ -387,6 +429,10 @@ const ChatDetailScreen = ({
     loadMessages();
     loadItinerary();
   }, [loadMessages, loadItinerary]);
+
+  useEffect(() => {
+    if (!showItineraryModal) setItineraryTimePickerVisible(false);
+  }, [showItineraryModal]);
 
   useEffect(() => {
     if (!roomId || !accessToken) return;
@@ -660,7 +706,7 @@ const ChatDetailScreen = ({
     setEditingItineraryId(null);
     setItineraryWizardStep(0);
     setItineraryWizardData({ startDate: "", daysCount: 1, nightsCount: 0, itemsBySlot: [], tripId: null, currentSlot: 0 });
-    setItineraryForm({ time_label: "", place: "", activity: "", food_name: "", notes: "" });
+    setItineraryForm({ time_label: DEFAULT_ITINERARY_TIME_LABEL, activity: "" });
   };
 
   const openNewItineraryModal = () => {
@@ -676,11 +722,8 @@ const ChatDetailScreen = ({
     setItineraryWizardStep(1);
     setItineraryWizardData((p) => ({ ...p, currentSlot: 0 }));
     setItineraryForm({
-      time_label: item.time_label || "",
-      place: item.place || "",
+      time_label: (item.time_label || "").trim() || DEFAULT_ITINERARY_TIME_LABEL,
       activity: item.activity || "",
-      food_name: item.food_name || "",
-      notes: item.notes || "",
     });
     setShowItineraryModal(true);
   };
@@ -702,15 +745,14 @@ const ChatDetailScreen = ({
       itemsBySlot,
     }));
     setItineraryWizardStep(1);
-    setItineraryForm({ time_label: "", place: "", activity: "", food_name: "", notes: "" });
+    setItineraryForm({ time_label: DEFAULT_ITINERARY_TIME_LABEL, activity: "" });
   };
 
   const itineraryAddEntry = () => {
     const time = (itineraryForm.time_label || "").trim();
-    const place = (itineraryForm.place || "").trim();
     const activity = (itineraryForm.activity || "").trim();
-    if (!time || !place || !activity) {
-      Alert.alert("Missing details", "Please fill time, place, and activity.");
+    if (!time || !activity) {
+      Alert.alert("Missing details", "Please fill time and activity.");
       return;
     }
     const { daysCount, nightsCount, currentSlot, itemsBySlot } = itineraryWizardData;
@@ -725,15 +767,15 @@ const ChatDetailScreen = ({
       is_night: currentSlot % 2 === 1,
       day_label: labels[currentSlot],
       time_label: time,
-      place,
+      place: "",
       activity,
-      food_name: (itineraryForm.food_name || "").trim(),
-      notes: (itineraryForm.notes || "").trim(),
+      food_name: "",
+      notes: "",
     };
     const newItemsBySlot = [...itemsBySlot];
     newItemsBySlot[currentSlot] = [...(newItemsBySlot[currentSlot] || []), newEntry];
     setItineraryWizardData((p) => ({ ...p, itemsBySlot: newItemsBySlot }));
-    setItineraryForm({ time_label: "", place: "", activity: "", food_name: "", notes: "" });
+    setItineraryForm({ time_label: DEFAULT_ITINERARY_TIME_LABEL, activity: "" });
   };
 
   const itineraryFormNext = async () => {
@@ -764,7 +806,7 @@ const ChatDetailScreen = ({
       return;
     }
     setItineraryWizardData((p) => ({ ...p, currentSlot: currentSlot + 1 }));
-    setItineraryForm({ time_label: "", place: "", activity: "", food_name: "", notes: "" });
+    setItineraryForm({ time_label: DEFAULT_ITINERARY_TIME_LABEL, activity: "" });
   };
 
   const itineraryFormBack = () => {
@@ -774,7 +816,20 @@ const ChatDetailScreen = ({
       return;
     }
     setItineraryWizardData((p) => ({ ...p, currentSlot: currentSlot - 1 }));
-    setItineraryForm({ time_label: "", place: "", activity: "", food_name: "", notes: "" });
+    setItineraryForm({ time_label: DEFAULT_ITINERARY_TIME_LABEL, activity: "" });
+  };
+
+  const onItineraryTimePickerChange = (event, date) => {
+    if (Platform.OS === "android") {
+      setItineraryTimePickerVisible(false);
+    }
+    if (event?.type === "dismissed") {
+      setItineraryTimePickerVisible(false);
+      return;
+    }
+    if (date) {
+      setItineraryForm((p) => ({ ...p, time_label: formatTimeLabelFromDate(date) }));
+    }
   };
 
   const itineraryCheckPdf = () => {
@@ -804,13 +859,10 @@ const ChatDetailScreen = ({
     if (!editingItineraryId) return;
     const payload = {
       time_label: itineraryForm.time_label.trim(),
-      place: itineraryForm.place.trim(),
       activity: itineraryForm.activity.trim(),
-      food_name: itineraryForm.food_name.trim(),
-      notes: itineraryForm.notes.trim(),
     };
-    if (!payload.time_label || !payload.place || !payload.activity) {
-      Alert.alert("Missing details", "Please fill time, place, and activity.");
+    if (!payload.time_label || !payload.activity) {
+      Alert.alert("Missing details", "Please fill time and activity.");
       return;
     }
     setSavingItinerary(true);
@@ -909,7 +961,9 @@ const ChatDetailScreen = ({
                           <Text style={styles.itineraryCardTime}>{item.time_label}</Text>
                           {!!item.day_label && <Text style={styles.itineraryCardDay}>{item.day_label}</Text>}
                         </View>
-                        <Text style={styles.itineraryCardMain}>{item.place} - {item.activity}</Text>
+                        <Text style={styles.itineraryCardMain}>
+                          {(item.place || "").trim() ? `${item.place} — ${item.activity}` : item.activity}
+                        </Text>
                         {!!item.food_name && <Text style={styles.itineraryCardSub}>Food: {item.food_name}</Text>}
                         {!!item.notes && <Text style={styles.itineraryCardSub}>Note: {item.notes}</Text>}
                         {isAgent && (
@@ -1211,13 +1265,31 @@ const ChatDetailScreen = ({
           <View style={styles.modalCard}>
             {editingItineraryId ? (
               <>
-                <Text style={styles.modalTitle}>Edit itinerary item</Text>
+                <View style={styles.modalHead}>
+                  <Text style={styles.modalTitle}>Edit itinerary item</Text>
+                </View>
                 <ScrollView showsVerticalScrollIndicator={false}>
-                  <TextInput style={styles.modalInput} placeholder="Time" value={itineraryForm.time_label} onChangeText={(v) => setItineraryForm((p) => ({ ...p, time_label: v }))} />
-                  <TextInput style={styles.modalInput} placeholder="Place" value={itineraryForm.place} onChangeText={(v) => setItineraryForm((p) => ({ ...p, place: v }))} />
+                  <Text style={styles.modalFieldLabel}>Time</Text>
+                  {Platform.OS === "web" ? (
+                    <TextInput
+                      style={styles.modalInput}
+                      value={itineraryForm.time_label}
+                      onChangeText={(v) => setItineraryForm((p) => ({ ...p, time_label: v }))}
+                      placeholder="9:00 AM"
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.modalInput, styles.modalTimeRow]}
+                      onPress={() => setItineraryTimePickerVisible(true)}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel="Select time"
+                    >
+                      <Text style={styles.modalTimeText}>{itineraryForm.time_label}</Text>
+                      <Ionicons name="time-outline" size={22} color="#475569" />
+                    </TouchableOpacity>
+                  )}
                   <TextInput style={styles.modalInput} placeholder="Activity" value={itineraryForm.activity} onChangeText={(v) => setItineraryForm((p) => ({ ...p, activity: v }))} />
-                  <TextInput style={styles.modalInput} placeholder="Food (optional)" value={itineraryForm.food_name} onChangeText={(v) => setItineraryForm((p) => ({ ...p, food_name: v }))} />
-                  <TextInput style={[styles.modalInput, styles.modalNotes]} multiline placeholder="Notes (optional)" value={itineraryForm.notes} onChangeText={(v) => setItineraryForm((p) => ({ ...p, notes: v }))} />
                 </ScrollView>
                 <View style={styles.modalActions}>
                   <TouchableOpacity style={[styles.modalBtn, styles.modalCancelBtn]} onPress={() => { setShowItineraryModal(false); resetItineraryForm(); }}>
@@ -1230,11 +1302,39 @@ const ChatDetailScreen = ({
               </>
             ) : itineraryWizardStep === 0 ? (
               <>
-                <Text style={styles.modalTitle}>Create itinerary</Text>
-                <Text style={styles.itineraryStepLabel}>Select trip start date and duration</Text>
-                <TextInput style={styles.modalInput} placeholder="Start date (YYYY-MM-DD)" value={itineraryWizardData.startDate} onChangeText={(v) => setItineraryWizardData((p) => ({ ...p, startDate: v }))} />
-                <TextInput style={styles.modalInput} placeholder="Days" keyboardType="number-pad" value={String(itineraryWizardData.daysCount)} onChangeText={(v) => setItineraryWizardData((p) => ({ ...p, daysCount: parseInt(v, 10) || 1 }))} />
-                <TextInput style={styles.modalInput} placeholder="Nights" keyboardType="number-pad" value={String(itineraryWizardData.nightsCount)} onChangeText={(v) => setItineraryWizardData((p) => ({ ...p, nightsCount: parseInt(v, 10) || 0 }))} />
+                <View style={styles.modalHead}>
+                  <Text style={styles.modalTitle}>Create itinerary</Text>
+                  <Text style={styles.itineraryStepLabel}>Select trip start date and duration</Text>
+                </View>
+                <Text style={styles.modalFieldLabel}>Start date</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="YYYY-MM-DD"
+                  value={itineraryWizardData.startDate}
+                  onChangeText={(v) => setItineraryWizardData((p) => ({ ...p, startDate: v }))}
+                />
+                <View style={styles.itineraryDurationRow}>
+                  <View style={styles.modalFieldHalf}>
+                    <Text style={styles.modalFieldLabel}>Days</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="1"
+                      keyboardType="number-pad"
+                      value={String(itineraryWizardData.daysCount)}
+                      onChangeText={(v) => setItineraryWizardData((p) => ({ ...p, daysCount: parseInt(v, 10) || 1 }))}
+                    />
+                  </View>
+                  <View style={styles.modalFieldHalf}>
+                    <Text style={styles.modalFieldLabel}>Nights</Text>
+                    <TextInput
+                      style={styles.modalInput}
+                      placeholder="0"
+                      keyboardType="number-pad"
+                      value={String(itineraryWizardData.nightsCount)}
+                      onChangeText={(v) => setItineraryWizardData((p) => ({ ...p, nightsCount: parseInt(v, 10) || 0 }))}
+                    />
+                  </View>
+                </View>
                 <View style={styles.modalActions}>
                   <TouchableOpacity style={[styles.modalBtn, styles.modalCancelBtn]} onPress={() => { setShowItineraryModal(false); resetItineraryForm(); }}>
                     <Text style={styles.modalCancelText}>Cancel</Text>
@@ -1246,30 +1346,50 @@ const ChatDetailScreen = ({
               </>
             ) : itineraryWizardStep === 1 ? (
               <>
-                <Text style={styles.modalTitle}>Add itinerary for {slotLabels(itineraryWizardData.daysCount, itineraryWizardData.nightsCount)[itineraryWizardData.currentSlot]}</Text>
-                <Text style={styles.itineraryStepLabel}>
-                  {(itineraryWizardData.itemsBySlot?.[itineraryWizardData.currentSlot]?.length || 0)} entries (up to 24)
-                </Text>
-                <ScrollView style={{ maxHeight: 100 }} showsVerticalScrollIndicator={false}>
+                <View style={styles.modalHead}>
+                  <Text style={styles.modalTitle}>
+                    Add itinerary for {slotLabels(itineraryWizardData.daysCount, itineraryWizardData.nightsCount)[itineraryWizardData.currentSlot]}
+                  </Text>
+                  <Text style={styles.itineraryStepLabel}>
+                    {(itineraryWizardData.itemsBySlot?.[itineraryWizardData.currentSlot]?.length || 0)} entries (up to 24)
+                  </Text>
+                </View>
+                <ScrollView style={styles.itineraryChipScroll} showsVerticalScrollIndicator={false}>
                   {(itineraryWizardData.itemsBySlot?.[itineraryWizardData.currentSlot] || []).map((e, i) => (
                     <View key={i} style={styles.itineraryChip}>
-                      <Text style={styles.itineraryChipText} numberOfLines={1}>{e.time_label} – {e.place}: {e.activity}</Text>
+                      <Text style={styles.itineraryChipText} numberOfLines={1}>{e.time_label} – {e.activity}</Text>
                     </View>
                   ))}
                 </ScrollView>
                 <ScrollView showsVerticalScrollIndicator={false}>
-                  <TextInput style={styles.modalInput} placeholder="Time (e.g., 09:00 AM)" value={itineraryForm.time_label} onChangeText={(v) => setItineraryForm((p) => ({ ...p, time_label: v }))} />
-                  <TextInput style={styles.modalInput} placeholder="Place" value={itineraryForm.place} onChangeText={(v) => setItineraryForm((p) => ({ ...p, place: v }))} />
+                  <Text style={styles.modalFieldLabel}>Time</Text>
+                  {Platform.OS === "web" ? (
+                    <TextInput
+                      style={styles.modalInput}
+                      value={itineraryForm.time_label}
+                      onChangeText={(v) => setItineraryForm((p) => ({ ...p, time_label: v }))}
+                      placeholder="9:00 AM"
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.modalInput, styles.modalTimeRow]}
+                      onPress={() => setItineraryTimePickerVisible(true)}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel="Select time"
+                    >
+                      <Text style={styles.modalTimeText}>{itineraryForm.time_label}</Text>
+                      <Ionicons name="time-outline" size={22} color="#475569" />
+                    </TouchableOpacity>
+                  )}
                   <TextInput style={styles.modalInput} placeholder="Activity" value={itineraryForm.activity} onChangeText={(v) => setItineraryForm((p) => ({ ...p, activity: v }))} />
-                  <TextInput style={styles.modalInput} placeholder="Food (optional)" value={itineraryForm.food_name} onChangeText={(v) => setItineraryForm((p) => ({ ...p, food_name: v }))} />
-                  <TextInput style={[styles.modalInput, styles.modalNotes]} multiline placeholder="Notes (optional)" value={itineraryForm.notes} onChangeText={(v) => setItineraryForm((p) => ({ ...p, notes: v }))} />
                 </ScrollView>
-                <View style={styles.modalActions}>
-                  <TouchableOpacity style={[styles.modalBtn, styles.modalCancelBtn]} onPress={itineraryFormBack}>
+                <View style={[styles.modalActions, styles.modalActionsForm]}>
+                  <TouchableOpacity style={[styles.modalBtn, styles.modalCancelBtn, styles.modalBtnBack]} onPress={itineraryFormBack}>
                     <Text style={styles.modalCancelText}>Back</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalBtn, styles.modalSaveBtn]} onPress={itineraryAddEntry}>
-                    <Text style={styles.modalSaveText}>Add entry</Text>
+                  <TouchableOpacity style={[styles.modalBtn, styles.modalSecondaryBtn]} onPress={itineraryAddEntry}>
+                    <Text style={styles.modalSecondaryText}>Add entry</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.modalBtn, styles.modalSaveBtn]} onPress={itineraryFormNext} disabled={savingItinerary}>
                     {savingItinerary ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.modalSaveText}>Next</Text>}
@@ -1278,14 +1398,16 @@ const ChatDetailScreen = ({
               </>
             ) : (
               <>
-                <Text style={styles.modalTitle}>Itinerary ready</Text>
-                <Text style={styles.itineraryStepLabel}>Preview the PDF or send it to the traveler</Text>
+                <View style={styles.modalHead}>
+                  <Text style={styles.modalTitle}>Itinerary ready</Text>
+                  <Text style={styles.itineraryStepLabel}>Preview the PDF or send it to the traveler</Text>
+                </View>
                 <View style={styles.modalActions}>
                   <TouchableOpacity style={[styles.modalBtn, styles.modalCancelBtn]} onPress={() => { setShowItineraryModal(false); resetItineraryForm(); }}>
                     <Text style={styles.modalCancelText}>Close</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.modalBtn, styles.modalSaveBtn]} onPress={itineraryCheckPdf}>
-                    <Text style={styles.modalSaveText}>Check (PDF)</Text>
+                  <TouchableOpacity style={[styles.modalBtn, styles.modalOutlineBtn]} onPress={itineraryCheckPdf}>
+                    <Text style={styles.modalOutlineText}>Preview PDF</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.modalBtn, styles.modalSaveBtn]} onPress={itinerarySend} disabled={savingItinerary}>
                     {savingItinerary ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.modalSaveText}>Send</Text>}
@@ -1294,6 +1416,48 @@ const ChatDetailScreen = ({
               </>
             )}
           </View>
+          {itineraryTimePickerVisible && (editingItineraryId || itineraryWizardStep === 1) && Platform.OS === "ios" ? (
+            <Modal
+              visible={itineraryTimePickerVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setItineraryTimePickerVisible(false)}
+            >
+              <View style={styles.itineraryTimePickerBackdrop}>
+                <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setItineraryTimePickerVisible(false)} />
+                <View style={styles.itineraryTimePickerSheet}>
+                  <View style={styles.itineraryTimePickerBar}>
+                    <TouchableOpacity
+                      onPress={() => setItineraryTimePickerVisible(false)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Done"
+                    >
+                      <Text style={styles.itineraryTimePickerDone}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={parseTimeLabelToDate(itineraryForm.time_label)}
+                    mode="time"
+                    display="spinner"
+                    themeVariant="light"
+                    onChange={(_, d) => {
+                      if (d) setItineraryForm((p) => ({ ...p, time_label: formatTimeLabelFromDate(d) }));
+                    }}
+                  />
+                </View>
+              </View>
+            </Modal>
+          ) : null}
+          {itineraryTimePickerVisible && (editingItineraryId || itineraryWizardStep === 1) && Platform.OS === "android" ? (
+            <DateTimePicker
+              value={parseTimeLabelToDate(itineraryForm.time_label)}
+              mode="time"
+              is24Hour={false}
+              display="default"
+              onChange={onItineraryTimePickerChange}
+            />
+          ) : null}
         </View>
       </Modal>
 
@@ -1848,32 +2012,101 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
     justifyContent: "flex-end",
   },
   modalCard: {
     backgroundColor: "#ffffff",
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    padding: 16,
-    maxHeight: "85%",
+    borderWidth: 1,
+    borderColor: "#e8ecf1",
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
+    maxHeight: "88%",
+  },
+  modalHead: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    paddingBottom: 14,
+    marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
     color: "#0f172a",
-    marginBottom: 12,
+    marginBottom: 6,
+    letterSpacing: -0.2,
   },
   itineraryStepLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#64748b",
-    marginBottom: 10,
+    marginBottom: 0,
+    lineHeight: 20,
+  },
+  modalFieldLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 6,
+  },
+  itineraryDurationRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginBottom: 4,
+  },
+  modalFieldHalf: {
+    flex: 1,
+  },
+  modalTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTimeText: {
+    fontSize: 14,
+    color: "#1e293b",
+    fontWeight: "500",
+  },
+  itineraryTimePickerBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+  },
+  itineraryTimePickerSheet: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    overflow: "hidden",
+    paddingBottom: Platform.OS === "ios" ? 28 : 12,
+  },
+  itineraryTimePickerBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  itineraryTimePickerDone: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#1f6b2a",
+  },
+  itineraryChipScroll: {
+    maxHeight: 120,
+    marginBottom: 8,
   },
   itineraryChip: {
-    padding: 6,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 6,
-    marginBottom: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 6,
   },
   itineraryChipText: {
     fontSize: 12,
@@ -1881,13 +2114,14 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: "#dbe3ed",
-    borderRadius: 10,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 10,
+    marginBottom: 12,
     fontSize: 14,
-    color: "#1f1f1f",
+    color: "#1e293b",
+    backgroundColor: "#fafbfc",
   },
   modalNotes: {
     minHeight: 80,
@@ -1896,30 +2130,62 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 6,
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 8,
     gap: 10,
+  },
+  modalActionsForm: {
+    marginTop: 12,
   },
   modalBtn: {
     minWidth: 88,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
+  },
+  modalBtnBack: {
+    marginRight: "auto",
   },
   modalCancelBtn: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  modalSecondaryBtn: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  modalSecondaryText: {
+    color: "#1e3a2f",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  modalOutlineBtn: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+  },
+  modalOutlineText: {
+    color: "#1e3a2f",
+    fontWeight: "600",
+    fontSize: 13,
   },
   modalSaveBtn: {
     backgroundColor: "#1f6b2a",
   },
   modalCancelText: {
-    color: "#334155",
+    color: "#475569",
     fontWeight: "600",
+    fontSize: 13,
   },
   modalSaveText: {
     color: "#ffffff",
     fontWeight: "700",
+    fontSize: 13,
   },
 });
 

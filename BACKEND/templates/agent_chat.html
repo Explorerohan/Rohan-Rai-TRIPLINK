@@ -816,42 +816,349 @@
     }
     .itinerary-modal-card {
         width: 100%;
-        max-width: 560px;
+        max-width: 480px;
         max-height: 90vh;
         overflow-y: auto;
         background: #fff;
         border-radius: 12px;
-        box-shadow: 0 12px 40px rgba(2, 6, 23, 0.18);
-        padding: 20px;
+        border: 1px solid #e8ecf1;
+        box-shadow: 0 12px 40px rgba(2, 6, 23, 0.14);
+        padding: 24px 24px 22px;
     }
     .itinerary-wizard-step { display: none; }
     .itinerary-wizard-step.active { display: block; }
+    .itinerary-modal-head {
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #f1f5f9;
+    }
     .itinerary-modal-title {
-        margin: 0 0 16px 0;
-        font-size: 17px;
+        margin: 0 0 6px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+    }
+    .itinerary-step-label {
+        font-size: 13px;
+        line-height: 1.45;
+        color: #64748b;
+        margin: 0;
+    }
+    .itinerary-modal-subhead {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        margin: 0 0 10px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .itinerary-booking-input-wrap {
+        display: flex;
+        gap: 10px;
+        align-items: stretch;
+    }
+    .itinerary-booking-input-wrap input {
+        flex: 1;
+        min-width: 0;
+    }
+    .itinerary-btn-load-booking {
+        flex-shrink: 0;
+        background: #0f172a;
+        color: #fff;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .itinerary-btn-load-booking:hover:not(:disabled) {
+        background: #1e293b;
+    }
+    .itinerary-btn-load-booking:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+    .itinerary-field-hint {
+        font-size: 11px;
+        color: #94a3b8;
+        margin: 4px 0 0 0;
+        line-height: 1.35;
+    }
+    .itinerary-step-help {
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.5;
+        margin: 0 0 12px 0;
+    }
+    .itinerary-step-help strong { color: #334155; }
+    .itinerary-step-help code {
+        font-size: 11px;
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #0f172a;
+    }
+    .itinerary-hotel-stay {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 14px 14px 10px;
+        margin-bottom: 12px;
+        background: #fafbfc;
+    }
+    .itinerary-hotel-stay-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .itinerary-hotel-stay-label {
+        font-size: 13px;
         font-weight: 600;
         color: #0f172a;
     }
-    .itinerary-step-label {
+    .itinerary-btn-remove-hotel {
         font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
         color: #64748b;
-        margin-bottom: 8px;
+        cursor: pointer;
+        font-family: inherit;
     }
-    .itinerary-btn-next, .itinerary-btn-check, .itinerary-btn-send-final {
+    .itinerary-btn-remove-hotel:hover {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #b91c1c;
+    }
+    .itinerary-hotel-add-wrap {
+        margin-top: 4px;
+    }
+    .itinerary-hotel-room-select {
+        width: 100%;
+        max-width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        font-size: 13px;
+        font-family: inherit;
+        background: #fff;
+    }
+    .itinerary-hotel-stay input[type="date"],
+    .itinerary-hotel-stay input[type="time"] {
+        min-height: 38px;
+    }
+    .itinerary-document-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 14px 14px 10px;
+        margin-bottom: 12px;
+        background: #fafbfc;
+    }
+    .itinerary-document-item-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .itinerary-document-item-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .itinerary-btn-remove-doc {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #64748b;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .itinerary-btn-remove-doc:hover {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #b91c1c;
+    }
+    .itinerary-document-add-wrap {
+        margin-top: 4px;
+    }
+    .itinerary-activity-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 14px 14px 10px;
+        margin-bottom: 12px;
+        background: #fafbfc;
+    }
+    .itinerary-activity-item-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .itinerary-activity-item-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .itinerary-btn-remove-activity {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #64748b;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .itinerary-btn-remove-activity:hover {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #b91c1c;
+    }
+    .itinerary-activity-add-wrap {
+        margin-top: 4px;
+    }
+    .itinerary-booking-summary {
+        margin-top: 12px;
+        padding: 12px 14px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #334155;
+    }
+    .itinerary-booking-summary strong {
+        color: #0f172a;
+        font-weight: 600;
+    }
+    .itinerary-booking-summary dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 12px;
+    }
+    .itinerary-booking-summary dt {
+        color: #64748b;
+        font-weight: 500;
+    }
+    .itinerary-booking-summary dd {
+        margin: 0;
+    }
+    .itinerary-alt-row {
+        margin: 12px 0 16px;
+    }
+    .itinerary-link-btn {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 12px;
+        color: #1d4ed8;
+        cursor: pointer;
+        text-decoration: underline;
+        font-family: inherit;
+    }
+    .itinerary-link-btn:hover {
+        color: #1e40af;
+    }
+    .itinerary-step-progress {
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        margin: 0 0 14px 0;
+        letter-spacing: 0.02em;
+    }
+    /* Must win over `.itinerary-grid { display: grid }` — panes use both classes */
+    .itinerary-step-pane.itinerary-grid {
+        display: none !important;
+    }
+    .itinerary-step-pane.itinerary-grid.is-active {
+        display: grid !important;
+    }
+    .itinerary-btn-next,
+    .itinerary-btn-send-final {
         background: #1f6b2a;
         color: #fff;
         font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 18px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.15s ease;
     }
-    .itinerary-btn-check { background: #0369a1; margin-right: 8px; }
-    .itinerary-btn-add-entry { background: #0d9488; color: #fff; font-weight: 600; border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px; cursor: pointer; }
-    .itinerary-btn-add-entry:hover { background: #0f766e; }
-    .itinerary-entries-list { max-height: 120px; overflow-y: auto; margin-bottom: 10px; padding: 8px; background: #f8fafc; border-radius: 8px; }
-    .itinerary-entry-chip { font-size: 12px; color: #334155; padding: 4px 8px; background: #e2e8f0; border-radius: 6px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .itinerary-btn-next:hover,
+    .itinerary-btn-send-final:hover {
+        background: #185a22;
+    }
+    .itinerary-btn-check {
+        background: #fff;
+        color: #1e3a2f;
+        font-weight: 600;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .itinerary-btn-check:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+    .itinerary-btn-add-entry {
+        background: #f8fafc;
+        color: #1e3a2f;
+        font-weight: 600;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .itinerary-btn-add-entry:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+    .itinerary-entries-list {
+        max-height: 140px;
+        overflow-y: auto;
+        margin-bottom: 14px;
+        padding: 10px 12px;
+        background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid #eef2f6;
+    }
+    .itinerary-entry-chip {
+        font-size: 12px;
+        color: #334155;
+        padding: 8px 10px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .itinerary-entry-chip:last-child { margin-bottom: 0; }
     .itinerary-entry-chip span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .itinerary-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 10px;
+        gap: 14px 16px;
+    }
+    .itinerary-grid-step0 {
+        grid-template-columns: 1fr 1fr;
+    }
+    .itinerary-grid-step0 > .itinerary-field.full {
+        grid-column: 1 / -1;
     }
     .itinerary-grid .full {
         grid-column: 1 / -1;
@@ -859,53 +1166,118 @@
     .itinerary-field {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 6px;
     }
     .itinerary-field label {
         font-size: 12px;
         color: #475569;
-        font-weight: 500;
+        font-weight: 600;
+        letter-spacing: 0.01em;
     }
     .itinerary-field input,
+    .itinerary-field select,
     .itinerary-field textarea {
-        border: 1px solid #dbe3ed;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 9px 10px;
+        padding: 10px 12px;
         font-size: 14px;
         color: #1e293b;
+        background: #fafbfc;
         outline: none;
         font-family: inherit;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .itinerary-field input:hover,
+    .itinerary-field select:hover,
+    .itinerary-field textarea:hover {
+        border-color: #cbd5e1;
+    }
+    .itinerary-field input:focus,
+    .itinerary-field select:focus,
+    .itinerary-field textarea:focus {
+        background: #fff;
+        border-color: #1f6b2a;
+        box-shadow: 0 0 0 3px rgba(31, 107, 42, 0.12);
     }
     .itinerary-field textarea {
         resize: vertical;
-        min-height: 72px;
+        min-height: 76px;
+    }
+    .itinerary-field input[type="time"] {
+        min-height: 42px;
+        color-scheme: light;
     }
     .itinerary-modal-actions {
         display: flex;
         justify-content: flex-end;
+        align-items: center;
+        flex-wrap: wrap;
         gap: 10px;
-        margin-top: 14px;
+        margin-top: 22px;
+        padding-top: 4px;
+    }
+    .itinerary-modal-actions--form .itinerary-btn-back {
+        margin-right: auto;
     }
     .itinerary-btn-cancel,
-    .itinerary-btn-save {
-        border: none;
+    .itinerary-btn-save,
+    .itinerary-btn-back {
         border-radius: 8px;
-        padding: 10px 14px;
+        padding: 10px 18px;
         font-size: 13px;
         cursor: pointer;
+        font-weight: 600;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
-    .itinerary-btn-cancel {
-        background: #e2e8f0;
+    .itinerary-btn-cancel,
+    .itinerary-btn-back {
+        background: #fff;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+    .itinerary-btn-cancel:hover,
+    .itinerary-btn-back:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
         color: #334155;
     }
     .itinerary-btn-save {
+        border: none;
         background: #1f6b2a;
         color: #fff;
-        font-weight: 600;
+    }
+    .itinerary-btn-save:hover {
+        background: #185a22;
     }
     .itinerary-btn-save:disabled {
         opacity: 0.7;
         cursor: not-allowed;
+    }
+
+    @media (max-width: 440px) {
+        .itinerary-modal-card {
+            padding: 20px 18px 18px;
+        }
+        .itinerary-grid-step0 {
+            grid-template-columns: 1fr;
+        }
+        .itinerary-grid-step0 > .itinerary-field:not(.full) {
+            grid-column: 1 / -1;
+        }
+        .itinerary-modal-actions--form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .itinerary-modal-actions--form .itinerary-btn-back {
+            margin-right: 0;
+            order: 1;
+        }
+        .itinerary-modal-actions--form .itinerary-btn-add-entry {
+            order: 2;
+        }
+        .itinerary-modal-actions--form .itinerary-btn-next {
+            order: 3;
+        }
     }
 
     .chat-input-area.hidden {
@@ -1086,12 +1458,30 @@
 
 <div class="itinerary-modal" id="itineraryModal" aria-hidden="true">
     <div class="itinerary-modal-card">
-        <!-- Step 0: Date + Days + Nights -->
+        <!-- Step 0: Booking ID + trip dates -->
         <div class="itinerary-wizard-step active" id="itineraryStep0">
-            <h3 class="itinerary-modal-title">Create itinerary</h3>
-            <p class="itinerary-step-label">Select trip start date and duration</p>
-            <div class="itinerary-grid">
-                <div class="itinerary-field">
+            <div class="itinerary-modal-head">
+                <h3 class="itinerary-modal-title">Create itinerary</h3>
+                <p class="itinerary-step-label">Enter the traveler’s 5-digit booking ID to load booking and payment details. Anything missing can be filled in the next steps.</p>
+            </div>
+            <div id="itineraryBookingBlock">
+                <div class="itinerary-field full">
+                    <label for="itineraryBookingCode">Booking ID</label>
+                    <div class="itinerary-booking-input-wrap">
+                        <input id="itineraryBookingCode" type="text" inputmode="numeric" maxlength="12" placeholder="e.g. 48291" autocomplete="off">
+                        <button type="button" class="itinerary-btn-load-booking" id="itineraryBookingLoadBtn">Load</button>
+                    </div>
+                    <p class="itinerary-field-hint">Must be this traveler’s booking in the current chat. Dates below fill in after a successful load.</p>
+                </div>
+                <div id="itineraryBookingSummary" class="itinerary-booking-summary" style="display:none" aria-live="polite"></div>
+            </div>
+            <div class="itinerary-alt-row">
+                <button type="button" class="itinerary-link-btn" id="itineraryManualOnlyBtn">No booking — enter trip dates only</button>
+                <button type="button" class="itinerary-link-btn" id="itineraryUseBookingBtn" style="display:none">Use booking ID instead</button>
+            </div>
+            <div class="itinerary-modal-subhead">Trip schedule</div>
+            <div class="itinerary-grid itinerary-grid-step0">
+                <div class="itinerary-field full">
                     <label for="itineraryStartDate">Start date</label>
                     <input id="itineraryStartDate" type="date" required>
                 </div>
@@ -1109,46 +1499,124 @@
                 <button type="button" class="itinerary-btn-next" id="itineraryStep0Next">Next</button>
             </div>
         </div>
-        <!-- Step 1..N: Day/Night forms (injected by JS) -->
+        <!-- Step 1..N: one form per calendar day -->
         <div class="itinerary-wizard-step" id="itineraryStepForms">
-            <h3 class="itinerary-modal-title" id="itineraryFormTitle">Add itinerary for Day 1</h3>
-            <p class="itinerary-step-label" id="itineraryEntriesCount">0 entries added (up to 24)</p>
+            <div class="itinerary-modal-head">
+                <h3 class="itinerary-modal-title" id="itineraryFormTitle">Add itinerary for Day 1</h3>
+                <p class="itinerary-step-label" id="itineraryEntriesCount">0 entries added (up to 24)</p>
+            </div>
             <div id="itineraryEntriesList" class="itinerary-entries-list"></div>
             <div class="itinerary-grid" id="itineraryFormGrid">
                 <div class="itinerary-field">
                     <label for="itineraryTime">Time</label>
-                    <input id="itineraryTime" type="text" placeholder="09:00 AM">
+                    <input id="itineraryTime" type="time" step="60" value="09:00" title="Select time">
                 </div>
                 <div class="itinerary-field">
-                    <label for="itineraryPlace">Place</label>
-                    <input id="itineraryPlace" type="text" placeholder="e.g. Kathmandu Durbar Square">
-                </div>
-                <div class="itinerary-field full">
                     <label for="itineraryActivity">Activity</label>
-                    <input id="itineraryActivity" type="text" placeholder="e.g. Sightseeing">
-                </div>
-                <div class="itinerary-field">
-                    <label for="itineraryFood">Food (optional)</label>
-                    <input id="itineraryFood" type="text" placeholder="e.g. Breakfast">
-                </div>
-                <div class="itinerary-field full">
-                    <label for="itineraryNotes">Notes (optional)</label>
-                    <textarea id="itineraryNotes" placeholder="Any extra notes..."></textarea>
+                    <input id="itineraryActivity" type="text" placeholder="e.g. Sightseeing, transfer to hotel">
                 </div>
             </div>
-            <div class="itinerary-modal-actions">
-                <button type="button" class="itinerary-btn-cancel" id="itineraryBackBtn">Back</button>
+            <div class="itinerary-modal-actions itinerary-modal-actions--form">
+                <button type="button" class="itinerary-btn-back" id="itineraryBackBtn">Back</button>
                 <button type="button" class="itinerary-btn-add-entry" id="itineraryAddEntryBtn">Add entry</button>
                 <button type="button" class="itinerary-btn-next" id="itineraryFormNext">Next</button>
             </div>
         </div>
+        <div class="itinerary-wizard-step" id="itineraryStepProfile">
+            <div class="itinerary-modal-head">
+                <h3 class="itinerary-modal-title" id="itineraryProfileStepHeading">Trip itinerary</h3>
+                <p class="itinerary-step-label" id="itineraryProfileStepSubheading">Premium PDF details for the traveler</p>
+            </div>
+            <p class="itinerary-step-progress" id="itineraryProfileStepProgress" aria-live="polite">Step 1 of 7</p>
+            <div id="itineraryProfilePane0" class="itinerary-step-pane itinerary-grid is-active" data-itinerary-profile-pane="0">
+                <div class="itinerary-field full">
+                    <label for="itineraryProfileDestinations">Destination(s)</label>
+                    <input id="itineraryProfileDestinations" type="text" placeholder="e.g. Pokhara, Nepal">
+                </div>
+            </div>
+            <div id="itineraryProfilePane1" class="itinerary-step-pane itinerary-grid" data-itinerary-profile-pane="1">
+                <div class="itinerary-field">
+                    <label for="itineraryProfileSupportName">Support agent name</label>
+                    <input id="itineraryProfileSupportName" type="text">
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryProfileSupportPhone">Support contact number</label>
+                    <input id="itineraryProfileSupportPhone" type="text">
+                </div>
+                <div class="itinerary-field full">
+                    <label for="itineraryProfileSupportEmail">Support email</label>
+                    <input id="itineraryProfileSupportEmail" type="email">
+                </div>
+            </div>
+            <div id="itineraryProfilePane2" class="itinerary-step-pane itinerary-grid" data-itinerary-profile-pane="2">
+                <div class="itinerary-field">
+                    <label for="itineraryProfilePaymentMethod">Payment method</label>
+                    <input id="itineraryProfilePaymentMethod" type="text" placeholder="e.g. eSewa">
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryProfileTotalCost">Total package cost</label>
+                    <input id="itineraryProfileTotalCost" type="number" step="0.01">
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryProfileAmountPaid">Amount paid</label>
+                    <input id="itineraryProfileAmountPaid" type="number" step="0.01">
+                </div>
+                <div class="itinerary-field">
+                    <label for="itineraryProfileBalance">Remaining balance</label>
+                    <input id="itineraryProfileBalance" type="number" step="0.01">
+                </div>
+            </div>
+            <div id="itineraryProfilePane3" class="itinerary-step-pane itinerary-grid" data-itinerary-profile-pane="3">
+                <div class="itinerary-field full">
+                    <label for="itineraryProfileCarryItems">Carry items (one per line)</label>
+                    <textarea id="itineraryProfileCarryItems" placeholder="Warm jacket&#10;Power bank&#10;ID / passport copy"></textarea>
+                </div>
+            </div>
+            <div id="itineraryProfilePane4" class="itinerary-step-pane itinerary-grid" data-itinerary-profile-pane="4">
+                <div class="itinerary-field full">
+                    <span class="itinerary-modal-title" style="display:block;font-size:15px;margin-bottom:6px;">Activities &amp; experiences</span>
+                    <p class="itinerary-step-help" style="margin:0 0 12px 0;">One card per activity. Use <strong>Add another activity</strong> for more.</p>
+                    <div id="itineraryProfileActivityContainer"></div>
+                    <div class="itinerary-activity-add-wrap">
+                        <button type="button" class="itinerary-btn-add-entry" id="itineraryProfileActivityAddBtn">Add another activity</button>
+                    </div>
+                </div>
+            </div>
+            <div id="itineraryProfilePane5" class="itinerary-step-pane itinerary-grid" data-itinerary-profile-pane="5">
+                <div class="itinerary-field full">
+                    <span class="itinerary-modal-title" style="display:block;font-size:15px;margin-bottom:6px;">Hotels</span>
+                    <p class="itinerary-step-help" style="margin:0 0 12px 0;">One card per stay. Use <strong>Add another hotel</strong> for more properties or nights.</p>
+                    <p class="itinerary-field-hint" id="itineraryProfileHotelTripRangeHint" style="display:none;margin:0 0 12px 0;"></p>
+                    <div id="itineraryProfileHotelContainer"></div>
+                    <div class="itinerary-hotel-add-wrap">
+                        <button type="button" class="itinerary-btn-add-entry" id="itineraryProfileHotelAddBtn">Add another hotel</button>
+                    </div>
+                </div>
+            </div>
+            <div id="itineraryProfilePane6" class="itinerary-step-pane itinerary-grid" data-itinerary-profile-pane="6">
+                <div class="itinerary-field full">
+                    <span class="itinerary-modal-title" style="display:block;font-size:15px;margin-bottom:6px;">Travel documents</span>
+                    <p class="itinerary-step-help" style="margin:0 0 12px 0;">Checklist for the traveler. Use <strong>Add another document</strong> for more entries.</p>
+                    <div id="itineraryProfileDocumentContainer"></div>
+                    <div class="itinerary-document-add-wrap">
+                        <button type="button" class="itinerary-btn-add-entry" id="itineraryProfileDocumentAddBtn">Add another document</button>
+                    </div>
+                </div>
+            </div>
+            <div class="itinerary-modal-actions itinerary-modal-actions--form">
+                <button type="button" class="itinerary-btn-back" id="itineraryProfileBackBtn">Back</button>
+                <button type="button" class="itinerary-btn-next" id="itineraryProfileNextBtn">Next</button>
+            </div>
+        </div>
         <!-- Final step: Check + Send -->
         <div class="itinerary-wizard-step" id="itineraryStepFinal">
-            <h3 class="itinerary-modal-title">Itinerary ready</h3>
-            <p class="itinerary-step-label">Preview the PDF or send it to the traveler</p>
+            <div class="itinerary-modal-head">
+                <h3 class="itinerary-modal-title">Itinerary ready</h3>
+                <p class="itinerary-step-label">Preview the PDF or send it to the traveler</p>
+            </div>
             <div class="itinerary-modal-actions">
                 <button type="button" class="itinerary-btn-cancel" id="itineraryFinalCancelBtn">Close</button>
-                <button type="button" class="itinerary-btn-check" id="itineraryCheckBtn">Check itinerary (PDF)</button>
+                <button type="button" class="itinerary-btn-check" id="itineraryCheckBtn">Preview PDF</button>
                 <button type="button" class="itinerary-btn-send-final" id="itinerarySendBtn">Send itinerary</button>
             </div>
         </div>
@@ -1205,19 +1673,40 @@
     const itineraryModal = document.getElementById('itineraryModal');
     const itineraryStep0 = document.getElementById('itineraryStep0');
     const itineraryStepForms = document.getElementById('itineraryStepForms');
+    const itineraryStepProfile = document.getElementById('itineraryStepProfile');
     const itineraryStepFinal = document.getElementById('itineraryStepFinal');
     const itineraryStartDate = document.getElementById('itineraryStartDate');
     const itineraryDays = document.getElementById('itineraryDays');
     const itineraryNights = document.getElementById('itineraryNights');
+    const itineraryBookingBlock = document.getElementById('itineraryBookingBlock');
+    const itineraryBookingCode = document.getElementById('itineraryBookingCode');
+    const itineraryBookingLoadBtn = document.getElementById('itineraryBookingLoadBtn');
+    const itineraryBookingSummary = document.getElementById('itineraryBookingSummary');
+    const itineraryManualOnlyBtn = document.getElementById('itineraryManualOnlyBtn');
+    const itineraryUseBookingBtn = document.getElementById('itineraryUseBookingBtn');
     const itineraryFormTitle = document.getElementById('itineraryFormTitle');
     const itineraryTime = document.getElementById('itineraryTime');
-    const itineraryPlace = document.getElementById('itineraryPlace');
     const itineraryActivity = document.getElementById('itineraryActivity');
-    const itineraryFood = document.getElementById('itineraryFood');
-    const itineraryNotes = document.getElementById('itineraryNotes');
     const itineraryCancelBtn = document.getElementById('itineraryCancelBtn');
     const itineraryBackBtn = document.getElementById('itineraryBackBtn');
+    const itineraryProfileBackBtn = document.getElementById('itineraryProfileBackBtn');
+    const itineraryProfileNextBtn = document.getElementById('itineraryProfileNextBtn');
     const itineraryFinalCancelBtn = document.getElementById('itineraryFinalCancelBtn');
+    const itineraryProfileDestinations = document.getElementById('itineraryProfileDestinations');
+    const itineraryProfileSupportName = document.getElementById('itineraryProfileSupportName');
+    const itineraryProfileSupportPhone = document.getElementById('itineraryProfileSupportPhone');
+    const itineraryProfileSupportEmail = document.getElementById('itineraryProfileSupportEmail');
+    const itineraryProfilePaymentMethod = document.getElementById('itineraryProfilePaymentMethod');
+    const itineraryProfileTotalCost = document.getElementById('itineraryProfileTotalCost');
+    const itineraryProfileAmountPaid = document.getElementById('itineraryProfileAmountPaid');
+    const itineraryProfileBalance = document.getElementById('itineraryProfileBalance');
+    const itineraryProfileCarryItems = document.getElementById('itineraryProfileCarryItems');
+    const itineraryProfileActivityContainer = document.getElementById('itineraryProfileActivityContainer');
+    const itineraryProfileActivityAddBtn = document.getElementById('itineraryProfileActivityAddBtn');
+    const itineraryProfileHotelContainer = document.getElementById('itineraryProfileHotelContainer');
+    const itineraryProfileHotelAddBtn = document.getElementById('itineraryProfileHotelAddBtn');
+    const itineraryProfileDocumentContainer = document.getElementById('itineraryProfileDocumentContainer');
+    const itineraryProfileDocumentAddBtn = document.getElementById('itineraryProfileDocumentAddBtn');
     const chatImageLightbox = document.getElementById('chatImageLightbox');
     const chatImageLightboxImg = document.getElementById('chatImageLightboxImg');
     const chatImageLightboxBgImg = document.getElementById('chatImageLightboxBgImg');
@@ -1399,8 +1888,34 @@
             headers,
             ...options,
         });
-        if (!res.ok) throw new Error('API error: ' + res.status);
-        return res.json();
+        const text = await res.text();
+        let data = null;
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch (e) {
+            data = null;
+        }
+        if (!res.ok) {
+            let msg = 'API error: ' + res.status;
+            if (data) {
+                if (typeof data.detail === 'string') {
+                    msg = data.detail;
+                } else if (data.detail != null) {
+                    msg = JSON.stringify(data.detail);
+                } else {
+                    const bits = [];
+                    for (const k of Object.keys(data)) {
+                        const v = data[k];
+                        if (Array.isArray(v)) bits.push(k + ': ' + v.join(' '));
+                        else if (v && typeof v === 'object') bits.push(k + ': ' + JSON.stringify(v));
+                        else bits.push(k + ': ' + String(v));
+                    }
+                    if (bits.length) msg = bits.join('\n');
+                }
+            }
+            throw new Error(msg);
+        }
+        return data;
     }
 
     /** Multipart POST (no JSON Content-Type). Same-origin session + CSRF. */
@@ -1869,12 +2384,22 @@
         }
     }
 
-    let itineraryWizard = { startDate: '', daysCount: 1, nightsCount: 0, itemsBySlot: [], tripId: null };
-    const slotLabels = (days, nights) => {
+    let itineraryWizard = {
+        startDate: '',
+        daysCount: 1,
+        nightsCount: 0,
+        itemsBySlot: [],
+        tripId: null,
+        bookingId: null,
+        bookingSnapshot: null,
+        manualOnly: false,
+    };
+    /** One wizard step per calendar day only (no separate night steps). */
+    const slotLabels = (days) => {
         const labels = [];
-        for (let i = 0; i < days + nights; i++) {
-            const d = Math.floor(i / 2) + 1;
-            labels.push(i % 2 === 0 ? 'Day ' + d : 'Night ' + d);
+        const d = Math.max(1, parseInt(days, 10) || 1);
+        for (let i = 0; i < d; i++) {
+            labels.push('Day ' + (i + 1));
         }
         return labels;
     };
@@ -1883,15 +2408,782 @@
         if (!itineraryModal) return;
         itineraryModal.classList.remove('show');
         itineraryModal.setAttribute('aria-hidden', 'true');
-        itineraryWizard = { startDate: '', daysCount: 1, nightsCount: 0, itemsBySlot: [], tripId: null };
+        resetItineraryProfileSubStep();
+        itineraryWizard = {
+            startDate: '',
+            daysCount: 1,
+            nightsCount: 0,
+            itemsBySlot: [],
+            tripId: null,
+            bookingId: null,
+            bookingSnapshot: null,
+            manualOnly: false,
+        };
+    }
+
+    function setItineraryManualOnlyMode(on) {
+        itineraryWizard.manualOnly = !!on;
+        if (itineraryBookingBlock) itineraryBookingBlock.style.display = on ? 'none' : '';
+        if (itineraryManualOnlyBtn) itineraryManualOnlyBtn.style.display = on ? 'none' : '';
+        if (itineraryUseBookingBtn) itineraryUseBookingBtn.style.display = on ? '' : 'none';
+        if (on) {
+            itineraryWizard.bookingId = null;
+            itineraryWizard.bookingSnapshot = null;
+            if (itineraryBookingCode) itineraryBookingCode.value = '';
+            if (itineraryBookingSummary) {
+                itineraryBookingSummary.innerHTML = '';
+                itineraryBookingSummary.style.display = 'none';
+            }
+        }
+    }
+
+    function renderItineraryBookingSummary(data) {
+        if (!itineraryBookingSummary || !data) return;
+        const rows = [
+            ['Traveler', data.traveler_name || '—'],
+            ['Email', data.traveler_email || '—'],
+            ['Phone', data.traveler_phone || '—'],
+            ['Package', data.package_name || '—'],
+            ['Travelers', String(data.traveler_count != null ? data.traveler_count : '—')],
+            ['Payment', (data.payment_method_display || '') + (data.payment_status_display ? ' · ' + data.payment_status_display : '')],
+            ['Total', data.total_amount != null ? data.total_amount : '—'],
+        ];
+        let html = '<dl>';
+        rows.forEach(function (r) {
+            html += '<dt>' + escapeHtml(r[0]) + '</dt><dd>' + escapeHtml(String(r[1])) + '</dd>';
+        });
+        html += '</dl>';
+        itineraryBookingSummary.innerHTML = html;
+        itineraryBookingSummary.style.display = 'block';
+    }
+
+    async function itineraryBookingLoadHandler() {
+        if (!activeRoomId) return;
+        const raw = (itineraryBookingCode && itineraryBookingCode.value || '').trim();
+        const code = raw.replace(/\D/g, '').slice(0, 5);
+        if (code.length !== 5) {
+            alert('Enter a 5-digit booking ID.');
+            return;
+        }
+        if (itineraryBookingLoadBtn) itineraryBookingLoadBtn.disabled = true;
+        try {
+            const data = await apiFetch('/chat/rooms/' + activeRoomId + '/booking-lookup/?code=' + encodeURIComponent(code));
+            itineraryWizard.bookingId = data.booking_id;
+            itineraryWizard.bookingSnapshot = data;
+            setItineraryManualOnlyMode(false);
+            if (data.trip_start_date) {
+                if (itineraryStartDate) itineraryStartDate.value = data.trip_start_date.slice(0, 10);
+            } else if (itineraryStartDate && !itineraryStartDate.value) {
+                itineraryStartDate.value = new Date().toISOString().slice(0, 10);
+            }
+            if (itineraryDays) itineraryDays.value = data.duration_days != null ? data.duration_days : 1;
+            if (itineraryNights) itineraryNights.value = data.duration_nights != null ? data.duration_nights : 0;
+            renderItineraryBookingSummary(data);
+        } catch (err) {
+            console.error('Booking lookup failed', err);
+            itineraryWizard.bookingId = null;
+            itineraryWizard.bookingSnapshot = null;
+            if (itineraryBookingSummary) {
+                itineraryBookingSummary.innerHTML = '';
+                itineraryBookingSummary.style.display = 'none';
+            }
+            alert(err.message || 'Lookup failed.');
+        } finally {
+            if (itineraryBookingLoadBtn) itineraryBookingLoadBtn.disabled = false;
+        }
+    }
+
+    function itineraryProfileSetNum(el, v) {
+        if (!el) return;
+        if (v === null || v === undefined || v === '') el.value = '';
+        else el.value = String(v);
+    }
+
+    async function loadProfileIntoProfileForm() {
+        if (!itineraryWizard.tripId || !activeRoomId) return;
+        try {
+            const p = await apiFetch('/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/profile/');
+            if (itineraryProfileDestinations) itineraryProfileDestinations.value = p.destinations || '';
+            if (itineraryProfileSupportName) itineraryProfileSupportName.value = p.support_agent_name || '';
+            if (itineraryProfileSupportPhone) itineraryProfileSupportPhone.value = p.support_contact_number || '';
+            if (itineraryProfileSupportEmail) itineraryProfileSupportEmail.value = p.support_email || '';
+            if (itineraryProfilePaymentMethod) itineraryProfilePaymentMethod.value = p.payment_method || '';
+            itineraryProfileSetNum(itineraryProfileTotalCost, p.total_package_cost);
+            itineraryProfileSetNum(itineraryProfileAmountPaid, p.amount_paid);
+            itineraryProfileSetNum(itineraryProfileBalance, p.remaining_balance);
+        } catch (e) {
+            console.error('Load profile failed', e);
+        }
+    }
+
+    const ITINERARY_PROFILE_SUBSTEP_META = [
+        { title: 'Trip overview', sub: 'Where the traveler is going' },
+        { title: 'Support contact', sub: 'How the traveler can reach you' },
+        { title: 'Payment', sub: 'Method and amounts' },
+        { title: 'Carry list', sub: 'What to pack — one item per line' },
+        { title: 'Activities & experiences', sub: 'Name, location, optional details' },
+        { title: 'Hotels', sub: 'Stays — one card per hotel with full details' },
+        { title: 'Travel documents', sub: 'Checklist — type and included' },
+    ];
+    const ITINERARY_PROFILE_SUBSTEP_COUNT = ITINERARY_PROFILE_SUBSTEP_META.length;
+    let itineraryProfileSubStepIndex = 0;
+
+    function resetItineraryProfileSubStep() {
+        itineraryProfileSubStepIndex = 0;
+    }
+
+    function showItineraryProfileSubStep(index) {
+        if (index < 0 || index >= ITINERARY_PROFILE_SUBSTEP_COUNT) return;
+        itineraryProfileSubStepIndex = index;
+        for (let i = 0; i < ITINERARY_PROFILE_SUBSTEP_COUNT; i++) {
+            const pane = document.getElementById('itineraryProfilePane' + i);
+            if (pane) pane.classList.toggle('is-active', i === index);
+        }
+        const meta = ITINERARY_PROFILE_SUBSTEP_META[index];
+        const h = document.getElementById('itineraryProfileStepHeading');
+        const s = document.getElementById('itineraryProfileStepSubheading');
+        const pr = document.getElementById('itineraryProfileStepProgress');
+        if (h) h.textContent = meta.title;
+        if (s) s.textContent = meta.sub;
+        if (pr) pr.textContent = 'Step ' + (index + 1) + ' of ' + ITINERARY_PROFILE_SUBSTEP_COUNT;
+        if (itineraryProfileNextBtn) {
+            itineraryProfileNextBtn.textContent = index === ITINERARY_PROFILE_SUBSTEP_COUNT - 1 ? 'Save details' : 'Next';
+        }
+        if (index === 5) {
+            updateItineraryProfileHotelTripRangeHint();
+            refreshAllHotelStayDateConstraints();
+        }
+        if (itineraryModal) {
+            const card = itineraryModal.querySelector('.itinerary-modal-card');
+            if (card) card.scrollTop = 0;
+        }
     }
 
     function showItineraryStep(stepId) {
-        [itineraryStep0, itineraryStepForms, itineraryStepFinal].forEach(el => {
+        [itineraryStep0, itineraryStepForms, itineraryStepProfile, itineraryStepFinal].forEach(el => {
             if (el) el.classList.remove('active');
         });
         const el = document.getElementById(stepId);
         if (el) el.classList.add('active');
+    }
+
+    /** HTML5 time value (HH:MM 24h) → display label for API/PDF, e.g. 9:00 AM */
+    function formatTimeLabelFromHHMM(hhmm) {
+        if (!hhmm || typeof hhmm !== 'string') return '';
+        var m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+        if (!m) return '';
+        var hh = parseInt(m[1], 10);
+        var mm = parseInt(m[2], 10);
+        if (isNaN(hh) || isNaN(mm) || mm > 59 || hh > 23) return '';
+        var period = hh >= 12 ? 'PM' : 'AM';
+        var hour12 = hh % 12;
+        if (hour12 === 0) hour12 = 12;
+        return hour12 + ':' + String(mm).padStart(2, '0') + ' ' + period;
+    }
+
+    function setItineraryTimeInputDefault() {
+        if (itineraryTime) itineraryTime.value = '09:00';
+    }
+
+    function parseItineraryProfileLines(text) {
+        return String(text || '').split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    function yesNoToBool(v) {
+        const s = String(v || '').trim().toLowerCase();
+        return s === 'yes' || s === 'true' || s === '1';
+    }
+
+    /** Trip calendar window for hotel stay dates: first day through last day of the package (days_count). */
+    function getTripDateBounds() {
+        const start = itineraryWizard.startDate;
+        const dc = parseInt(itineraryWizard.daysCount, 10) || 1;
+        if (!start || typeof start !== 'string' || start.length < 10) {
+            return { min: '', max: '', label: '' };
+        }
+        const parts = start.split('-');
+        if (parts.length !== 3) return { min: '', max: '', label: '' };
+        const y = parseInt(parts[0], 10);
+        const mo = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        const d0 = new Date(y, mo, d);
+        if (isNaN(d0.getTime())) return { min: '', max: '', label: '' };
+        const dLast = new Date(d0);
+        dLast.setDate(dLast.getDate() + Math.max(0, dc - 1));
+        const pad = function (n) { return n < 10 ? '0' + n : String(n); };
+        const fmt = function (dt) {
+            return dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate());
+        };
+        const min = fmt(d0);
+        const max = fmt(dLast);
+        const label = 'Trip dates: ' + min + ' – ' + max + '. Stay check-in / check-out must be within this range.';
+        return { min: min, max: max, label: label };
+    }
+
+    function updateItineraryProfileHotelTripRangeHint() {
+        const el = document.getElementById('itineraryProfileHotelTripRangeHint');
+        if (!el) return;
+        const b = getTripDateBounds();
+        if (b.label) {
+            el.textContent = b.label;
+            el.style.display = 'block';
+        } else {
+            el.textContent = '';
+            el.style.display = 'none';
+        }
+    }
+
+    function validateHotelStayDatesInRow(row) {
+        const b = getTripDateBounds();
+        if (!b.min || !b.max) return;
+        const di = row.querySelector('[data-f="stay_check_in_date"]');
+        const doo = row.querySelector('[data-f="stay_check_out_date"]');
+        if (!di || !doo) return;
+        function clampEl(el) {
+            if (!el.value) return;
+            if (el.value < b.min) el.value = b.min;
+            if (el.value > b.max) el.value = b.max;
+        }
+        clampEl(di);
+        clampEl(doo);
+        if (di.value && doo.value && doo.value < di.value) {
+            doo.value = di.value;
+        }
+    }
+
+    function applyHotelStayDateConstraints(row) {
+        const b = getTripDateBounds();
+        const di = row.querySelector('[data-f="stay_check_in_date"]');
+        const doo = row.querySelector('[data-f="stay_check_out_date"]');
+        if (!di || !doo) return;
+        if (b.min && b.max) {
+            di.min = b.min;
+            di.max = b.max;
+            doo.min = b.min;
+            doo.max = b.max;
+        } else {
+            di.removeAttribute('min');
+            di.removeAttribute('max');
+            doo.removeAttribute('min');
+            doo.removeAttribute('max');
+        }
+        validateHotelStayDatesInRow(row);
+    }
+
+    function refreshAllHotelStayDateConstraints() {
+        const container = document.getElementById('itineraryProfileHotelContainer');
+        if (!container) return;
+        container.querySelectorAll('.itinerary-hotel-stay').forEach(function (row) {
+            applyHotelStayDateConstraints(row);
+        });
+    }
+
+    function isoDateSlice(v) {
+        if (v == null || v === '') return '';
+        const s = String(v);
+        return s.length >= 10 ? s.slice(0, 10) : '';
+    }
+
+    function normalizeTimeValueForInput(s) {
+        if (!s) return '';
+        const t = String(s).trim();
+        if (/^\d{2}:\d{2}$/.test(t)) return t;
+        const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+        if (!m) return '';
+        let h = parseInt(m[1], 10);
+        const mm = parseInt(m[2], 10);
+        const ap = (m[3] || '').toUpperCase();
+        if (isNaN(h) || isNaN(mm) || mm > 59) return '';
+        if (ap) {
+            if (h < 1 || h > 12) return '';
+            if (ap === 'PM' && h !== 12) h += 12;
+            if (ap === 'AM' && h === 12) h = 0;
+        } else if (h > 23) {
+            return '';
+        }
+        return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    }
+
+    const HOTEL_ROOM_TYPE_SELECT_INNER =
+        '<option value="">Select room type</option>' +
+        '<option value="Standard">Standard</option>' +
+        '<option value="Standard Double">Standard Double</option>' +
+        '<option value="Deluxe">Deluxe</option>' +
+        '<option value="Deluxe Suite">Deluxe Suite</option>' +
+        '<option value="Executive">Executive</option>' +
+        '<option value="Family Room">Family Room</option>' +
+        '<option value="Suite">Suite</option>' +
+        '<option value="Studio">Studio</option>' +
+        '<option value="Villa">Villa</option>' +
+        '<option value="Connecting Rooms">Connecting Rooms</option>' +
+        '<option value="__other__">Other…</option>';
+
+    function syncHotelRoomType(row, roomType) {
+        const sel = row.querySelector('[data-f="room_type_select"]');
+        const wrap = row.querySelector('.itinerary-room-other-wrap');
+        const oth = row.querySelector('[data-f="room_type_other"]');
+        if (!sel) return;
+        const v = (roomType || '').trim();
+        let found = false;
+        for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value && sel.options[i].value === v) {
+                found = true;
+                break;
+            }
+        }
+        if (v && !found) {
+            sel.value = '__other__';
+            if (oth) oth.value = v;
+            if (wrap) wrap.style.display = 'block';
+        } else {
+            sel.value = v;
+            if (oth) oth.value = '';
+            if (wrap) wrap.style.display = 'none';
+        }
+    }
+
+    function relabelHotelStays(container) {
+        if (!container) return;
+        const rows = container.querySelectorAll('.itinerary-hotel-stay');
+        rows.forEach(function (row, i) {
+            const lab = row.querySelector('.itinerary-hotel-stay-label');
+            if (lab) lab.textContent = 'Stay ' + (i + 1);
+            const rm = row.querySelector('.itinerary-btn-remove-hotel');
+            if (rm) rm.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+        });
+    }
+
+    function appendHotelStayRow(container, data) {
+        if (!container) return;
+        data = data || {};
+        const row = document.createElement('div');
+        row.className = 'itinerary-hotel-stay';
+        row.innerHTML =
+            '<div class="itinerary-hotel-stay-head">' +
+            '<span class="itinerary-hotel-stay-label">Stay</span>' +
+            '<button type="button" class="itinerary-btn-remove-hotel">Remove</button>' +
+            '</div>' +
+            '<div class="itinerary-grid itinerary-grid-step0">' +
+            '<div class="itinerary-field full"><label>Hotel name</label><input type="text" data-f="hotel_name" placeholder="e.g. Grand Resort" autocomplete="off"></div>' +
+            '<div class="itinerary-field full"><label>Full address</label><textarea data-f="full_address" rows="2" placeholder="Street, city, postal code"></textarea></div>' +
+            '<div class="itinerary-field"><label>Contact</label><input type="text" data-f="contact_number" placeholder="Phone" autocomplete="off"></div>' +
+            '<div class="itinerary-field"><label>Check-in date</label><input type="date" data-f="stay_check_in_date" class="itinerary-hotel-date" autocomplete="off"></div>' +
+            '<div class="itinerary-field"><label>Check-out date</label><input type="date" data-f="stay_check_out_date" class="itinerary-hotel-date" autocomplete="off"></div>' +
+            '<div class="itinerary-field"><label>Check-in time</label><input type="time" data-f="check_in_time" step="60" autocomplete="off"></div>' +
+            '<div class="itinerary-field"><label>Check-out time</label><input type="time" data-f="check_out_time" step="60" autocomplete="off"></div>' +
+            '<div class="itinerary-field full"><label>Room type</label><select data-f="room_type_select" class="itinerary-hotel-room-select">' + HOTEL_ROOM_TYPE_SELECT_INNER + '</select></div>' +
+            '<div class="itinerary-field full itinerary-room-other-wrap" style="display:none"><label>Specify room type</label><input type="text" data-f="room_type_other" placeholder="Describe the room" autocomplete="off"></div>' +
+            '<div class="itinerary-field full"><label>Amenities</label><textarea data-f="amenities" rows="2" placeholder="Wi-Fi, breakfast, pool…"></textarea></div>' +
+            '</div>';
+        const setv = function (name, val) {
+            const el = row.querySelector('[data-f="' + name + '"]');
+            if (el) el.value = (val != null && val !== undefined) ? String(val) : '';
+        };
+        setv('hotel_name', data.hotel_name);
+        setv('full_address', data.full_address);
+        setv('contact_number', data.contact_number);
+        setv('stay_check_in_date', isoDateSlice(data.stay_check_in_date));
+        setv('stay_check_out_date', isoDateSlice(data.stay_check_out_date));
+        const tiIn = row.querySelector('[data-f="check_in_time"]');
+        const tiOut = row.querySelector('[data-f="check_out_time"]');
+        if (tiIn) tiIn.value = normalizeTimeValueForInput(data.check_in_time);
+        if (tiOut) tiOut.value = normalizeTimeValueForInput(data.check_out_time);
+        syncHotelRoomType(row, data.room_type || '');
+        setv('amenities', data.amenities);
+        const selRoom = row.querySelector('[data-f="room_type_select"]');
+        if (selRoom) {
+            selRoom.addEventListener('change', function () {
+                const wrap = row.querySelector('.itinerary-room-other-wrap');
+                const oth = row.querySelector('[data-f="room_type_other"]');
+                if (this.value === '__other__') {
+                    if (wrap) wrap.style.display = 'block';
+                } else {
+                    if (wrap) wrap.style.display = 'none';
+                    if (oth) oth.value = '';
+                }
+            });
+        }
+        const di = row.querySelector('[data-f="stay_check_in_date"]');
+        const doo = row.querySelector('[data-f="stay_check_out_date"]');
+        function onDateChange() {
+            validateHotelStayDatesInRow(row);
+        }
+        if (di) di.addEventListener('change', onDateChange);
+        if (doo) doo.addEventListener('change', onDateChange);
+        row.querySelector('.itinerary-btn-remove-hotel').addEventListener('click', function () {
+            if (container.querySelectorAll('.itinerary-hotel-stay').length <= 1) return;
+            row.remove();
+            relabelHotelStays(container);
+        });
+        container.appendChild(row);
+        relabelHotelStays(container);
+        applyHotelStayDateConstraints(row);
+    }
+
+    function initItineraryProfileHotelUI() {
+        const c = document.getElementById('itineraryProfileHotelContainer');
+        if (!c) return;
+        c.innerHTML = '';
+        appendHotelStayRow(c, null);
+    }
+
+    function collectHotelStaysFromDom() {
+        const container = document.getElementById('itineraryProfileHotelContainer');
+        if (!container) return [];
+        const rows = container.querySelectorAll('.itinerary-hotel-stay');
+        const out = [];
+        rows.forEach(function (row) {
+            const gv = function (name) {
+                const el = row.querySelector('[data-f="' + name + '"]');
+                return el ? String(el.value || '').trim() : '';
+            };
+            let room_type = gv('room_type_select');
+            if (room_type === '__other__') {
+                room_type = gv('room_type_other');
+            }
+            const stayIn = gv('stay_check_in_date');
+            const stayOut = gv('stay_check_out_date');
+            const payload = {
+                hotel_name: gv('hotel_name'),
+                full_address: gv('full_address'),
+                contact_number: gv('contact_number'),
+                check_in_time: gv('check_in_time'),
+                check_out_time: gv('check_out_time'),
+                room_type: room_type,
+                amenities: gv('amenities'),
+            };
+            if (stayIn) payload.stay_check_in_date = stayIn;
+            if (stayOut) payload.stay_check_out_date = stayOut;
+            const empty = !payload.hotel_name && !payload.full_address && !payload.contact_number &&
+                !stayIn && !stayOut &&
+                !payload.check_in_time && !payload.check_out_time && !payload.room_type && !payload.amenities;
+            if (empty) return;
+            if (!payload.hotel_name) payload.hotel_name = 'Hotel';
+            out.push(payload);
+        });
+        return out;
+    }
+
+    async function fetchHotelStayList() {
+        if (!activeRoomId || !itineraryWizard.tripId) return [];
+        const base = '/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/hotels/';
+        const data = await apiFetch(base);
+        return Array.isArray(data) ? data : (data && data.results ? data.results : []);
+    }
+
+    async function loadHotelsIntoForm() {
+        const container = document.getElementById('itineraryProfileHotelContainer');
+        if (!container || !itineraryWizard.tripId || !activeRoomId) return;
+        let list = [];
+        try {
+            list = await fetchHotelStayList();
+        } catch (e) {
+            console.error('Load hotels failed', e);
+        }
+        container.innerHTML = '';
+        if (!list.length) {
+            appendHotelStayRow(container, null);
+            updateItineraryProfileHotelTripRangeHint();
+            refreshAllHotelStayDateConstraints();
+            return;
+        }
+        list.forEach(function (h) { appendHotelStayRow(container, h); });
+        updateItineraryProfileHotelTripRangeHint();
+        refreshAllHotelStayDateConstraints();
+    }
+
+    async function deleteAllHotelStays() {
+        if (!activeRoomId || !itineraryWizard.tripId) return;
+        const base = '/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/hotels/';
+        const list = await fetchHotelStayList();
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].id) {
+                await apiFetch(base + list[i].id + '/', { method: 'DELETE' });
+            }
+        }
+    }
+
+    function relabelActivityItems(container) {
+        if (!container) return;
+        const rows = container.querySelectorAll('.itinerary-activity-item');
+        rows.forEach(function (row, i) {
+            const lab = row.querySelector('.itinerary-activity-item-label');
+            if (lab) lab.textContent = 'Activity ' + (i + 1);
+            const rm = row.querySelector('.itinerary-btn-remove-activity');
+            if (rm) rm.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+        });
+    }
+
+    function appendActivityRow(container, data) {
+        if (!container) return;
+        data = data || {};
+        const row = document.createElement('div');
+        row.className = 'itinerary-activity-item';
+        row.innerHTML =
+            '<div class="itinerary-activity-item-head">' +
+            '<span class="itinerary-activity-item-label">Activity</span>' +
+            '<button type="button" class="itinerary-btn-remove-activity">Remove</button>' +
+            '</div>' +
+            '<div class="itinerary-grid itinerary-grid-step0">' +
+            '<div class="itinerary-field full"><label>Activity name</label><input type="text" data-f="activity_name" placeholder="e.g. Boating, Cultural show" autocomplete="off"></div>' +
+            '<div class="itinerary-field full"><label>Location</label><input type="text" data-f="location" placeholder="e.g. Lake Phewa, Lakeside" autocomplete="off"></div>' +
+            '<div class="itinerary-field full"><label>Details (optional)</label><textarea data-f="notes" rows="2" placeholder="Extra info for your records; not shown on the traveler PDF"></textarea></div>' +
+            '</div>';
+        const setv = function (name, val) {
+            const el = row.querySelector('[data-f="' + name + '"]');
+            if (el) el.value = (val != null && val !== undefined) ? String(val) : '';
+        };
+        setv('activity_name', data.activity_name);
+        setv('location', data.location);
+        setv('notes', data.notes);
+        row.querySelector('.itinerary-btn-remove-activity').addEventListener('click', function () {
+            if (container.querySelectorAll('.itinerary-activity-item').length <= 1) return;
+            row.remove();
+            relabelActivityItems(container);
+        });
+        container.appendChild(row);
+        relabelActivityItems(container);
+    }
+
+    function initItineraryProfileActivityUI() {
+        const c = document.getElementById('itineraryProfileActivityContainer');
+        if (!c) return;
+        c.innerHTML = '';
+        appendActivityRow(c, null);
+    }
+
+    function collectActivitiesFromDom() {
+        const container = document.getElementById('itineraryProfileActivityContainer');
+        if (!container) return [];
+        const rows = container.querySelectorAll('.itinerary-activity-item');
+        const out = [];
+        rows.forEach(function (row) {
+            const gv = function (name) {
+                const el = row.querySelector('[data-f="' + name + '"]');
+                return el ? String(el.value || '').trim() : '';
+            };
+            const activity_name = gv('activity_name');
+            const location = gv('location');
+            const notes = gv('notes');
+            if (!activity_name && !location && !notes) return;
+            if (!activity_name) return;
+            out.push({
+                activity_name: activity_name,
+                activity_timing: '',
+                location: location,
+                entry_tickets_included: false,
+                guide_available: false,
+                prebooked: false,
+                notes: notes,
+            });
+        });
+        return out;
+    }
+
+    async function fetchActivityPlanList() {
+        if (!activeRoomId || !itineraryWizard.tripId) return [];
+        const base = '/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/activities/';
+        const data = await apiFetch(base);
+        return Array.isArray(data) ? data : (data && data.results ? data.results : []);
+    }
+
+    async function loadActivitiesIntoForm() {
+        const container = document.getElementById('itineraryProfileActivityContainer');
+        if (!container || !itineraryWizard.tripId || !activeRoomId) return;
+        let list = [];
+        try {
+            list = await fetchActivityPlanList();
+        } catch (e) {
+            console.error('Load activities failed', e);
+        }
+        container.innerHTML = '';
+        if (!list.length) {
+            appendActivityRow(container, null);
+            return;
+        }
+        list.forEach(function (a) { appendActivityRow(container, a); });
+    }
+
+    async function deleteAllActivities() {
+        if (!activeRoomId || !itineraryWizard.tripId) return;
+        const base = '/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/activities/';
+        const list = await fetchActivityPlanList();
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].id) {
+                await apiFetch(base + list[i].id + '/', { method: 'DELETE' });
+            }
+        }
+    }
+
+    const DOCUMENT_TYPE_SELECT_INNER =
+        '<option value="">Select document type</option>' +
+        '<option value="Passport">Passport</option>' +
+        '<option value="Visa">Visa</option>' +
+        '<option value="National ID">National ID</option>' +
+        '<option value="Flight ticket / e-ticket">Flight ticket / e-ticket</option>' +
+        '<option value="Hotel voucher">Hotel voucher</option>' +
+        '<option value="Travel insurance">Travel insurance</option>' +
+        '<option value="Vaccination / health certificate">Vaccination / health certificate</option>' +
+        '<option value="Driving license">Driving license</option>' +
+        '<option value="Cruise / tour ticket">Cruise / tour ticket</option>' +
+        '<option value="__other__">Other…</option>';
+
+    function relabelDocumentItems(container) {
+        if (!container) return;
+        const rows = container.querySelectorAll('.itinerary-document-item');
+        rows.forEach(function (row, i) {
+            const lab = row.querySelector('.itinerary-document-item-label');
+            if (lab) lab.textContent = 'Document ' + (i + 1);
+            const rm = row.querySelector('.itinerary-btn-remove-doc');
+            if (rm) rm.style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+        });
+    }
+
+    function syncDocumentTypeSelect(row, documentType) {
+        const sel = row.querySelector('[data-f="document_type_select"]');
+        const wrap = row.querySelector('.itinerary-doc-type-other-wrap');
+        const oth = row.querySelector('[data-f="document_type_other"]');
+        if (!sel) return;
+        const v = (documentType || '').trim();
+        let found = false;
+        for (let j = 0; j < sel.options.length; j++) {
+            if (sel.options[j].value && sel.options[j].value === v) {
+                found = true;
+                break;
+            }
+        }
+        if (v && !found) {
+            sel.value = '__other__';
+            if (oth) oth.value = v;
+            if (wrap) wrap.style.display = 'block';
+        } else {
+            sel.value = v;
+            if (oth) oth.value = '';
+            if (wrap) wrap.style.display = 'none';
+        }
+    }
+
+    function syncDocumentIncludedSelect(row, included) {
+        const sel = row.querySelector('[data-f="included"]');
+        if (!sel) return;
+        if (included === true || included === 'true' || included === 1 || included === '1') {
+            sel.value = 'true';
+        } else if (included === false || included === 'false' || included === 0 || included === '0') {
+            sel.value = 'false';
+        } else {
+            sel.value = 'true';
+        }
+    }
+
+    function appendDocumentRow(container, data) {
+        if (!container) return;
+        data = data || {};
+        const row = document.createElement('div');
+        row.className = 'itinerary-document-item';
+        row.innerHTML =
+            '<div class="itinerary-document-item-head">' +
+            '<span class="itinerary-document-item-label">Document</span>' +
+            '<button type="button" class="itinerary-btn-remove-doc">Remove</button>' +
+            '</div>' +
+            '<div class="itinerary-grid itinerary-grid-step0">' +
+            '<div class="itinerary-field full"><label>Document type</label><select data-f="document_type_select" class="itinerary-hotel-room-select">' + DOCUMENT_TYPE_SELECT_INNER + '</select></div>' +
+            '<div class="itinerary-field full itinerary-doc-type-other-wrap" style="display:none"><label>Specify type</label><input type="text" data-f="document_type_other" placeholder="e.g. Fishing permit, press pass" autocomplete="off"></div>' +
+            '<div class="itinerary-field full"><label>Included in package</label><select data-f="included" class="itinerary-hotel-room-select">' +
+            '<option value="true">Yes — included or arranged by agent</option>' +
+            '<option value="false">No — traveler must provide</option>' +
+            '</select></div>' +
+            '</div>';
+        syncDocumentTypeSelect(row, data.document_type || data.document_name || '');
+        syncDocumentIncludedSelect(row, data.included);
+        const selType = row.querySelector('[data-f="document_type_select"]');
+        if (selType) {
+            selType.addEventListener('change', function () {
+                const wrap = row.querySelector('.itinerary-doc-type-other-wrap');
+                const oth = row.querySelector('[data-f="document_type_other"]');
+                if (this.value === '__other__') {
+                    if (wrap) wrap.style.display = 'block';
+                } else {
+                    if (wrap) wrap.style.display = 'none';
+                    if (oth) oth.value = '';
+                }
+            });
+        }
+        row.querySelector('.itinerary-btn-remove-doc').addEventListener('click', function () {
+            if (container.querySelectorAll('.itinerary-document-item').length <= 1) return;
+            row.remove();
+            relabelDocumentItems(container);
+        });
+        container.appendChild(row);
+        relabelDocumentItems(container);
+    }
+
+    function initItineraryProfileDocumentsUI() {
+        const c = document.getElementById('itineraryProfileDocumentContainer');
+        if (!c) return;
+        c.innerHTML = '';
+        appendDocumentRow(c, null);
+    }
+
+    function collectDocumentsFromDom() {
+        const container = document.getElementById('itineraryProfileDocumentContainer');
+        if (!container) return [];
+        const rows = container.querySelectorAll('.itinerary-document-item');
+        const out = [];
+        rows.forEach(function (row) {
+            const gv = function (name) {
+                const el = row.querySelector('[data-f="' + name + '"]');
+                return el ? String(el.value || '').trim() : '';
+            };
+            let document_type = gv('document_type_select');
+            if (document_type === '__other__') {
+                document_type = gv('document_type_other');
+            }
+            const included = gv('included') === 'true';
+            if (!document_type) return;
+            const label = document_type || 'Document';
+            out.push({
+                document_type: document_type,
+                document_name: label,
+                included: included,
+                notes: '',
+            });
+        });
+        return out;
+    }
+
+    async function fetchDocumentItemList() {
+        if (!activeRoomId || !itineraryWizard.tripId) return [];
+        const base = '/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/documents/';
+        const data = await apiFetch(base);
+        return Array.isArray(data) ? data : (data && data.results ? data.results : []);
+    }
+
+    async function loadDocumentsIntoForm() {
+        const container = document.getElementById('itineraryProfileDocumentContainer');
+        if (!container || !itineraryWizard.tripId || !activeRoomId) return;
+        let list = [];
+        try {
+            list = await fetchDocumentItemList();
+        } catch (e) {
+            console.error('Load documents failed', e);
+        }
+        container.innerHTML = '';
+        if (!list.length) {
+            appendDocumentRow(container, null);
+            return;
+        }
+        list.forEach(function (d) { appendDocumentRow(container, d); });
+    }
+
+    async function deleteAllDocuments() {
+        if (!activeRoomId || !itineraryWizard.tripId) return;
+        const base = '/chat/rooms/' + activeRoomId + '/itinerary-trip/' + itineraryWizard.tripId + '/documents/';
+        const list = await fetchDocumentItemList();
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].id) {
+                await apiFetch(base + list[i].id + '/', { method: 'DELETE' });
+            }
+        }
     }
 
     function openItineraryModal() {
@@ -1900,7 +3192,22 @@
             return;
         }
         if (!itineraryModal) return;
-        itineraryWizard = { startDate: '', daysCount: 1, nightsCount: 0, itemsBySlot: [], tripId: null };
+        itineraryWizard = {
+            startDate: '',
+            daysCount: 1,
+            nightsCount: 0,
+            itemsBySlot: [],
+            tripId: null,
+            bookingId: null,
+            bookingSnapshot: null,
+            manualOnly: false,
+        };
+        setItineraryManualOnlyMode(false);
+        if (itineraryBookingCode) itineraryBookingCode.value = '';
+        if (itineraryBookingSummary) {
+            itineraryBookingSummary.innerHTML = '';
+            itineraryBookingSummary.style.display = 'none';
+        }
         itineraryModal.classList.add('show');
         itineraryModal.setAttribute('aria-hidden', 'false');
         if (itineraryStartDate && !itineraryStartDate.value) {
@@ -1908,27 +3215,45 @@
         }
         if (itineraryDays) itineraryDays.value = 1;
         if (itineraryNights) itineraryNights.value = 0;
+        if (itineraryProfileDestinations) itineraryProfileDestinations.value = '';
+        if (itineraryProfileSupportName) itineraryProfileSupportName.value = '';
+        if (itineraryProfileSupportPhone) itineraryProfileSupportPhone.value = '';
+        if (itineraryProfileSupportEmail) itineraryProfileSupportEmail.value = '';
+        if (itineraryProfilePaymentMethod) itineraryProfilePaymentMethod.value = '';
+        if (itineraryProfileTotalCost) itineraryProfileTotalCost.value = '';
+        if (itineraryProfileAmountPaid) itineraryProfileAmountPaid.value = '';
+        if (itineraryProfileBalance) itineraryProfileBalance.value = '';
+        if (itineraryProfileCarryItems) itineraryProfileCarryItems.value = '';
+        initItineraryProfileActivityUI();
+        initItineraryProfileHotelUI();
+        initItineraryProfileDocumentsUI();
         showItineraryStep('itineraryStep0');
-        if (itineraryStartDate) itineraryStartDate.focus();
+        if (itineraryBookingCode) itineraryBookingCode.focus();
+        else if (itineraryStartDate) itineraryStartDate.focus();
     }
 
     function itineraryStep0NextHandler() {
+        if (!itineraryWizard.manualOnly && !itineraryWizard.bookingId) {
+            alert('Load a booking with the 5-digit ID, or choose “No booking — enter trip dates only”.');
+            return;
+        }
         const days = parseInt(itineraryDays.value, 10) || 1;
         const nights = parseInt(itineraryNights.value, 10) || 0;
         if (days < 1) { alert('Days must be at least 1.'); return; }
+        if (!itineraryStartDate || !itineraryStartDate.value) {
+            alert('Please set a start date.');
+            return;
+        }
         itineraryWizard.startDate = itineraryStartDate.value;
         itineraryWizard.daysCount = days;
         itineraryWizard.nightsCount = nights;
         itineraryWizard.currentSlot = 0;
         itineraryWizard.itemsBySlot = [];
-        for (let i = 0; i < days + nights; i++) itineraryWizard.itemsBySlot.push([]);
+        for (let i = 0; i < days; i++) itineraryWizard.itemsBySlot.push([]);
         showItineraryStep('itineraryStepForms');
-        itineraryFormTitle.textContent = 'Add itinerary for ' + slotLabels(days, nights)[0];
-        itineraryTime.value = '';
-        itineraryPlace.value = '';
-        itineraryActivity.value = '';
-        itineraryFood.value = '';
-        itineraryNotes.value = '';
+        itineraryFormTitle.textContent = 'Add itinerary for ' + slotLabels(days)[0];
+        setItineraryTimeInputDefault();
+        if (itineraryActivity) itineraryActivity.value = '';
         renderEntriesList();
         if (itineraryTime) itineraryTime.focus();
     }
@@ -1940,80 +3265,85 @@
         const arr = itineraryWizard.itemsBySlot[itineraryWizard.currentSlot] || [];
         countEl.textContent = arr.length + ' entries added (up to 24)';
         listEl.innerHTML = arr.map((e, i) =>
-            '<div class="itinerary-entry-chip"><span>' + escapeHtml(e.time_label) + ' – ' + escapeHtml(e.place) + ': ' + escapeHtml(e.activity) + '</span></div>'
+            '<div class="itinerary-entry-chip"><span>' + escapeHtml(e.time_label) + ' – ' + escapeHtml(e.activity) + '</span></div>'
         ).join('');
     }
 
     function itineraryAddEntryHandler() {
-        const time = (itineraryTime.value || '').trim();
-        const place = (itineraryPlace.value || '').trim();
+        const time = formatTimeLabelFromHHMM((itineraryTime.value || '').trim());
         const activity = (itineraryActivity.value || '').trim();
-        if (!time || !place || !activity) {
-            alert('Please fill time, place, and activity.');
+        if (!time || !activity) {
+            alert('Please choose a time and fill in the activity.');
             return;
         }
-        const labels = slotLabels(itineraryWizard.daysCount, itineraryWizard.nightsCount);
+        const labels = slotLabels(itineraryWizard.daysCount);
         const idx = itineraryWizard.currentSlot;
         const arr = itineraryWizard.itemsBySlot[idx] || [];
         if (arr.length >= 24) {
-            alert('Maximum 24 entries per day/night.');
+            alert('Maximum 24 entries per day.');
             return;
         }
         arr.push({
-            day_number: Math.floor(idx / 2) + 1,
-            is_night: idx % 2 === 1,
+            day_number: idx + 1,
+            is_night: false,
             day_label: labels[idx],
             time_label: time,
-            place,
+            place: '',
             activity,
-            food_name: (itineraryFood.value || '').trim(),
-            notes: (itineraryNotes.value || '').trim(),
+            food_name: '',
+            notes: '',
         });
-        itineraryTime.value = '';
-        itineraryPlace.value = '';
-        itineraryActivity.value = '';
-        itineraryFood.value = '';
-        itineraryNotes.value = '';
+        setItineraryTimeInputDefault();
+        if (itineraryActivity) itineraryActivity.value = '';
         renderEntriesList();
         if (itineraryTime) itineraryTime.focus();
     }
 
     function itineraryFormNextHandler() {
-        const labels = slotLabels(itineraryWizard.daysCount, itineraryWizard.nightsCount);
+        const labels = slotLabels(itineraryWizard.daysCount);
         itineraryWizard.currentSlot++;
         if (itineraryWizard.currentSlot >= labels.length) {
             const flat = [];
             (itineraryWizard.itemsBySlot || []).forEach(slotArr => flat.push(...slotArr));
             itineraryWizard.items = flat;
-            itineraryCreateTripAndShowFinal();
+            itineraryCreateTripAndShowProfile();
             return;
         }
         itineraryFormTitle.textContent = 'Add itinerary for ' + labels[itineraryWizard.currentSlot];
-        itineraryTime.value = '';
-        itineraryPlace.value = '';
-        itineraryActivity.value = '';
-        itineraryFood.value = '';
-        itineraryNotes.value = '';
+        setItineraryTimeInputDefault();
+        if (itineraryActivity) itineraryActivity.value = '';
         renderEntriesList();
         if (itineraryTime) itineraryTime.focus();
     }
 
-    async function itineraryCreateTripAndShowFinal() {
+    async function itineraryCreateTripAndShowProfile() {
         try {
+            const payload = {
+                start_date: itineraryWizard.startDate,
+                days_count: itineraryWizard.daysCount,
+                nights_count: itineraryWizard.nightsCount,
+                items: itineraryWizard.items,
+            };
+            if (itineraryWizard.bookingId) {
+                payload.booking_id = itineraryWizard.bookingId;
+            }
             const res = await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/`, {
                 method: 'POST',
-                body: JSON.stringify({
-                    start_date: itineraryWizard.startDate,
-                    days_count: itineraryWizard.daysCount,
-                    nights_count: itineraryWizard.nightsCount,
-                    items: itineraryWizard.items,
-                }),
+                body: JSON.stringify(payload),
             });
             itineraryWizard.tripId = res.id;
-            showItineraryStep('itineraryStepFinal');
+            itineraryWizard.startDate = itineraryWizard.startDate || (itineraryStartDate && itineraryStartDate.value) || '';
+            itineraryWizard.daysCount = itineraryWizard.daysCount || (parseInt(itineraryDays && itineraryDays.value, 10) || 1);
+            await loadProfileIntoProfileForm();
+            await loadHotelsIntoForm();
+            await loadActivitiesIntoForm();
+            await loadDocumentsIntoForm();
+            resetItineraryProfileSubStep();
+            showItineraryStep('itineraryStepProfile');
+            showItineraryProfileSubStep(0);
         } catch (err) {
             console.error('Create trip failed', err);
-            alert('Could not create itinerary. Please try again.');
+            alert(err.message || 'Could not create itinerary. Please try again.');
         }
     }
 
@@ -2023,14 +3353,105 @@
             return;
         }
         itineraryWizard.currentSlot--;
-        const labels = slotLabels(itineraryWizard.daysCount, itineraryWizard.nightsCount);
+        const labels = slotLabels(itineraryWizard.daysCount);
         itineraryFormTitle.textContent = 'Add itinerary for ' + labels[itineraryWizard.currentSlot];
-        itineraryTime.value = '';
-        itineraryPlace.value = '';
-        itineraryActivity.value = '';
-        itineraryFood.value = '';
-        itineraryNotes.value = '';
+        setItineraryTimeInputDefault();
+        if (itineraryActivity) itineraryActivity.value = '';
         renderEntriesList();
+    }
+
+    function itineraryProfileBackHandler() {
+        if (itineraryProfileSubStepIndex > 0) {
+            showItineraryProfileSubStep(itineraryProfileSubStepIndex - 1);
+            return;
+        }
+        showItineraryStep('itineraryStepForms');
+    }
+
+    function itineraryProfileNextHandler() {
+        if (itineraryProfileSubStepIndex < ITINERARY_PROFILE_SUBSTEP_COUNT - 1) {
+            showItineraryProfileSubStep(itineraryProfileSubStepIndex + 1);
+            return;
+        }
+        itineraryProfileSaveHandler();
+    }
+
+    function itineraryProfileOptionalDecimal(el) {
+        const s = (el && el.value || '').trim();
+        return s === '' ? null : s;
+    }
+
+    async function itineraryProfileSaveHandler() {
+        if (!itineraryWizard.tripId) return;
+        try {
+            const profilePayload = {
+                destinations: (itineraryProfileDestinations.value || '').trim(),
+                support_agent_name: (itineraryProfileSupportName.value || '').trim(),
+                support_contact_number: (itineraryProfileSupportPhone.value || '').trim(),
+                support_email: (itineraryProfileSupportEmail.value || '').trim(),
+                payment_method: (itineraryProfilePaymentMethod.value || '').trim(),
+            };
+            const tc = itineraryProfileOptionalDecimal(itineraryProfileTotalCost);
+            const ap = itineraryProfileOptionalDecimal(itineraryProfileAmountPaid);
+            const rb = itineraryProfileOptionalDecimal(itineraryProfileBalance);
+            if (tc !== null) profilePayload.total_package_cost = tc;
+            if (ap !== null) profilePayload.amount_paid = ap;
+            if (rb !== null) profilePayload.remaining_balance = rb;
+
+            await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/${itineraryWizard.tripId}/profile/`, {
+                method: 'PUT',
+                body: JSON.stringify(profilePayload),
+            });
+
+            await deleteAllHotelStays();
+            const hotelPayloads = collectHotelStaysFromDom();
+            for (let i = 0; i < hotelPayloads.length; i++) {
+                await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/${itineraryWizard.tripId}/hotels/`, {
+                    method: 'POST',
+                    body: JSON.stringify(Object.assign({}, hotelPayloads[i], { display_order: i + 1 })),
+                });
+            }
+
+            await deleteAllActivities();
+            const activityPayloads = collectActivitiesFromDom();
+            for (let i = 0; i < activityPayloads.length; i++) {
+                await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/${itineraryWizard.tripId}/activities/`, {
+                    method: 'POST',
+                    body: JSON.stringify(Object.assign({}, activityPayloads[i], { display_order: i + 1 })),
+                });
+            }
+
+            const carryLines = parseItineraryProfileLines(itineraryProfileCarryItems.value);
+            for (let i = 0; i < carryLines.length; i++) {
+                const raw = carryLines[i];
+                const p = raw.split('|').map(s => s.trim());
+                let category = '';
+                let item_name = (raw || '').trim();
+                if (p.length >= 2) {
+                    category = p[0] || '';
+                    item_name = (p[1] || p[0] || '').trim() || 'Item';
+                } else {
+                    item_name = item_name || 'Item';
+                }
+                await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/${itineraryWizard.tripId}/carry-items/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ category: category, item_name: item_name, display_order: i + 1 }),
+                });
+            }
+
+            await deleteAllDocuments();
+            const documentPayloads = collectDocumentsFromDom();
+            for (let i = 0; i < documentPayloads.length; i++) {
+                await apiFetch(`/chat/rooms/${activeRoomId}/itinerary-trip/${itineraryWizard.tripId}/documents/`, {
+                    method: 'POST',
+                    body: JSON.stringify(Object.assign({}, documentPayloads[i], { display_order: i + 1 })),
+                });
+            }
+            showItineraryStep('itineraryStepFinal');
+        } catch (err) {
+            console.error('Save itinerary failed', err);
+            alert(err.message || 'Could not save itinerary details.');
+        }
     }
 
     function itineraryCheckHandler() {
@@ -2175,7 +3596,29 @@
     if (itineraryCancelBtn) itineraryCancelBtn.addEventListener('click', closeItineraryModal);
     if (itineraryFinalCancelBtn) itineraryFinalCancelBtn.addEventListener('click', closeItineraryModal);
     if (document.getElementById('itineraryStep0Next')) document.getElementById('itineraryStep0Next').addEventListener('click', itineraryStep0NextHandler);
+    if (itineraryBookingLoadBtn) itineraryBookingLoadBtn.addEventListener('click', itineraryBookingLoadHandler);
+    if (itineraryManualOnlyBtn) itineraryManualOnlyBtn.addEventListener('click', function () { setItineraryManualOnlyMode(true); });
+    if (itineraryUseBookingBtn) itineraryUseBookingBtn.addEventListener('click', function () { setItineraryManualOnlyMode(false); if (itineraryBookingCode) itineraryBookingCode.focus(); });
+    if (itineraryBookingCode) {
+        itineraryBookingCode.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                itineraryBookingLoadHandler();
+            }
+        });
+    }
     if (itineraryBackBtn) itineraryBackBtn.addEventListener('click', itineraryBackHandler);
+    if (itineraryProfileBackBtn) itineraryProfileBackBtn.addEventListener('click', itineraryProfileBackHandler);
+    if (itineraryProfileNextBtn) itineraryProfileNextBtn.addEventListener('click', itineraryProfileNextHandler);
+    if (itineraryProfileHotelAddBtn) itineraryProfileHotelAddBtn.addEventListener('click', function () {
+        if (itineraryProfileHotelContainer) appendHotelStayRow(itineraryProfileHotelContainer, null);
+    });
+    if (itineraryProfileDocumentAddBtn) itineraryProfileDocumentAddBtn.addEventListener('click', function () {
+        if (itineraryProfileDocumentContainer) appendDocumentRow(itineraryProfileDocumentContainer, null);
+    });
+    if (itineraryProfileActivityAddBtn) itineraryProfileActivityAddBtn.addEventListener('click', function () {
+        if (itineraryProfileActivityContainer) appendActivityRow(itineraryProfileActivityContainer, null);
+    });
     if (document.getElementById('itineraryAddEntryBtn')) document.getElementById('itineraryAddEntryBtn').addEventListener('click', itineraryAddEntryHandler);
     if (document.getElementById('itineraryFormNext')) document.getElementById('itineraryFormNext').addEventListener('click', itineraryFormNextHandler);
     if (document.getElementById('itineraryCheckBtn')) document.getElementById('itineraryCheckBtn').addEventListener('click', itineraryCheckHandler);
