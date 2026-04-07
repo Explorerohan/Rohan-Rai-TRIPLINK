@@ -2310,6 +2310,14 @@ def agent_bookings_view(request):
         except ValueError:
             pass
 
+    booking_code_filter = request.GET.get('booking_code', '').strip()
+    if booking_code_filter:
+        digits_only = ''.join(c for c in booking_code_filter if c.isdigit())
+        if len(digits_only) == 5:
+            queryset = queryset.filter(booking_code=digits_only)
+        elif digits_only:
+            queryset = queryset.filter(booking_code__startswith=digits_only)
+
     # Build list with profile for each booking's user
     bookings_with_profile = []
     for booking in queryset:
@@ -2347,10 +2355,45 @@ def agent_bookings_view(request):
         'cancelled_count': cancelled_count,
         'status_filter': status_filter,
         'package_id_filter': package_id_filter,
+        'booking_code_filter': booking_code_filter,
         'booking_status_choices': BookingStatus.choices,
         'active_nav': 'bookings',
     }
     return render(request, 'agent_bookings.html', context)
+
+
+def agent_booking_detail_view(request, booking_id):
+    """Single booking detail for the signed-in agent (only bookings on their packages)."""
+    if not request.user.is_authenticated or request.user.role != Roles.AGENT:
+        messages.error(request, 'Access denied. Agent access required.')
+        return redirect('login')
+
+    booking = get_object_or_404(
+        Booking.objects.select_related('package', 'user')
+        .prefetch_related('package__features'),
+        pk=booking_id,
+        package__agent=request.user,
+    )
+
+    try:
+        profile = booking.user.user_profile
+    except UserProfile.DoesNotExist:
+        profile = None
+
+    try:
+        agent_profile = AgentProfile.objects.get(user=request.user)
+        display_name = agent_profile.full_name
+    except AgentProfile.DoesNotExist:
+        display_name = request.user.email.split('@')[0]
+
+    context = {
+        'user': request.user,
+        'display_name': display_name,
+        'booking': booking,
+        'profile': profile,
+        'active_nav': 'bookings',
+    }
+    return render(request, 'agent_booking_detail.html', context)
 
 
 def agent_chat_view(request):

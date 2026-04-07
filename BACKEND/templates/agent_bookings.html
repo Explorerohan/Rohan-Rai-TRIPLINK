@@ -246,6 +246,39 @@
         box-shadow: 0 0 0 3px rgba(45, 90, 54, 0.1);
     }
 
+    .bookings-toolbar input[type="text"] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        font-size: 13px;
+        background: #fff;
+        color: #1a1d21;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .bookings-toolbar input[type="text"]::placeholder {
+        color: #94a3b8;
+    }
+
+    .bookings-toolbar input[type="text"]:hover {
+        border-color: rgba(0, 0, 0, 0.14);
+    }
+
+    .bookings-toolbar input[type="text"]:focus {
+        outline: none;
+        border-color: #2d5a36;
+        box-shadow: 0 0 0 3px rgba(45, 90, 54, 0.1);
+    }
+
+    .booking-code-cell {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+        color: #14532d;
+    }
+
     .bookings-filters-clear {
         font-size: 13px;
         font-weight: 500;
@@ -379,6 +412,33 @@
         line-height: 1.6;
     }
 
+    .bookings-th-actions,
+    .bookings-td-actions {
+        text-align: right;
+        width: 1%;
+        white-space: nowrap;
+    }
+
+    .btn-booking-details {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid #166534;
+        background: #166534;
+        color: #f9fafb;
+        transition: background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .btn-booking-details:hover {
+        background: #14532d;
+        border-color: #14532d;
+    }
+
     .bookings-page .alert {
         margin-bottom: 14px;
     }
@@ -409,11 +469,16 @@
             font-size: 13px;
         }
 
-        .bookings-table th:nth-child(4),
-        .bookings-table td:nth-child(4),
         .bookings-table th:nth-child(5),
-        .bookings-table td:nth-child(5) {
+        .bookings-table td:nth-child(5),
+        .bookings-table th:nth-child(6),
+        .bookings-table td:nth-child(6) {
             display: none;
+        }
+
+        .bookings-th-actions,
+        .bookings-td-actions {
+            text-align: right;
         }
     }
 </style>
@@ -471,6 +536,10 @@
             <form method="get" action="{% url 'agent_bookings' %}" class="bookings-toolbar-form">
                 <div class="bookings-toolbar-controls">
                     <div class="filter-group">
+                        <label for="filter-booking-code">Booking ID</label>
+                        <input type="text" name="booking_code" id="filter-booking-code" value="{{ booking_code_filter }}" placeholder="5-digit code" maxlength="12" inputmode="numeric" autocomplete="off" pattern="[0-9]*">
+                    </div>
+                    <div class="filter-group">
                         <label for="filter-status">Status</label>
                         <select name="status" id="filter-status">
                             <option value="">All</option>
@@ -492,7 +561,7 @@
                         </div>
                     </div>
                 </div>
-                {% if status_filter or package_id_filter %}
+                {% if status_filter or package_id_filter or booking_code_filter %}
                     <a href="{% url 'agent_bookings' %}" class="bookings-filters-clear">Clear filters</a>
                 {% endif %}
             </form>
@@ -504,16 +573,19 @@
                 <table class="bookings-table">
                     <thead>
                         <tr>
+                            <th>Booking ID</th>
                             <th>Traveler</th>
                             <th>Package</th>
                             <th>Trip dates</th>
                             <th>Status</th>
                             <th>Booked</th>
+                            <th class="bookings-th-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in bookings_with_profile %}
                             <tr>
+                                <td class="booking-code-cell">{{ item.booking.booking_code }}</td>
                                 <td>
                                     <span class="booking-traveler-name">
                                         {% if item.profile and item.profile.full_name %}
@@ -544,6 +616,9 @@
                                     <span class="booking-status {{ item.booking.status }}">{{ item.booking.get_status_display }}</span>
                                 </td>
                                 <td>{{ item.booking.created_at|date:"M d, Y" }}</td>
+                                <td class="bookings-td-actions">
+                                    <a href="{% url 'agent_booking_detail' item.booking.id %}" class="btn-booking-details">Details</a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -553,7 +628,7 @@
             <div class="empty-state">
                 <div class="empty-state-icon">📋</div>
                 <div class="empty-state-text">
-                    {% if status_filter or package_id_filter %}
+                    {% if status_filter or package_id_filter or booking_code_filter %}
                         No bookings match your filters.
                     {% else %}
                         No bookings yet. Bookings will appear here when travelers book your packages.

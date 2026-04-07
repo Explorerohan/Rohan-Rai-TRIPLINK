@@ -135,10 +135,10 @@ class CustomPackageAdmin(admin.ModelAdmin):
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ['user', 'package', 'status', 'created_at']
+    list_display = ['booking_code', 'user', 'package', 'status', 'created_at']
     list_filter = ['status', 'created_at']
-    search_fields = ['user__email', 'package__title']
-    readonly_fields = ['created_at']
+    search_fields = ['booking_code', 'user__email', 'package__title']
+    readonly_fields = ['created_at', 'booking_code']
 
 
 @admin.register(BookingTripReminder)

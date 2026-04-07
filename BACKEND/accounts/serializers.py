@@ -442,14 +442,16 @@ class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = [
-            'id', 'user', 'package_id', 'package_title', 'status', 'created_at',
+            'id', 'booking_code', 'user', 'package_id', 'package_title', 'status', 'created_at',
             'traveler_count', 'price_per_person_snapshot', 'total_amount',
             'payment_method', 'payment_status', 'payment_reference', 'transaction_uuid',
             'refunded_at', 'esewa_refund_reference',
             'package_image_url', 'package_location', 'package_country',
             'trip_start_date', 'trip_end_date', 'package_status',
         ]
-        read_only_fields = ['id', 'user', 'created_at', 'refunded_at', 'esewa_refund_reference']
+        read_only_fields = [
+            'id', 'booking_code', 'user', 'created_at', 'refunded_at', 'esewa_refund_reference',
+        ]
 
     def get_package_image_url(self, obj):
         pkg = obj.package
