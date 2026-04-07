@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -21,6 +20,7 @@ import {
   updateCustomPackage,
   deleteCustomPackage,
 } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 const PLACEHOLDER_IMAGE =
   "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80";
@@ -46,6 +46,7 @@ const CustomPackageDetailScreen = ({
   onBook,
 }) => {
   const { t } = useLanguage();
+  const { showAlert, showConfirm } = useAppAlert();
   const { width: windowWidth } = useWindowDimensions();
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -150,34 +151,30 @@ const CustomPackageDetailScreen = ({
   const canCancel = canCancelBase && canCancelByDate();
 
   const handleCancelPackage = () => {
-    Alert.alert(
-      t("cancelPackage"),
-      t("cancelPackageConfirm"),
-      [
-        { text: t("keepIt"), style: "cancel" },
-        {
-          text: t("cancelPackage"),
-          style: "destructive",
-          onPress: async () => {
-            if (!session?.access || !pkg?.id) return;
-            setActionLoading(true);
-            try {
-              const res = await updateCustomPackage(pkg.id, { status: "cancelled" }, session.access);
-              const updated = res?.data ?? null;
-              if (updated) {
-                setPkg(updated);
-                onCancelSuccess?.(updated);
-              }
-              Alert.alert(t("doneTitle"), t("packageCancelled"));
-            } catch (err) {
-              Alert.alert(t("error"), err?.message || t("couldNotCancelPackage"));
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: t("cancelPackage"),
+      message: t("cancelPackageConfirm"),
+      cancelText: t("keepIt"),
+      confirmText: t("cancelPackage"),
+      destructive: true,
+      onConfirm: async () => {
+        if (!session?.access || !pkg?.id) return;
+        setActionLoading(true);
+        try {
+          const res = await updateCustomPackage(pkg.id, { status: "cancelled" }, session.access);
+          const updated = res?.data ?? null;
+          if (updated) {
+            setPkg(updated);
+            onCancelSuccess?.(updated);
+          }
+          showAlert({ title: t("doneTitle"), message: t("packageCancelled"), type: "success" });
+        } catch (err) {
+          showAlert({ title: t("error"), message: err?.message || t("couldNotCancelPackage"), type: "error" });
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   const closeBookingModal = () => {
@@ -191,7 +188,7 @@ const CustomPackageDetailScreen = ({
     if (publishedId == null) return;
 
     if (!session?.access) {
-      Alert.alert(t("loginRequired"), t("pleaseLoginToBook"));
+      showAlert({ title: t("loginRequired"), message: t("pleaseLoginToBook"), type: "warning" });
       onBook?.({ requiresLogin: true });
       return;
     }
@@ -203,7 +200,7 @@ const CustomPackageDetailScreen = ({
       const response = await getPackageById(String(publishedId), session.access);
       setBookingPackageDetail(response?.data ?? null);
     } catch (err) {
-      Alert.alert(t("error"), err?.message || t("couldntLoadPackage"));
+      showAlert({ title: t("error"), message: err?.message || t("couldntLoadPackage"), type: "error" });
       closeBookingModal();
     } finally {
       setBookingPackageLoading(false);
@@ -211,30 +208,26 @@ const CustomPackageDetailScreen = ({
   };
 
   const handleDeletePackage = () => {
-    Alert.alert(
-      t("deletePackage"),
-      t("deletePackageConfirm"),
-      [
-        { text: t("keepIt"), style: "cancel" },
-        {
-          text: t("delete"),
-          style: "destructive",
-          onPress: async () => {
-            if (!session?.access || !pkg?.id) return;
-            setActionLoading(true);
-            try {
-              await deleteCustomPackage(pkg.id, session.access);
-              onDeleteSuccess?.(pkg.id);
-              Alert.alert(t("deleted"), t("packageDeleted"), [{ text: "OK" }]);
-            } catch (err) {
-              Alert.alert(t("error"), err?.message || t("couldNotDeletePackage"));
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: t("deletePackage"),
+      message: t("deletePackageConfirm"),
+      cancelText: t("keepIt"),
+      confirmText: t("delete"),
+      destructive: true,
+      onConfirm: async () => {
+        if (!session?.access || !pkg?.id) return;
+        setActionLoading(true);
+        try {
+          await deleteCustomPackage(pkg.id, session.access);
+          onDeleteSuccess?.(pkg.id);
+          showAlert({ title: t("deleted"), message: t("packageDeleted"), type: "success" });
+        } catch (err) {
+          showAlert({ title: t("error"), message: err?.message || t("couldNotDeletePackage"), type: "error" });
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   return (

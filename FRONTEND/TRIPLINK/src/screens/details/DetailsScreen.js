@@ -12,11 +12,11 @@ import {
   View,
   useWindowDimensions,
   ActivityIndicator,
-  Alert,
   Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import PackageBookingModal from "../../components/PackageBookingModal";
+import { useAppAlert } from "../../components/AppAlertProvider";
 import { getPackageById, getAgentPublicProfile, createAgentReview } from "../../utils/api";
 
 const DEFAULT_AVATAR_URL =
@@ -274,10 +274,11 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting, t }) => {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const T = t || ((k) => k);
+  const { showAlert } = useAppAlert();
 
   const handleSubmit = () => {
     if (rating < 1 || rating > 5) {
-      Alert.alert(T("error") || "Error", T("selectRating1To5"));
+      showAlert({ title: T("error") || "Error", message: T("selectRating1To5"), type: "warning" });
       return;
     }
     onSubmit(rating, comment);
@@ -339,6 +340,7 @@ const ReviewModal = ({ visible, onClose, onSubmit, submitting, t }) => {
 
 const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, session, initialProfile = null, onBack = () => {}, onShowMap = () => {}, onBook = () => {}, onMessageAgent = () => {} }) => {
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   const { width: windowWidth } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
   const [descriptionHasOverflow, setDescriptionHasOverflow] = useState(false);
@@ -433,13 +435,13 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
   const handleSubmitReview = async (rating, comment) => {
     if (!session?.access) {
-      Alert.alert(t("error"), t("pleaseLoginToReview"));
+      showAlert({ title: t("error"), message: t("pleaseLoginToReview"), type: "warning" });
       return;
     }
 
     const agentId = packageDetail?.agent?.agent_id;
     if (!agentId) {
-      Alert.alert(t("error"), t("agentInfoNotFound"));
+      showAlert({ title: t("error"), message: t("agentInfoNotFound"), type: "error" });
       return;
     }
 
@@ -448,9 +450,9 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
       await createAgentReview(agentId, rating, comment, session.access);
       setReviewModalVisible(false);
       setUserHasReviewed(true);
-      Alert.alert(t("success") || "Success", t("reviewSubmitted"));
+      showAlert({ title: t("success") || "Success", message: t("reviewSubmitted"), type: "success" });
     } catch (error) {
-      Alert.alert(t("error"), error.message || t("failedToSubmitReview"));
+      showAlert({ title: t("error"), message: error.message || t("failedToSubmitReview"), type: "error" });
     } finally {
       setSubmittingReview(false);
     }
@@ -513,7 +515,7 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
 
   const handleBookNowPress = () => {
     if (!session?.access) {
-      Alert.alert(t("loginRequired"), t("pleaseLoginToBook"));
+      showAlert({ title: t("loginRequired"), message: t("pleaseLoginToBook"), type: "warning" });
       onBook({ requiresLogin: true });
       return;
     }
@@ -728,10 +730,11 @@ const DetailsScreen = ({ route, trip: tripProp, initialPackageFromCache = null, 
                         if (hasBooked && tripEndDate) {
                           const todayStr = new Date().toISOString().slice(0, 10);
                           if (tripEndDate > todayStr) {
-                            Alert.alert(
-                              t("cannotReviewYet"),
-                              t("tripNotCompleted")
-                            );
+                            showAlert({
+                              title: t("cannotReviewYet"),
+                              message: t("tripNotCompleted"),
+                              type: "info",
+                            });
                             return;
                           }
                         }

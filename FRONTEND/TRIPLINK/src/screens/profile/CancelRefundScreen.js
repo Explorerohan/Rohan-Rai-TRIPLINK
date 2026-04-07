@@ -9,7 +9,6 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
-  Alert,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
@@ -20,6 +19,7 @@ import {
   mapBookingsToScheduleItems,
   filterUpcomingConfirmedBookings,
 } from "../../utils/scheduleBookingItems";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 const CancelRefundScreen = ({
   session,
@@ -29,6 +29,7 @@ const CancelRefundScreen = ({
   onTripPress,
 }) => {
   const { t } = useLanguage();
+  const { showAlert, showConfirm } = useAppAlert();
   const hasInitial = Array.isArray(initialBookings) && initialBookings.length > 0;
   const [bookings, setBookings] = useState(() => (Array.isArray(initialBookings) ? initialBookings : []));
   const [loading, setLoading] = useState(!hasInitial);
@@ -89,36 +90,32 @@ const CancelRefundScreen = ({
     const booking = item?.booking;
     if (!booking || !session?.access) return;
     if (!canCancelByTwoDayRule(item.tripStartDateRaw)) {
-      Alert.alert(t("cannotCancelBooking"), t("cancelBookingTwoDayRule"));
+      showAlert({ title: t("cannotCancelBooking"), message: t("cancelBookingTwoDayRule"), type: "warning" });
       return;
     }
-    Alert.alert(
-      t("cancelBookingTitle"),
-      t("cancelBookingConfirmMessage"),
-      [
-        { text: t("keepBooking"), style: "cancel" },
-        {
-          text: t("cancelBookingTitle"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setCancellingId(item.id);
-              await cancelBooking(booking.id, session.access);
-              const res = await getMyBookings(session.access);
-              const list = res?.data ?? [];
-              const arr = Array.isArray(list) ? list : [];
-              setBookings(arr);
-              onUpdateCachedBookings(arr);
-              Alert.alert(t("bookingCancelledTitle"), t("bookingCancelledRefundSoonBody"));
-            } catch (err) {
-              Alert.alert(t("error"), err?.message || t("couldNotCancelBooking"));
-            } finally {
-              setCancellingId(null);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: t("cancelBookingTitle"),
+      message: t("cancelBookingConfirmMessage"),
+      cancelText: t("keepBooking"),
+      confirmText: t("cancelBookingTitle"),
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          setCancellingId(item.id);
+          await cancelBooking(booking.id, session.access);
+          const res = await getMyBookings(session.access);
+          const list = res?.data ?? [];
+          const arr = Array.isArray(list) ? list : [];
+          setBookings(arr);
+          onUpdateCachedBookings(arr);
+          showAlert({ title: t("bookingCancelledTitle"), message: t("bookingCancelledRefundSoonBody"), type: "success" });
+        } catch (err) {
+          showAlert({ title: t("error"), message: err?.message || t("couldNotCancelBooking"), type: "error" });
+        } finally {
+          setCancellingId(null);
+        }
+      },
+    });
   };
 
   return (

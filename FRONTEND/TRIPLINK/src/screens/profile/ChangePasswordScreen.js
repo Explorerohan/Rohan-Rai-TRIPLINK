@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -16,10 +15,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../context/LanguageContext";
 import { changePassword } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 import { getPasswordStrength } from "../../utils/passwordStrength";
 
 const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -40,19 +41,19 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
 
   const handleSubmit = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert(t("changePasswordTitle"), t("changePasswordFillAll"));
+      showAlert({ title: t("changePasswordTitle"), message: t("changePasswordFillAll"), type: "warning" });
       return;
     }
     if (newPassword.length < 8) {
-      Alert.alert(t("changePasswordTitle"), t("passwordMinLength"));
+      showAlert({ title: t("changePasswordTitle"), message: t("passwordMinLength"), type: "warning" });
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert(t("changePasswordTitle"), t("passwordsDoNotMatch"));
+      showAlert({ title: t("changePasswordTitle"), message: t("passwordsDoNotMatch"), type: "warning" });
       return;
     }
     if (!session?.access) {
-      Alert.alert(t("changePasswordTitle"), t("pleaseLoginToContinue"));
+      showAlert({ title: t("changePasswordTitle"), message: t("pleaseLoginToContinue"), type: "warning" });
       return;
     }
 
@@ -62,9 +63,9 @@ const ChangePasswordScreen = ({ session, onBack = () => {} }) => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      Alert.alert(t("success"), t("changePasswordSuccess"), [{ text: "OK", onPress: onBack }]);
+      showAlert({ title: t("success"), message: t("changePasswordSuccess"), type: "success", onOk: onBack });
     } catch (err) {
-      Alert.alert(t("changePasswordTitle"), err?.message || t("changePasswordFailed"));
+      showAlert({ title: t("changePasswordTitle"), message: err?.message || t("changePasswordFailed"), type: "error" });
     } finally {
       setSaving(false);
     }

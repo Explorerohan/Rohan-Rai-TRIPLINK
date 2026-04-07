@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLanguage } from "../../context/LanguageContext";
 import { getFeatures, createCustomPackage } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 function formatDateToYYYYMMDD(date) {
   const y = date.getFullYear();
@@ -40,6 +40,7 @@ function parseYYYYMMDD(str) {
 
 const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [country, setCountry] = useState("");
@@ -99,7 +100,7 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(t("permissionNeeded") || "Permission needed", t("permissionNeededGallery"));
+        showAlert({ title: t("permissionNeeded") || "Permission needed", message: t("permissionNeededGallery"), type: "warning" });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -113,43 +114,43 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
       }
     } catch (e) {
       console.error("Image picker error:", e);
-      Alert.alert(t("error"), t("failedToOpenGallery"));
+      showAlert({ title: t("error"), message: t("failedToOpenGallery"), type: "error" });
     }
   };
 
   const handleSubmit = async () => {
     const trim = (s) => (typeof s === "string" ? s.trim() : "");
     if (!trim(title)) {
-      Alert.alert(t("required"), t("pleaseEnterTitle"));
+      showAlert({ title: t("required"), message: t("pleaseEnterTitle"), type: "warning" });
       return;
     }
     if (!trim(location)) {
-      Alert.alert(t("required"), t("pleaseEnterLocation"));
+      showAlert({ title: t("required"), message: t("pleaseEnterLocation"), type: "warning" });
       return;
     }
     if (!trim(country)) {
-      Alert.alert(t("required"), t("pleaseEnterCountry"));
+      showAlert({ title: t("required"), message: t("pleaseEnterCountry"), type: "warning" });
       return;
     }
     if (!trim(description)) {
-      Alert.alert(t("required"), t("pleaseEnterDescription"));
+      showAlert({ title: t("required"), message: t("pleaseEnterDescription"), type: "warning" });
       return;
     }
     const price = parseFloat(pricePerPerson);
     if (Number.isNaN(price) || price < 0) {
-      Alert.alert(t("error"), t("pleaseEnterValidPrice"));
+      showAlert({ title: t("error"), message: t("pleaseEnterValidPrice"), type: "warning" });
       return;
     }
     if (!trim(tripStartDate)) {
-      Alert.alert(t("required"), t("pleaseEnterTripStartDate"));
+      showAlert({ title: t("required"), message: t("pleaseEnterTripStartDate"), type: "warning" });
       return;
     }
     if (!trim(tripEndDate)) {
-      Alert.alert(t("required"), t("pleaseEnterTripEndDate"));
+      showAlert({ title: t("required"), message: t("pleaseEnterTripEndDate"), type: "warning" });
       return;
     }
     if (!session?.access) {
-      Alert.alert(t("error"), t("mustBeLoggedInToCreate"));
+      showAlert({ title: t("error"), message: t("mustBeLoggedInToCreate"), type: "warning" });
       return;
     }
     setSubmitting(true);
@@ -170,12 +171,18 @@ const CreateCustomPackageScreen = ({ session, onBack, onCreateSuccess }) => {
       if (mainImage) payload.main_image = mainImage;
       const res = await createCustomPackage(payload, session.access);
       const createdPackage = res?.data;
-      Alert.alert(t("success"), t("customPackageCreated"), [
-        { text: "OK", onPress: () => { onCreateSuccess?.(createdPackage); onBack?.(); } },
-      ]);
+      showAlert({
+        title: t("success"),
+        message: t("customPackageCreated"),
+        type: "success",
+        onOk: () => {
+          onCreateSuccess?.(createdPackage);
+          onBack?.();
+        },
+      });
     } catch (err) {
       const message = err?.message || t("couldNotCreatePackage");
-      Alert.alert(t("couldNotCreatePackageTitle"), message);
+      showAlert({ title: t("couldNotCreatePackageTitle"), message, type: "error" });
     } finally {
       setSubmitting(false);
     }

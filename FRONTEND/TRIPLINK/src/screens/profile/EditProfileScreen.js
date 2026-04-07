@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   SafeAreaView,
@@ -17,6 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { getProfile, updateProfile, updateProfileWithImage } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -98,6 +98,7 @@ const outlineStyles = StyleSheet.create({
 
 const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) => {
   const { t } = useLanguage();
+  const { showAlert, showOptions } = useAppAlert();
   const hasInitial = initialProfile != null && typeof initialProfile === "object";
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(!hasInitial);
@@ -193,36 +194,22 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
-      if (!hasInitial) Alert.alert("Error", "Failed to load profile data");
+      if (!hasInitial) showAlert({ title: "Couldn't load profile", message: "Failed to load profile data.", type: "error" });
     } finally {
       setFetching(false);
     }
   };
 
   const pickImage = () => {
-    // Let user choose between camera and gallery
-    Alert.alert(
-      t("changePhoto"),
-      t("howToUpdatePhoto"),
-      [
-        {
-          text: t("takePhoto"),
-          onPress: () => {
-            takePhotoWithCamera();
-          },
-        },
-        {
-          text: t("chooseFromGallery"),
-          onPress: () => {
-            pickFromGallery();
-          },
-        },
-        {
-          text: t("cancel"),
-          style: "cancel",
-        },
-      ]
-    );
+    showOptions({
+      title: t("changePhoto"),
+      message: t("howToUpdatePhoto"),
+      options: [
+        { label: t("takePhoto"), onPress: () => takePhotoWithCamera() },
+        { label: t("chooseFromGallery"), onPress: () => pickFromGallery() },
+        { label: t("cancel"), variant: "cancel" },
+      ],
+    });
   };
 
   const takePhotoWithCamera = async () => {
@@ -230,7 +217,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       // Request camera permissions
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission needed", "Please grant camera permissions to take a photo");
+        showAlert({ title: "Permission needed", message: "Please grant camera permissions to take a photo.", type: "warning" });
         return;
       }
 
@@ -250,7 +237,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       }
     } catch (error) {
       console.error("Error taking photo with camera:", error);
-      Alert.alert("Error", "Failed to open camera. Please try again.");
+      showAlert({ title: "Couldn't open camera", message: "Please try again.", type: "error" });
     }
   };
 
@@ -274,7 +261,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission needed", "Please allow photo library access to upload your refund QR.");
+        showAlert({ title: "Permission needed", message: "Please allow photo library access to upload your refund QR.", type: "warning" });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -290,7 +277,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       }
     } catch (error) {
       console.error("Error picking refund QR:", error);
-      Alert.alert("Error", "Could not open gallery.");
+      showAlert({ title: "Couldn't open gallery", message: "Please try again.", type: "error" });
     }
   };
 
@@ -299,7 +286,7 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission needed", "Please grant camera roll permissions to upload images");
+        showAlert({ title: "Permission needed", message: "Please grant photo library access to upload images.", type: "warning" });
         return;
       }
 
@@ -322,19 +309,19 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       }
     } catch (error) {
       console.error("Error picking image from gallery:", error);
-      Alert.alert("Error", "Failed to open gallery. Please try again.");
+      showAlert({ title: "Couldn't open gallery", message: "Please try again.", type: "error" });
     }
   };
 
   const handleSave = async () => {
     if (!session?.access) {
-      Alert.alert("Error", "Not authenticated");
+      showAlert({ title: "Not signed in", message: "Please log in and try again.", type: "warning" });
       return;
     }
 
     const cleanDigits = phoneDigits.replace(/\D/g, "").slice(0, 10);
     if (cleanDigits.length !== 10) {
-      Alert.alert(t("error"), t("phoneMustBe10Digits"));
+      showAlert({ title: t("error"), message: t("phoneMustBe10Digits"), type: "warning" });
       return;
     }
     const resolvedPhone = fullNepalPhone(cleanDigits);
@@ -355,10 +342,11 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
     });
 
     if (isFirstTimeProfile && missingRequired.length > 0) {
-      Alert.alert(
-        "Complete your profile",
-        "Because this is your first time updating your profile, please fill in all fields before saving."
-      );
+      showAlert({
+        title: "Complete your profile",
+        message: "Fill in all fields before saving.",
+        type: "info",
+      });
       return;
     }
 
@@ -401,7 +389,6 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
         response = await updateProfile(updateData, session.access);
       }
 
-      Alert.alert("Success", "Profile updated successfully!");
       const didClearRefundQr = refundQrRemoved;
       const didRemoveProfilePicture = profilePictureRemoved;
       setIsFirstTimeProfile(false);
@@ -422,9 +409,14 @@ const EditProfileScreen = ({ session, initialProfile = null, onBack, onSave }) =
       setProfileData((prev) => ({ ...prev, phone_number: resolvedPhone }));
       if (onSave) onSave(response.data);
       else if (onBack) onBack();
+      showAlert({
+        title: "Profile updated",
+        message: "Your changes have been saved.",
+        type: "success",
+      });
     } catch (error) {
       console.error("Error updating profile:", error);
-      Alert.alert("Error", error.message || "Failed to update profile");
+      showAlert({ title: "Couldn't save", message: error.message || "Failed to update profile.", type: "error" });
     } finally {
       setLoading(false);
     }

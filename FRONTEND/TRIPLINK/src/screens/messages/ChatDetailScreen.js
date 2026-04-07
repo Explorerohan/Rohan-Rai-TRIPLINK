@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import {
-  ActionSheetIOS,
   ActivityIndicator,
-  Alert,
   Dimensions,
   Image,
   KeyboardAvoidingView,
@@ -38,6 +36,7 @@ import {
   sendChatItineraryTrip,
   getChatItineraryPdfUrl,
 } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 const DEFAULT_AVATAR =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -363,6 +362,7 @@ const ChatDetailScreen = ({
   onPackagePress,
 }) => {
   const { t } = useLanguage();
+  const { showAlert, showConfirm, showOptions } = useAppAlert();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inputText, setInputText] = useState("");
@@ -535,12 +535,12 @@ const ChatDetailScreen = ({
         setInputText("");
         await loadMessages(false);
       } catch (err) {
-        Alert.alert(t("error"), err?.message || t("chatAttachmentUploadFailed"));
+        showAlert({ title: t("error"), message: err?.message || t("chatAttachmentUploadFailed"), type: "error" });
       } finally {
         setSending(false);
       }
     },
-    [roomId, accessToken, inputText, loadMessages, t]
+    [roomId, accessToken, inputText, loadMessages, t, showAlert]
   );
 
   /** Up to 10 images per request (`attachments` field); same caption on each message server-side. */
@@ -562,18 +562,18 @@ const ChatDetailScreen = ({
         setInputText("");
         await loadMessages(false);
       } catch (err) {
-        Alert.alert(t("error"), err?.message || t("chatAttachmentUploadFailed"));
+        showAlert({ title: t("error"), message: err?.message || t("chatAttachmentUploadFailed"), type: "error" });
       } finally {
         setSending(false);
       }
     },
-    [roomId, accessToken, inputText, loadMessages, t]
+    [roomId, accessToken, inputText, loadMessages, t, showAlert]
   );
 
   const pickImageFromLibrary = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(t("error"), t("chatMediaLibraryPermission"));
+      showAlert({ title: t("error"), message: t("chatMediaLibraryPermission"), type: "warning" });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -585,19 +585,19 @@ const ChatDetailScreen = ({
     });
     if (result.canceled || !result.assets?.length) return;
     await uploadChatImagesBatch(result.assets);
-  }, [uploadChatImagesBatch, t]);
+  }, [uploadChatImagesBatch, t, showAlert]);
 
   const pickFromCamera = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(t("error"), t("chatCameraPermission"));
+      showAlert({ title: t("error"), message: t("chatCameraPermission"), type: "warning" });
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 1 });
     if (result.canceled || !result.assets?.[0]) return;
     const a = result.assets[0];
     await uploadChatImagesBatch([a]);
-  }, [uploadChatImagesBatch, t]);
+  }, [uploadChatImagesBatch, t, showAlert]);
 
   const pickDocument = useCallback(async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -611,27 +611,16 @@ const ChatDetailScreen = ({
 
   const openAttachMenu = useCallback(() => {
     if (sending || !roomId || !accessToken) return;
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [t("chatAttachPhotoLibrary"), t("chatAttachCamera"), t("chatAttachDocument"), t("cancel")],
-          cancelButtonIndex: 3,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 0) pickImageFromLibrary();
-          else if (buttonIndex === 1) pickFromCamera();
-          else if (buttonIndex === 2) pickDocument();
-        }
-      );
-    } else {
-      Alert.alert(t("chatAttachTitle"), "", [
-        { text: t("chatAttachPhotoLibrary"), onPress: () => pickImageFromLibrary() },
-        { text: t("chatAttachCamera"), onPress: () => pickFromCamera() },
-        { text: t("chatAttachDocument"), onPress: () => pickDocument() },
-        { text: t("cancel"), style: "cancel" },
-      ]);
-    }
-  }, [sending, roomId, accessToken, t, pickImageFromLibrary, pickFromCamera, pickDocument]);
+    showOptions({
+      title: t("chatAttachTitle"),
+      options: [
+        { label: t("chatAttachPhotoLibrary"), onPress: () => pickImageFromLibrary() },
+        { label: t("chatAttachCamera"), onPress: () => pickFromCamera() },
+        { label: t("chatAttachDocument"), onPress: () => pickDocument() },
+        { label: t("cancel"), variant: "cancel" },
+      ],
+    });
+  }, [sending, roomId, accessToken, t, pickImageFromLibrary, pickFromCamera, pickDocument, showOptions]);
 
   const sendMessage = async (messageOverride = null) => {
     const baseText = messageOverride !== null && messageOverride !== undefined ? messageOverride : inputText;
@@ -663,7 +652,7 @@ const ChatDetailScreen = ({
         setInputText(text);
       }
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      Alert.alert(t("error"), err?.message || "Failed to send message");
+      showAlert({ title: t("error"), message: err?.message || "Failed to send message", type: "error" });
     } finally {
       setSending(false);
     }
@@ -732,7 +721,7 @@ const ChatDetailScreen = ({
     const days = Math.max(1, parseInt(String(itineraryWizardData.daysCount), 10) || 1);
     const nights = Math.max(0, parseInt(String(itineraryWizardData.nightsCount), 10) || 0);
     if (!itineraryWizardData.startDate) {
-      Alert.alert("Missing date", "Please select start date.");
+      showAlert({ title: "Missing date", message: "Please select a start date.", type: "warning" });
       return;
     }
     const slots = days + nights;
@@ -752,13 +741,13 @@ const ChatDetailScreen = ({
     const time = (itineraryForm.time_label || "").trim();
     const activity = (itineraryForm.activity || "").trim();
     if (!time || !activity) {
-      Alert.alert("Missing details", "Please fill time and activity.");
+      showAlert({ title: "Missing details", message: "Please fill time and activity.", type: "warning" });
       return;
     }
     const { daysCount, nightsCount, currentSlot, itemsBySlot } = itineraryWizardData;
     const arr = itemsBySlot[currentSlot] || [];
     if (arr.length >= 24) {
-      Alert.alert("Limit reached", "Maximum 24 entries per day/night.");
+      showAlert({ title: "Limit reached", message: "Maximum 24 entries per day or night.", type: "warning" });
       return;
     }
     const labels = slotLabels(daysCount, nightsCount);
@@ -799,7 +788,7 @@ const ChatDetailScreen = ({
         setItineraryWizardStep(2);
         await loadItinerary();
       } catch (err) {
-        Alert.alert("Error", err?.message || "Could not create itinerary.");
+        showAlert({ title: "Couldn't save itinerary", message: err?.message || "Could not create itinerary.", type: "error" });
       } finally {
         setSavingItinerary(false);
       }
@@ -849,7 +838,7 @@ const ChatDetailScreen = ({
       resetItineraryForm();
       await loadMessages(false);
     } catch (err) {
-      Alert.alert("Error", err?.message || "Could not send itinerary.");
+      showAlert({ title: "Couldn't send", message: err?.message || "Could not send itinerary.", type: "error" });
     } finally {
       setSavingItinerary(false);
     }
@@ -862,7 +851,7 @@ const ChatDetailScreen = ({
       activity: itineraryForm.activity.trim(),
     };
     if (!payload.time_label || !payload.activity) {
-      Alert.alert("Missing details", "Please fill time and activity.");
+      showAlert({ title: "Missing details", message: "Please fill time and activity.", type: "warning" });
       return;
     }
     setSavingItinerary(true);
@@ -872,28 +861,28 @@ const ChatDetailScreen = ({
       resetItineraryForm();
       await loadItinerary();
     } catch (err) {
-      Alert.alert("Error", err?.message || "Could not update.");
+      showAlert({ title: "Couldn't update", message: err?.message || "Could not update.", type: "error" });
     } finally {
       setSavingItinerary(false);
     }
   };
 
   const removeItineraryItem = (itemId) => {
-    Alert.alert("Delete itinerary item", "Are you sure you want to delete this item?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteChatItineraryItem(roomId, itemId, accessToken);
-            await loadItinerary();
-          } catch (err) {
-            Alert.alert("Delete failed", err?.message || "Please try again.");
-          }
-        },
+    showConfirm({
+      title: "Delete item?",
+      message: "This itinerary entry will be removed.",
+      cancelText: "Cancel",
+      confirmText: "Delete",
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await deleteChatItineraryItem(roomId, itemId, accessToken);
+          await loadItinerary();
+        } catch (err) {
+          showAlert({ title: "Couldn't delete", message: err?.message || "Please try again.", type: "error" });
+        }
       },
-    ]);
+    });
   };
 
   return (

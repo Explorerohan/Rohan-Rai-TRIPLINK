@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   RefreshControl,
@@ -17,6 +16,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { addBookmarkedPackage, getPackages, removeBookmarkedPackage } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80";
@@ -137,6 +137,7 @@ const RunningNowScreen = ({
   onBack = () => {},
 }) => {
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   const hasInitialPackages = Array.isArray(initialPackages) && initialPackages.length > 0;
   const [packages, setPackages] = useState(() =>
     hasInitialPackages ? transformRawPackages(initialPackages) : []
@@ -234,7 +235,7 @@ const RunningNowScreen = ({
     async (trip) => {
       const id = String(trip?.id || "");
       if (!id || !session?.access) {
-        Alert.alert(t("loginRequired"), t("pleaseLoginBookmarks"));
+        showAlert({ title: t("loginRequired"), message: t("pleaseLoginBookmarks"), type: "warning" });
         return;
       }
       if (busyIds.includes(id)) return;
@@ -265,7 +266,7 @@ const RunningNowScreen = ({
           onUpdateCachedPackages(toRawCacheList(next));
           return next;
         });
-        Alert.alert(t("bookmarkError"), err?.message || t("couldNotUpdateBookmark"));
+        showAlert({ title: t("bookmarkError"), message: err?.message || t("couldNotUpdateBookmark"), type: "error" });
       } finally {
         setBusyIds((prev) => prev.filter((busyId) => busyId !== id));
       }

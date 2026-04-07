@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { SafeAreaView, ActivityIndicator, View, StyleSheet, Alert } from "react-native";
+import { SafeAreaView, ActivityIndicator, View, StyleSheet } from "react-native";
+import { AppAlertProvider, showAppAlert, showAppOptions } from "./src/components/AppAlertProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
 import LoginScreen from "./src/screens/login/LoginScreen";
@@ -71,11 +72,15 @@ export default function App() {
   const goBack = useCallback(() => {
     setScreenHistory((prev) => {
       if (prev.length === 0) {
-        Alert.alert("No previous screen", "Where do you want to go?", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Home", onPress: () => goToRootScreen("home") },
-          { text: "Profile", onPress: () => goToRootScreen("profile") },
-        ]);
+        showAppOptions({
+          title: "No previous screen",
+          message: "Where do you want to go?",
+          options: [
+            { label: "Home", onPress: () => goToRootScreen("home") },
+            { label: "Profile", onPress: () => goToRootScreen("profile") },
+            { label: "Cancel", variant: "cancel" },
+          ],
+        });
         return prev;
       }
       const previousScreen = prev[prev.length - 1];
@@ -382,6 +387,7 @@ export default function App() {
 
   return (
     <LanguageProvider>
+    <AppAlertProvider>
     <SafeAreaView style={{ flex: 1 }}>
       {screen === "onboarding" && (
         <OnboardingScreen onLoginPress={goToLogin} onSignupPress={goToSignup} />
@@ -601,8 +607,12 @@ export default function App() {
           onBook={handleBookTrip}
           onMessageAgent={async (agent) => {
             if (!session?.access) {
-              alert("Please log in to message the agent.");
-              navigate("login", { resetHistory: true });
+              showAppAlert({
+                title: "Login required",
+                message: "Please log in to message the agent.",
+                type: "warning",
+                onOk: () => navigate("login", { resetHistory: true }),
+              });
               return;
             }
             try {
@@ -616,7 +626,11 @@ export default function App() {
               });
               navigate("chatDetail");
             } catch (err) {
-              alert(err?.message || "Failed to start chat.");
+              showAppAlert({
+                title: "Couldn't start chat",
+                message: err?.message || "Failed to start chat.",
+                type: "error",
+              });
             }
           }}
         />
@@ -774,6 +788,7 @@ export default function App() {
         />
       )}
     </SafeAreaView>
+    </AppAlertProvider>
     </LanguageProvider>
   );
 }

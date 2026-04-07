@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   SafeAreaView,
   StyleSheet,
@@ -14,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import { useLanguage } from "../context/LanguageContext";
 import { initiateEsewaPayment, verifyEsewaPayment } from "../utils/api";
+import { useAppAlert } from "./AppAlertProvider";
 
 const formatPrice = (price) => {
   let numericValue = 0;
@@ -68,6 +68,7 @@ const PackageBookingModal = ({
   onBook,
 }) => {
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   const [bookingStep, setBookingStep] = useState("traveler_count");
   const [travelerCountInput, setTravelerCountInput] = useState("1");
   const [paymentSession, setPaymentSession] = useState(null);
@@ -113,11 +114,11 @@ const PackageBookingModal = ({
 
   const handleContinueToPayment = async () => {
     if (!session?.access) {
-      Alert.alert(t("loginRequired"), t("pleaseLoginToContinue"));
+      showAlert({ title: t("loginRequired"), message: t("pleaseLoginToContinue"), type: "warning" });
       return;
     }
     if (!packageId) {
-      Alert.alert(t("error"), t("invalidPackage"));
+      showAlert({ title: t("error"), message: t("invalidPackage"), type: "error" });
       return;
     }
 
@@ -132,7 +133,7 @@ const PackageBookingModal = ({
       if (data?.zero_payment) {
         onBook?.(data || null);
         closeBookingModal();
-        Alert.alert(t("paymentSuccessful"), t("bookingCompletedWithRewardPoints"));
+        showAlert({ title: t("paymentSuccessful"), message: t("bookingCompletedWithRewardPoints"), type: "success" });
         return;
       }
 
@@ -140,7 +141,7 @@ const PackageBookingModal = ({
       paymentCallbackHandledRef.current = false;
       setBookingStep("payment");
     } catch (error) {
-      Alert.alert(t("paymentSetupFailed"), error?.message || t("couldNotStartEsewa"));
+      showAlert({ title: t("paymentSetupFailed"), message: error?.message || t("couldNotStartEsewa"), type: "error" });
     } finally {
       setInitiatingPayment(false);
     }
@@ -149,7 +150,7 @@ const PackageBookingModal = ({
   const verifyEsewaPaymentAndBook = async ({ silent = false } = {}) => {
     const transactionUuid = paymentSession?.transaction_uuid;
     if (!session?.access || !transactionUuid) {
-      if (!silent) Alert.alert(t("error"), t("paymentSessionMissing"));
+      if (!silent) showAlert({ title: t("error"), message: t("paymentSessionMissing"), type: "error" });
       return;
     }
 
@@ -158,11 +159,11 @@ const PackageBookingModal = ({
       const { data } = await verifyEsewaPayment(transactionUuid, session.access);
       onBook?.(data || null);
       closeBookingModal();
-      Alert.alert(t("paymentSuccessful"), t("paymentCompleteBooked"));
+      showAlert({ title: t("paymentSuccessful"), message: t("paymentCompleteBooked"), type: "success" });
       return true;
     } catch (error) {
       if (!silent) {
-        Alert.alert(t("verificationFailed"), error?.message || t("paymentNotVerified"));
+        showAlert({ title: t("verificationFailed"), message: error?.message || t("paymentNotVerified"), type: "error" });
       }
       return false;
     } finally {
@@ -182,7 +183,7 @@ const PackageBookingModal = ({
     setEsewaWebViewVisible(false);
 
     if (isFailure) {
-      Alert.alert(t("paymentFailed"), t("esewaCancelledOrFailed"));
+      showAlert({ title: t("paymentFailed"), message: t("esewaCancelledOrFailed"), type: "error" });
       return true;
     }
 
@@ -195,14 +196,14 @@ const PackageBookingModal = ({
         const ok = await verifyEsewaPaymentAndBook({ silent: true });
         if (ok) return;
       }
-      Alert.alert(t("paymentSubmitted"), t("verificationTakingLonger"));
+      showAlert({ title: t("paymentSubmitted"), message: t("verificationTakingLonger"), type: "warning" });
     })();
     return true;
   };
 
   const handleOpenEsewaCheckout = async () => {
     if (!esewaPostSource) {
-      Alert.alert(t("error"), t("paymentCheckoutMissingError"));
+      showAlert({ title: t("error"), message: t("paymentCheckoutMissingError"), type: "error" });
       return;
     }
     paymentCallbackHandledRef.current = false;
@@ -438,12 +439,16 @@ const PackageBookingModal = ({
               onError={(event) => {
                 setEsewaWebViewLoading(false);
                 const msg = event?.nativeEvent?.description || t("failedToLoadEsewaPage");
-                Alert.alert(t("paymentPageError"), msg);
+                showAlert({ title: t("paymentPageError"), message: msg, type: "error" });
               }}
               onHttpError={(event) => {
                 setEsewaWebViewLoading(false);
                 const statusCode = event?.nativeEvent?.statusCode;
-                Alert.alert(t("paymentPageError"), `${t("esewaPageReturnedHttp")} ${statusCode || "error"}.`);
+                showAlert({
+                  title: t("paymentPageError"),
+                  message: `${t("esewaPageReturnedHttp")} ${statusCode || "error"}.`,
+                  type: "error",
+                });
               }}
               onNavigationStateChange={(navState) => {
                 const url = String(navState?.url || "");

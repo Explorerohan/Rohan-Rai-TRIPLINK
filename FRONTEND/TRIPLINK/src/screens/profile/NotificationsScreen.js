@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   SafeAreaView,
@@ -14,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../context/LanguageContext";
 import { getNotifications, markNotificationRead } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 const NOTIFICATION_ICONS = {
   alert: { icon: "alert-circle", color: "#f59e0b" },
@@ -36,6 +36,7 @@ const NotificationsScreen = ({
   onReadStateChange = () => {},
 }) => {
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [markAllBusy, setMarkAllBusy] = useState(false);
@@ -109,7 +110,7 @@ const NotificationsScreen = ({
       onReadStateChange(0);
     } catch (e) {
       console.warn("Failed to mark all notifications read:", e);
-      Alert.alert("Error", "Could not mark all notifications as read.");
+      showAlert({ title: "Couldn't update", message: "Could not mark all notifications as read.", type: "error" });
     } finally {
       setMarkAllBusy(false);
     }

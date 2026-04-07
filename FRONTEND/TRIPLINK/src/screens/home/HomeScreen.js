@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import {
-  Alert,
   Image,
   Modal,
   RefreshControl,
@@ -17,6 +16,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { addBookmarkedPackage, getPackages, getProfile, removeBookmarkedPackage } from "../../utils/api";
+import { useAppAlert } from "../../components/AppAlertProvider";
 
 const DEFAULT_AVATAR_URL =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -196,6 +196,7 @@ const HomeScreen = ({
   notificationUnreadCount = 0,
 }) => {
   const { t } = useLanguage();
+  const { showAlert } = useAppAlert();
   const hasInitialPackages = initialPackages && initialPackages.length > 0;
   const [activeCategory, setActiveCategory] = useState("All");
   const [packages, setPackages] = useState(() => (hasInitialPackages ? transformRawPackages(initialPackages) : []));
@@ -368,7 +369,7 @@ const HomeScreen = ({
     const packageId = trip?.id;
     if (!packageId) return;
     if (!session?.access) {
-      Alert.alert(t("loginRequired"), t("pleaseLoginBookmarks"));
+      showAlert({ title: t("loginRequired"), message: t("pleaseLoginBookmarks"), type: "warning" });
       return;
     }
     if (bookmarkBusyIds.includes(String(packageId))) return;
@@ -411,7 +412,7 @@ const HomeScreen = ({
         }, 0);
         return updated;
       });
-      Alert.alert(t("bookmarkError"), err?.message || t("couldNotUpdateBookmark"));
+      showAlert({ title: t("bookmarkError"), message: err?.message || t("couldNotUpdateBookmark"), type: "error" });
     } finally {
       setBookmarkBusyIds((prev) => prev.filter((id) => id !== packageIdStr));
     }
