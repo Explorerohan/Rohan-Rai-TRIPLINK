@@ -4,7 +4,7 @@
     "slug": "TRIPLINK",
     "version": "1.0.0",
     "sdkVersion": "52.0.0",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "extra": {
       "eas": {
         "projectId": "PUT_YOUR_EAS_PROJECT_ID_HERE"

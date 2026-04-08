@@ -3,8 +3,9 @@ module.exports = {
     name: "TRIPLINK",
     slug: "TRIPLINK",
     version: "1.0.0",
+    icon: "./assets/Logo.png",
     sdkVersion: "52.0.0",
-    newArchEnabled: true,
+    newArchEnabled: false,
     extra: {
       eas: {
         projectId: "6193951f-6227-4e24-be29-7651f8900c79",
@@ -21,6 +22,10 @@ module.exports = {
       },
     },
     android: {
+      adaptiveIcon: {
+        foregroundImage: "./assets/Logo.png",
+        backgroundColor: "#ffffff",
+      },
       config: {
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",

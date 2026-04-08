@@ -37,11 +37,20 @@ SECRET_KEY = config(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=config('DJANGO_DEBUG', default='False'), cast=bool)
 
-ALLOWED_HOSTS = config(
-    'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,192.168.18.6,10.148.97.183',
-    cast=Csv(),
-)
+ALLOWED_HOSTS = [
+    h
+    for h in dict.fromkeys(
+        [
+            *config(
+                'ALLOWED_HOSTS',
+                default='localhost,127.0.0.1,192.168.18.6,10.148.97.183',
+                cast=Csv(),
+            ),
+            *config('ALLOWED_HOSTS_EXTRA', default='', cast=Csv()),
+        ]
+    )
+    if h
+]
 # Note: use hostname/IP only (no :port). The Host header is e.g. 10.219.151.183:8000 but ALLOWED_HOSTS matches the host part.
 
 # Required for CSRF when accessing the site by IP or non-localhost (Django 4.0+)

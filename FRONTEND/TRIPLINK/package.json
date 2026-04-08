@@ -29,7 +29,8 @@
     "react-native-webview": "13.12.5"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.0"
+    "@babel/core": "^7.25.0",
+    "@react-native-community/cli": "latest"
   },
   "private": true
 }
