@@ -1,0 +1,27 @@
+TRIPLINK backend on Render (short checklist)
+==========================================
+
+1) Push this repo to GitHub (or GitLab) if it is not there yet.
+
+2) In Render: New → Blueprint → connect the repo → pick render.yaml at the repo root.
+   OR: New → Web Service → connect repo, set Root Directory = BACKEND, same Build/Start as in render.yaml.
+
+3) Create PostgreSQL: New → PostgreSQL (free tier if available). Copy the Internal/External DATABASE_URL.
+
+4) On the web service → Environment → add:
+   DATABASE_URL = <paste from Postgres, usually starts with postgres://>
+   (Optional) RENDER_EXTERNAL_URL = https://YOUR-SERVICE.onrender.com  if hosts/CSRF need a hint.
+
+5) Deploy. Logs should show migrate + daphne listening.
+
+6) Test: open https://YOUR-SERVICE.onrender.com/admin/ in a browser.
+
+7) Mobile app: set FRONTEND/TRIPLINK/.env
+   EXPO_PUBLIC_API_BASE=https://YOUR-SERVICE.onrender.com
+   Rebuild the APK (gradle assembleRelease).
+
+Notes
+-----
+- Free web services sleep after idle; first request can be slow.
+- Uploaded media under /media/ lives on ephemeral disk on free tier; use S3 or similar for real production.
+- WebSockets use in-memory channel layer on one dyno; scale-out would need Redis + channels_redis.

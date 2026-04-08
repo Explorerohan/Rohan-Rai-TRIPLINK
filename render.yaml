@@ -1,0 +1,21 @@
+# Render Blueprint: TRIPLINK Django API
+# New → Blueprint → Connect this repo → Render reads this file.
+# Then add a PostgreSQL instance in the dashboard and set DATABASE_URL on this service.
+
+services:
+  - type: web
+    name: triplink-api
+    runtime: python
+    plan: free
+    rootDir: BACKEND
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: chmod +x start.sh && ./start.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_SSL_REQUIRE
+        value: "true"

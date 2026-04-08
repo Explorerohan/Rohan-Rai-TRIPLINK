@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from datetime import timedelta
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 
 import dj_database_url
 from decouple import Csv, config
@@ -67,7 +68,20 @@ CSRF_TRUSTED_ORIGINS = [
     'http://10.52.7.183:8000',
     'http://192.168.40.62:8000',
     'http://192.168.47.30:8000',
-] + config('CSRF_TRUSTED_ORIGINS_EXTRA', default='', cast=Csv())
+] + [x for x in config('CSRF_TRUSTED_ORIGINS_EXTRA', default='', cast=Csv()) if x]
+
+# Render.com: trust HTTPS origin and Host (set in dashboard if auto env is missing)
+_render_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+if not _render_url:
+    _rh = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    if _rh:
+        _render_url = f"https://{_rh}"
+if _render_url:
+    _host = urlparse(_render_url).hostname
+    if _host and _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+    if _render_url not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS = list(CSRF_TRUSTED_ORIGINS) + [_render_url]
 
 # Ensure CSRF cookie is sent on same-origin requests (default; explicit for clarity)
 CSRF_COOKIE_SAMESITE = 'Lax'
