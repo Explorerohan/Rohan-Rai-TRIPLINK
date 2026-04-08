@@ -399,7 +399,7 @@
             });
             if (!res.ok) {
                 // Simple error handling; in future we can show a nicer toast
-                alert('Failed to start chat for this custom package.');
+                TriplinkAlert.show({ title: 'Chat unavailable', message: 'Failed to start chat for this custom package.', type: 'error' });
                 btn.disabled = false;
                 return;
             }
@@ -420,7 +420,7 @@
             }
         } catch (e) {
             console.error(e);
-            alert('Something went wrong while starting chat.');
+            TriplinkAlert.show({ title: 'Something went wrong', message: 'Something went wrong while starting chat.', type: 'error' });
             btn.disabled = false;
         }
     }

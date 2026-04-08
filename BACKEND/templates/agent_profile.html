@@ -330,7 +330,7 @@
                     <label for="profile_picture" class="btn btn-primary">Change Photo</label>
                 </div>
                 {% if profile.profile_picture %}
-                <button type="submit" name="remove_profile_picture" value="1" class="btn btn-danger" onclick="return confirm('Are you sure you want to remove your profile picture?')">Remove Photo</button>
+                <button type="submit" name="remove_profile_picture" value="1" class="btn btn-danger" data-triplink-confirm="Are you sure you want to remove your profile picture?" data-triplink-confirm-title="Remove photo?">Remove Photo</button>
                 {% endif %}
             </div>
         </div>

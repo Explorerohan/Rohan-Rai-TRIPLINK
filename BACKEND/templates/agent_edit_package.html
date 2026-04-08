@@ -679,7 +679,7 @@
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">Update package</button>
                         <a href="{% url 'agent_packages' %}" class="btn btn-secondary">Cancel</a>
-                        <a href="{% url 'agent_delete_package' package.id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this package?');">Delete</a>
+                        <a href="{% url 'agent_delete_package' package.id %}" class="btn btn-danger" data-triplink-confirm="Are you sure you want to delete this package?" data-triplink-confirm-title="Delete package?">Delete</a>
                     </div>
                 </section>
             </div>

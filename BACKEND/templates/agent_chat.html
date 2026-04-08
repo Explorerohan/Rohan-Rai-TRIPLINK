@@ -1817,7 +1817,7 @@
             navigator.share({ url: url }).catch(function () {});
         } else if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(function () {
-                alert('Link copied to clipboard.');
+                TriplinkAlert.show({ title: 'Copied', message: 'Link copied to clipboard.', type: 'success' });
             }).catch(function () {});
         } else {
             window.prompt('Copy link:', url);
@@ -1948,7 +1948,7 @@
         const maxN = 10;
         const files = Array.from(fileList).slice(0, maxN);
         if (fileList.length > maxN) {
-            alert('Only the first ' + maxN + ' images will be sent.');
+            TriplinkAlert.show({ title: 'Too many images', message: 'Only the first ' + maxN + ' images will be sent.', type: 'warning' });
         }
         const text = (chatInput && chatInput.value) ? chatInput.value.trim() : '';
         const formData = new FormData();
@@ -1966,7 +1966,7 @@
             await loadMessages(activeRoomId);
         } catch (err) {
             console.error('Image upload failed', err);
-            alert(err.message || 'Could not send images.');
+            TriplinkAlert.show({ title: 'Could not send', message: err.message || 'Could not send images.', type: 'error' });
         } finally {
             if (chatAttachInput) chatAttachInput.value = '';
         }
@@ -2462,7 +2462,7 @@
         const raw = (itineraryBookingCode && itineraryBookingCode.value || '').trim();
         const code = raw.replace(/\D/g, '').slice(0, 5);
         if (code.length !== 5) {
-            alert('Enter a 5-digit booking ID.');
+            TriplinkAlert.show({ title: 'Invalid ID', message: 'Enter a 5-digit booking ID.', type: 'warning' });
             return;
         }
         if (itineraryBookingLoadBtn) itineraryBookingLoadBtn.disabled = true;
@@ -2487,7 +2487,7 @@
                 itineraryBookingSummary.innerHTML = '';
                 itineraryBookingSummary.style.display = 'none';
             }
-            alert(err.message || 'Lookup failed.');
+            TriplinkAlert.show({ title: 'Lookup failed', message: err.message || 'Lookup failed.', type: 'error' });
         } finally {
             if (itineraryBookingLoadBtn) itineraryBookingLoadBtn.disabled = false;
         }
@@ -3188,7 +3188,7 @@
 
     function openItineraryModal() {
         if (!activeRoomId) {
-            alert('Please select a conversation first.');
+            TriplinkAlert.show({ title: 'No conversation', message: 'Please select a conversation first.', type: 'warning' });
             return;
         }
         if (!itineraryModal) return;
@@ -3234,14 +3234,14 @@
 
     function itineraryStep0NextHandler() {
         if (!itineraryWizard.manualOnly && !itineraryWizard.bookingId) {
-            alert('Load a booking with the 5-digit ID, or choose “No booking — enter trip dates only”.');
+            TriplinkAlert.show({ title: 'Booking or dates', message: 'Load a booking with the 5-digit ID, or choose “No booking — enter trip dates only”.', type: 'warning' });
             return;
         }
         const days = parseInt(itineraryDays.value, 10) || 1;
         const nights = parseInt(itineraryNights.value, 10) || 0;
-        if (days < 1) { alert('Days must be at least 1.'); return; }
+        if (days < 1) { TriplinkAlert.show({ title: 'Invalid duration', message: 'Days must be at least 1.', type: 'warning' }); return; }
         if (!itineraryStartDate || !itineraryStartDate.value) {
-            alert('Please set a start date.');
+            TriplinkAlert.show({ title: 'Start date', message: 'Please set a start date.', type: 'warning' });
             return;
         }
         itineraryWizard.startDate = itineraryStartDate.value;
@@ -3273,14 +3273,14 @@
         const time = formatTimeLabelFromHHMM((itineraryTime.value || '').trim());
         const activity = (itineraryActivity.value || '').trim();
         if (!time || !activity) {
-            alert('Please choose a time and fill in the activity.');
+            TriplinkAlert.show({ title: 'Missing details', message: 'Please choose a time and fill in the activity.', type: 'warning' });
             return;
         }
         const labels = slotLabels(itineraryWizard.daysCount);
         const idx = itineraryWizard.currentSlot;
         const arr = itineraryWizard.itemsBySlot[idx] || [];
         if (arr.length >= 24) {
-            alert('Maximum 24 entries per day.');
+            TriplinkAlert.show({ title: 'Limit reached', message: 'Maximum 24 entries per day.', type: 'warning' });
             return;
         }
         arr.push({
@@ -3343,7 +3343,7 @@
             showItineraryProfileSubStep(0);
         } catch (err) {
             console.error('Create trip failed', err);
-            alert(err.message || 'Could not create itinerary. Please try again.');
+            TriplinkAlert.show({ title: 'Could not create', message: err.message || 'Could not create itinerary. Please try again.', type: 'error' });
         }
     }
 
@@ -3450,7 +3450,7 @@
             showItineraryStep('itineraryStepFinal');
         } catch (err) {
             console.error('Save itinerary failed', err);
-            alert(err.message || 'Could not save itinerary details.');
+            TriplinkAlert.show({ title: 'Could not save', message: err.message || 'Could not save itinerary details.', type: 'error' });
         }
     }
 
@@ -3468,7 +3468,7 @@
             await loadMessages(activeRoomId);
         } catch (err) {
             console.error('Send itinerary failed', err);
-            alert('Could not send itinerary.');
+            TriplinkAlert.show({ title: 'Could not send', message: 'Could not send itinerary.', type: 'error' });
         }
     }
 
@@ -3582,7 +3582,7 @@
     if (chatAttachBtn && chatAttachInput) {
         chatAttachBtn.addEventListener('click', function () {
             if (!activeRoomId) {
-                alert('Please select a conversation first.');
+                TriplinkAlert.show({ title: 'No conversation', message: 'Please select a conversation first.', type: 'warning' });
                 return;
             }
             chatAttachInput.click();

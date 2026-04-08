@@ -6,10 +6,12 @@
     <title>{% block title %}TRIPLINK{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/login.css' %}">
+    <link rel="stylesheet" href="{% static 'css/triplink-alert.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     {% block content %}{% endblock %}
+    <script src="{% static 'js/triplink-alert.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,140 @@
+/* TRIPLINK modal alerts — matches app card style (white card, forest green primary) */
+
+.triplink-alert-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  animation: triplink-alert-fade-in 0.15s ease-out;
+}
+
+@keyframes triplink-alert-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.triplink-alert-card {
+  width: 100%;
+  max-width: 340px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 28px 24px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.triplink-alert-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.triplink-alert-icon-wrap.triplink-type-success { background: #ecfdf5; color: #166534; }
+.triplink-alert-icon-wrap.triplink-type-error { background: #fef2f2; color: #b91c1c; }
+.triplink-alert-icon-wrap.triplink-type-warning { background: #fffbeb; color: #b45309; }
+.triplink-alert-icon-wrap.triplink-type-info { background: #eff6ff; color: #1d4ed8; }
+
+.triplink-alert-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.triplink-alert-message {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.triplink-alert-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.triplink-alert-actions.triplink-single .triplink-alert-btn-primary {
+  width: 100%;
+}
+
+.triplink-alert-btn {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+.triplink-alert-btn:active {
+  transform: scale(0.98);
+}
+
+.triplink-alert-btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+}
+
+.triplink-alert-btn-primary {
+  color: #ffffff;
+}
+
+.triplink-alert-btn-primary.triplink-btn-success { background: #1f6b2a; }
+.triplink-alert-btn-primary.triplink-btn-neutral { background: #334155; }
+.triplink-alert-btn-primary.triplink-btn-warning { background: #b45309; }
+.triplink-alert-btn-primary.triplink-btn-info { background: #1f6b2a; }
+.triplink-alert-btn-primary.triplink-btn-danger { background: #b91c1c; }
+
+.triplink-alert-options {
+  margin-top: 16px;
+  max-height: 280px;
+  overflow-y: auto;
+  width: 100%;
+  border-top: 1px solid #e2e8f0;
+}
+
+.triplink-alert-option {
+  display: block;
+  width: 100%;
+  padding: 14px 8px;
+  border: none;
+  background: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  font-family: inherit;
+  border-top: 1px solid #e2e8f0;
+}
+
+.triplink-alert-option:first-child {
+  border-top: none;
+}
+
+.triplink-alert-option.triplink-opt-cancel {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.triplink-alert-option.triplink-opt-destructive {
+  color: #b91c1c;
+}
+
+.triplink-alert-option:hover {
+  background: #f8fafc;
+}
