@@ -479,6 +479,15 @@ class BookingSerializer(serializers.ModelSerializer):
         validated_data.pop('payment_status', None)
         validated_data.pop('price_per_person_snapshot', None)
         validated_data.pop('total_amount', None)
+        if Booking.objects.filter(
+            user=user,
+            package=package,
+            status=BookingStatus.CANCELLED,
+            payment_status=PaymentStatus.REFUND_PENDING,
+        ).exists():
+            raise serializers.ValidationError(
+                {'package_id': 'Refund for your previous booking is still pending. Please wait until it is completed before booking this package again.'}
+            )
         if Booking.objects.filter(user=user, package=package, status=BookingStatus.CONFIRMED).exists():
             raise serializers.ValidationError({'package_id': 'You have already booked this package.'})
         if not traveler_may_book_package(user, package):

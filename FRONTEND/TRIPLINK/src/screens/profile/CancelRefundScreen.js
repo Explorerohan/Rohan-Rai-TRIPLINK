@@ -37,6 +37,34 @@ const CancelRefundScreen = ({
   const [cancellingId, setCancellingId] = useState(null);
 
   const upcomingRaw = useMemo(() => filterUpcomingConfirmedBookings(bookings), [bookings]);
+  const refundTrackingItems = useMemo(() => {
+    return (bookings || [])
+      .filter((b) => {
+        if (b.status !== "cancelled") return false;
+        const paymentStatus = (b.payment_status || "").toLowerCase();
+        return paymentStatus === "refund_pending" || paymentStatus === "refunded" || paymentStatus === "refund_declined";
+      })
+      .map((b) => {
+        const startDate = b.trip_start_date || b.created_at;
+        const parsedDate = startDate ? new Date(startDate) : null;
+        const dateStr =
+          parsedDate && !Number.isNaN(parsedDate.getTime())
+            ? parsedDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+            : "Date TBA";
+        const location =
+          b.package_location && b.package_country
+            ? `${b.package_location}, ${b.package_country}`
+            : b.package_location || "—";
+        return {
+          id: `refund-${b.id}`,
+          title: b.package_title || "Trip",
+          location,
+          date: dateStr,
+          image: b.package_image_url || "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80",
+          paymentStatus: b.payment_status,
+        };
+      });
+  }, [bookings]);
 
   const items = useMemo(
     () => mapBookingsToScheduleItems(upcomingRaw),
@@ -151,6 +179,16 @@ const CancelRefundScreen = ({
             </View>
           )}
 
+          {refundTrackingItems.length > 0 && (
+            <View style={styles.policyCardAlt}>
+              <Ionicons name="wallet-outline" size={22} color="#1d4ed8" style={styles.policyIcon} />
+              <View style={styles.policyCardTextWrap}>
+                <Text style={styles.policyCardTitleAlt}>{t("refundTrackingTitle")}</Text>
+                <Text style={styles.policyCardBodyAlt}>{t("refundTrackingBody")}</Text>
+              </View>
+            </View>
+          )}
+
           {items.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={44} color="#94a3b8" />
@@ -248,6 +286,71 @@ const CancelRefundScreen = ({
               );
             })
           )}
+
+          {refundTrackingItems.length > 0 && (
+            <View style={styles.refundTrackSection}>
+              <Text style={styles.refundTrackHeading}>{t("refundStatusHeading")}</Text>
+              {refundTrackingItems.map((item) => {
+                const statusKey = (item.paymentStatus || "").toLowerCase();
+                const isPending = statusKey === "refund_pending";
+                const isCompleted = statusKey === "refunded";
+                const isDeclined = statusKey === "refund_declined";
+                const statusText = isPending
+                  ? t("refundStatusPending")
+                  : isCompleted
+                    ? t("refundStatusCompleted")
+                    : t("refundStatusDeclined");
+                return (
+                  <View key={item.id} style={styles.card}>
+                    <View style={styles.cardRow}>
+                      <View style={styles.cardImageWrap}>
+                        <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
+                      </View>
+                      <View style={styles.cardBody}>
+                        <View style={styles.cardDateRow}>
+                          <Ionicons name="calendar-outline" size={13} color="#94a3b8" />
+                          <Text style={styles.cardDate}>{item.date}</Text>
+                        </View>
+                        <Text style={styles.cardTitle} numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                        <View style={styles.cardLocationRow}>
+                          <Ionicons name="location-outline" size={13} color="#94a3b8" />
+                          <Text style={styles.cardLocation} numberOfLines={1}>
+                            {item.location}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.refundStatusPill,
+                            isPending && styles.refundStatusPillPending,
+                            isCompleted && styles.refundStatusPillCompleted,
+                            isDeclined && styles.refundStatusPillDeclined,
+                          ]}
+                        >
+                          <Ionicons
+                            name={isPending ? "time-outline" : isCompleted ? "checkmark-circle-outline" : "close-circle-outline"}
+                            size={14}
+                            color={isPending ? "#92400e" : isCompleted ? "#166534" : "#991b1b"}
+                          />
+                          <Text
+                            style={[
+                              styles.refundStatusText,
+                              isPending && styles.refundStatusTextPending,
+                              isCompleted && styles.refundStatusTextCompleted,
+                              isDeclined && styles.refundStatusTextDeclined,
+                            ]}
+                          >
+                            {statusText}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -335,6 +438,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 10,
   },
+  policyCardAlt: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    gap: 10,
+  },
   policyIcon: {
     marginTop: 2,
   },
@@ -351,6 +465,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#166534",
     lineHeight: 18,
+  },
+  policyCardTitleAlt: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e3a8a",
+    marginBottom: 4,
+  },
+  policyCardBodyAlt: {
+    fontSize: 12,
+    color: "#1d4ed8",
+    lineHeight: 18,
+  },
+  refundTrackSection: {
+    marginTop: 8,
+  },
+  refundTrackHeading: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#475569",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
   card: {
     backgroundColor: "#ffffff",
@@ -505,6 +641,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#b91c1c",
+  },
+  refundStatusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+  },
+  refundStatusPillPending: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
+  },
+  refundStatusPillCompleted: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#bbf7d0",
+  },
+  refundStatusPillDeclined: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+  },
+  refundStatusText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  refundStatusTextPending: {
+    color: "#92400e",
+  },
+  refundStatusTextCompleted: {
+    color: "#166534",
+  },
+  refundStatusTextDeclined: {
+    color: "#991b1b",
   },
 });
 

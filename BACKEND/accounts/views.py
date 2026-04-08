@@ -3999,6 +3999,21 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
                 {"detail": "You have already booked this package."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if Booking.objects.filter(
+            user=request.user,
+            package=package,
+            status=BookingStatus.CANCELLED,
+            payment_status=PaymentStatus.REFUND_PENDING,
+        ).exists():
+            return response.Response(
+                {
+                    "detail": (
+                        "Refund for your previous booking is still pending. "
+                        "Please wait until it is completed before booking this package again."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         active_deal = get_active_deal(package)
         if active_deal:
