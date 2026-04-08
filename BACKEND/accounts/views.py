@@ -778,7 +778,7 @@ def admin_packages_view(request):
         return redirect('login')
 
     search_query = (request.GET.get("q") or "").strip()
-    selected_status = (request.GET.get("status") or "").strip()
+    selected_status = (request.GET.get("status") or PackageStatus.ACTIVE).strip()
     selected_country = (request.GET.get("country") or "").strip()
     selected_sort = (request.GET.get("sort") or "newest").strip()
 
@@ -802,10 +802,21 @@ def admin_packages_view(request):
                 filter=Q(bookings__status=BookingStatus.CONFIRMED),
                 distinct=True,
             ),
+            cancelled_bookings_count=Count(
+                "bookings",
+                filter=Q(bookings__status=BookingStatus.CANCELLED),
+                distinct=True,
+            ),
+            refund_pending_count=Count(
+                "bookings",
+                filter=Q(bookings__payment_status=PaymentStatus.REFUND_PENDING),
+                distinct=True,
+            ),
             joined_travelers_count=Sum(
                 "bookings__traveler_count",
                 filter=Q(bookings__status=BookingStatus.CONFIRMED),
             ),
+            last_booking_at=Max("bookings__created_at"),
         )
     )
     packages_qs = base_packages_qs
@@ -828,7 +839,8 @@ def admin_packages_view(request):
         if selected_status in allowed_statuses:
             packages_qs = packages_qs.filter(status=selected_status)
         else:
-            selected_status = ""
+            selected_status = PackageStatus.ACTIVE
+            packages_qs = packages_qs.filter(status=selected_status)
 
     if selected_country:
         packages_qs = packages_qs.filter(country__iexact=selected_country)
@@ -890,6 +902,9 @@ def admin_packages_view(request):
             "participants_count": package.participants_count or 0,
             "joined_travelers_count": joined_travelers_count,
             "confirmed_bookings_count": package.confirmed_bookings_count or 0,
+            "cancelled_bookings_count": package.cancelled_bookings_count or 0,
+            "refund_pending_count": package.refund_pending_count or 0,
+            "last_booking_at": package.last_booking_at,
             "agent_name": agent_name,
             "agent_email": package.agent.email,
             "agent_location": agent_location,
@@ -898,14 +913,69 @@ def admin_packages_view(request):
             "updated_at": package.updated_at,
         })
 
-    recent_packages = packages[:5]
-    completed_packages = [p for p in packages if p["status_key"] == PackageStatus.COMPLETED][:5]
+    all_packages = []
+    for package in base_packages_qs.order_by("-created_at"):
+        try:
+            agent_profile = package.agent.agent_profile
+            agent_name = agent_profile.full_name
+            agent_location = agent_profile.location
+        except AgentProfile.DoesNotExist:
+            agent_name = package.agent.email.split("@")[0]
+            agent_location = ""
+
+        joined_travelers_count = package.joined_travelers_count
+        if joined_travelers_count is None:
+            joined_travelers_count = package.participants_count or 0
+
+        all_packages.append({
+            "id": package.id,
+            "title": package.title,
+            "location": package.location,
+            "country": package.country,
+            "description": package.description,
+            "main_image_url": package.main_image.url if package.main_image else "",
+            "feature_names": [f.name for f in package.features.all()[:4]],
+            "price_per_person": package.price_per_person,
+            "duration_days": package.duration_days,
+            "duration_nights": package.duration_nights,
+            "trip_start_date": package.trip_start_date,
+            "trip_end_date": package.trip_end_date,
+            "status": package.get_status_display(),
+            "status_key": package.status,
+            "participants_count": package.participants_count or 0,
+            "joined_travelers_count": joined_travelers_count,
+            "confirmed_bookings_count": package.confirmed_bookings_count or 0,
+            "cancelled_bookings_count": package.cancelled_bookings_count or 0,
+            "refund_pending_count": package.refund_pending_count or 0,
+            "last_booking_at": package.last_booking_at,
+            "agent_name": agent_name,
+            "agent_email": package.agent.email,
+            "agent_location": agent_location,
+            "agent_rating": package.agent_rating,
+            "created_at": package.created_at,
+            "updated_at": package.updated_at,
+        })
+
+    recent_packages = sorted(all_packages, key=lambda p: p["created_at"], reverse=True)[:5]
+    needs_attention_packages = sorted(
+        [p for p in all_packages if (p["refund_pending_count"] > 0 or p["cancelled_bookings_count"] > 0)],
+        key=lambda p: (
+            -(p["refund_pending_count"] or 0),
+            -(p["cancelled_bookings_count"] or 0),
+            -(p["confirmed_bookings_count"] or 0),
+        ),
+    )[:5]
+    completed_packages = sorted(
+        [p for p in all_packages if p["status_key"] == PackageStatus.COMPLETED],
+        key=lambda p: (-(p["confirmed_bookings_count"] or 0), -(p["joined_travelers_count"] or 0)),
+    )[:5]
     display_name = request.user.email.split("@")[0]
 
     context = {
         'user': request.user,
         'packages': packages,
         'recent_packages': recent_packages,
+        'needs_attention_packages': needs_attention_packages,
         'completed_packages': completed_packages,
         'total_packages': len(packages),
         'search_query': search_query,

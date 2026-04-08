@@ -889,7 +889,10 @@
         gap: 10px;
         align-items: end;
     }
-
+    .filter-field.search-field {
+        grid-column: 1 / -1;
+        max-width: none;
+    }
     .filter-field {
         min-width: 0;
     }
@@ -1524,13 +1527,6 @@
 {% block main_content %}
 <header class="header">
     <div class="header-left">
-        <form class="search-bar" method="get" action="{% url 'admin_packages' %}" role="search">
-            <span class="search-icon" aria-hidden="true">&#8981;</span>
-            <input type="hidden" name="status" value="{{ filters.status|default:'' }}">
-            <input type="hidden" name="country" value="{{ filters.country|default:'' }}">
-            <input type="hidden" name="sort" value="{{ filters.sort|default:'newest' }}">
-            <input type="search" name="q" placeholder="Search by title, location, country or agent" value="{{ search_query|default:'' }}" aria-label="Search packages">
-        </form>
     </div>
     <div class="header-right">
         <div class="notification-icon" title="Notifications">
@@ -1572,8 +1568,18 @@
 
         <div class="filters-bar">
             <form class="filters-form" method="get" action="{% url 'admin_packages' %}">
-                <input type="hidden" name="q" value="{{ search_query|default:'' }}">
-
+                <div class="filter-field search-field">
+                    <label class="filter-label" for="filter-search">Search</label>
+                    <input
+                        id="filter-search"
+                        type="search"
+                        name="q"
+                        class="filter-select"
+                        placeholder="Title, location, country or agent"
+                        value="{{ search_query|default:'' }}"
+                        aria-label="Search packages"
+                    >
+                </div>
                 <div class="filter-field">
                     <label class="filter-label" for="filter-status">Status</label>
                     <select id="filter-status" name="status" class="filter-select">
@@ -1607,7 +1613,7 @@
                 </div>
 
                 <button type="submit" class="btn-filter">Apply Filters</button>
-                <a href="{% url 'admin_packages' %}{% if search_query %}?q={{ search_query|urlencode }}{% endif %}" class="btn-clear-filter">Clear Filters</a>
+                <a href="{% url 'admin_packages' %}" class="btn-clear-filter">Clear Filters</a>
             </form>
         </div>
 
@@ -1693,12 +1699,12 @@
     <aside class="right-sidebar">
         <div class="sidebar-widget">
             <div class="sidebar-widget-head">
-                <h3 class="widget-title">Recent Packages</h3>
-                <span class="widget-count">{{ recent_packages|length }}</span>
+                <h3 class="widget-title">Needs Attention</h3>
+                <span class="widget-count">{{ needs_attention_packages|length }}</span>
             </div>
             <div class="package-list">
-                {% if recent_packages %}
-                    {% for package in recent_packages %}
+                {% if needs_attention_packages %}
+                    {% for package in needs_attention_packages %}
                         <a href="{% url 'admin_package_detail' package.id %}" class="package-list-item">
                             {% if package.main_image_url %}
                                 <img src="{{ package.main_image_url }}" alt="{{ package.title }}" class="package-thumbnail">
@@ -1708,14 +1714,20 @@
                             <div class="package-list-content">
                                 <div class="package-list-title">{{ package.title }}</div>
                                 <div class="package-list-subtitle">{{ package.location }}, {{ package.country }}</div>
-                                <div class="package-list-date">{{ package.created_at|date:"d F Y" }}</div>
+                                <div class="package-list-date">
+                                    {% if package.refund_pending_count > 0 %}
+                                        Refund pending: {{ package.refund_pending_count }}
+                                    {% else %}
+                                        Cancelled bookings: {{ package.cancelled_bookings_count }}
+                                    {% endif %}
+                                </div>
                             </div>
                             <span class="package-list-arrow" aria-hidden="true"></span>
                         </a>
                     {% endfor %}
                 {% else %}
                     <div class="empty-state compact">
-                        <div class="empty-state-text">No recent packages</div>
+                        <div class="empty-state-text">No packages currently need admin action</div>
                     </div>
                 {% endif %}
             </div>
@@ -1723,7 +1735,7 @@
 
         <div class="sidebar-widget">
             <div class="sidebar-widget-head">
-                <h3 class="widget-title">Completed Packages</h3>
+                <h3 class="widget-title">Top Completed Packages</h3>
                 <span class="widget-count">{{ completed_packages|length }}</span>
             </div>
             <div class="package-list">
@@ -1738,7 +1750,7 @@
                             <div class="completed-package-content">
                                 <div class="completed-package-title">{{ package.title }}</div>
                                 <div class="completed-package-price">Rs. {{ package.price_per_person|floatformat:0 }}</div>
-                                <div class="completed-package-date">{{ package.created_at|date:"d M" }} - {{ package.updated_at|date:"d M" }}</div>
+                                <div class="completed-package-date">Bookings: {{ package.confirmed_bookings_count }} • Joined: {{ package.joined_travelers_count }}</div>
                                 <div class="completed-package-rating">
                                     {% for i in "12345"|make_list %}
                                         {% if forloop.counter <= package.agent_rating %}
