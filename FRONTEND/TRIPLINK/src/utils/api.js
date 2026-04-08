@@ -313,9 +313,16 @@ export const createBooking = async (packageId, accessToken) => {
  * @param {number} travelerCount
  * @param {string} accessToken
  * @param {number} rewardPointsToUse
+ * @param {"regular"|"guide"} agentType
  * @returns {Promise<object>}
  */
-export const initiateEsewaPayment = async (packageId, travelerCount, accessToken, rewardPointsToUse = 0) => {
+export const initiateEsewaPayment = async (
+  packageId,
+  travelerCount,
+  accessToken,
+  rewardPointsToUse = 0,
+  agentType = "regular"
+) => {
   const id = typeof packageId === "string" ? parseInt(packageId, 10) : packageId;
   return apiRequest(
     "/api/auth/payments/esewa/initiate/",
@@ -325,6 +332,7 @@ export const initiateEsewaPayment = async (packageId, travelerCount, accessToken
         package_id: id,
         traveler_count: travelerCount,
         reward_points_to_use: rewardPointsToUse,
+        agent_type: agentType,
       }),
     },
     accessToken

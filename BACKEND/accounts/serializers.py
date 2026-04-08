@@ -1,5 +1,6 @@
 import os
 from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -16,6 +17,7 @@ from .models import (
     CustomPackage,
     Booking,
     BookingStatus,
+    BookingAgentType,
     PaymentMethod,
     PaymentStatus,
     AgentReview,
@@ -39,6 +41,17 @@ from .models import (
 from .booking_cancellation import cancel_traveler_booking
 
 User = get_user_model()
+
+
+def _money(value):
+    return Decimal(str(value or "0")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def _normalize_booking_agent_type(raw_value):
+    value = str(raw_value or "").strip().lower()
+    if value == BookingAgentType.GUIDE:
+        return BookingAgentType.GUIDE
+    return BookingAgentType.REGULAR
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -445,12 +458,13 @@ class BookingSerializer(serializers.ModelSerializer):
     trip_end_date = serializers.DateField(source='package.trip_end_date', read_only=True)
     package_status = serializers.CharField(source='package.status', read_only=True)
     traveler_count = serializers.IntegerField(required=False, min_value=1)
+    agent_type = serializers.ChoiceField(choices=BookingAgentType.choices, required=False, default=BookingAgentType.REGULAR)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'booking_code', 'user', 'package_id', 'package_title', 'status', 'created_at',
-            'traveler_count', 'price_per_person_snapshot', 'total_amount',
+            'traveler_count', 'agent_type', 'price_per_person_snapshot', 'total_amount',
             'payment_method', 'payment_status', 'payment_reference', 'transaction_uuid',
             'refunded_at', 'esewa_refund_reference',
             'package_image_url', 'package_location', 'package_country',
@@ -473,6 +487,7 @@ class BookingSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         package = validated_data.pop('package')
         traveler_count = int(validated_data.pop('traveler_count', 1) or 1)
+        agent_type = _normalize_booking_agent_type(validated_data.pop('agent_type', BookingAgentType.REGULAR))
         validated_data.pop('payment_reference', None)
         validated_data.pop('transaction_uuid', None)
         validated_data.pop('payment_method', None)
@@ -495,14 +510,17 @@ class BookingSerializer(serializers.ModelSerializer):
         # Always create as confirmed; ignore any incoming status. Apply deal price if active.
         active_deal = get_active_deal(package)
         if active_deal:
-            price_per_person = active_deal.effective_price() or 0
+            price_per_person = _money(active_deal.effective_price() or 0)
         else:
-            price_per_person = package.price_per_person or 0
-        total_amount = price_per_person * traveler_count
+            price_per_person = _money(package.price_per_person or 0)
+        if agent_type == BookingAgentType.GUIDE:
+            price_per_person = _money(price_per_person * Decimal("1.20"))
+        total_amount = _money(price_per_person * traveler_count)
         validated_data['user'] = user
         validated_data['package'] = package
         validated_data['status'] = BookingStatus.CONFIRMED
         validated_data['traveler_count'] = traveler_count
+        validated_data['agent_type'] = agent_type
         validated_data['price_per_person_snapshot'] = price_per_person
         validated_data['total_amount'] = total_amount
         validated_data['payment_method'] = PaymentMethod.DIRECT

@@ -48,6 +48,7 @@ from .models import (
     BookingAdminActionLog,
     BookingAdminActionType,
     PaymentMethod,
+    BookingAgentType,
     PaymentStatus,
     EsewaPaymentSession,
     EsewaPaymentSessionStatus,
@@ -118,6 +119,20 @@ def _money(value):
 
 def _money_str(value):
     return format(_money(value), ".2f")
+
+
+def _normalize_booking_agent_type(raw_value):
+    value = str(raw_value or "").strip().lower()
+    if value == BookingAgentType.GUIDE:
+        return BookingAgentType.GUIDE
+    return BookingAgentType.REGULAR
+
+
+def _booking_price_per_person_for_agent_type(base_price, agent_type):
+    price = _money(base_price)
+    if agent_type == BookingAgentType.GUIDE:
+        return _money(price * Decimal("1.20"))
+    return price
 
 
 def _parse_coordinate(raw_value, min_value, max_value):
@@ -3966,6 +3981,14 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
         package_id = request.data.get("package_id")
         traveler_count_raw = request.data.get("traveler_count", 1)
         reward_points_raw = request.data.get("reward_points_to_use", 0)
+        agent_type_raw = request.data.get("agent_type", BookingAgentType.REGULAR)
+        agent_type_raw_normalized = str(agent_type_raw or "").strip().lower()
+        agent_type = _normalize_booking_agent_type(agent_type_raw)
+        if agent_type_raw_normalized and agent_type_raw_normalized not in dict(BookingAgentType.choices):
+            return response.Response(
+                {"agent_type": "agent_type must be either 'regular' or 'guide'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             traveler_count = int(traveler_count_raw)
@@ -4017,9 +4040,10 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
 
         active_deal = get_active_deal(package)
         if active_deal:
-            price_per_person = _money(active_deal.effective_price())
+            base_price_per_person = _money(active_deal.effective_price())
         else:
-            price_per_person = _money(package.price_per_person)
+            base_price_per_person = _money(package.price_per_person)
+        price_per_person = _booking_price_per_person_for_agent_type(base_price_per_person, agent_type)
         total_amount = _money(price_per_person * traveler_count)
 
         # Reward points: 1 point = 1 NPR. Clamp to available points and total amount.
@@ -4065,6 +4089,7 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
                     package=package,
                     status=BookingStatus.CONFIRMED,
                     traveler_count=traveler_count,
+                    agent_type=agent_type,
                     price_per_person_snapshot=price_per_person,
                     total_amount=total_amount,
                     payment_method=PaymentMethod.DIRECT,
@@ -4094,6 +4119,7 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
             package=package,
             transaction_uuid=str(uuid.uuid4()),
             traveler_count=traveler_count,
+            agent_type=agent_type,
             price_per_person_snapshot=price_per_person,
             total_amount=total_amount,
             payable_amount=payable_amount,
@@ -4113,6 +4139,7 @@ class EsewaPaymentInitiateView(generics.GenericAPIView):
                 "status": payment_session.status,
                 "transaction_uuid": payment_session.transaction_uuid,
                 "traveler_count": traveler_count,
+                "agent_type": agent_type,
                 "price_per_person": _money_str(price_per_person),
                 "total_amount": _money_str(total_amount),
                 "payable_amount": _money_str(payable_amount),
@@ -4313,6 +4340,7 @@ class EsewaPaymentVerifyView(generics.GenericAPIView):
                     package=payment_session.package,
                     status=BookingStatus.CONFIRMED,
                     traveler_count=max(int(payment_session.traveler_count or 1), 1),
+                    agent_type=payment_session.agent_type or BookingAgentType.REGULAR,
                     price_per_person_snapshot=payment_session.price_per_person_snapshot,
                     total_amount=payment_session.total_amount,
                     payment_method=PaymentMethod.ESEWA,

@@ -38,6 +38,8 @@ const parsePriceValue = (price) => {
   return 0;
 };
 
+const GUIDE_PRICE_MULTIPLIER = 1.2;
+
 const buildEsewaPostSource = (paymentSession) => {
   const uri = paymentSession?.esewa_form_url;
   const fields = paymentSession?.esewa_fields;
@@ -78,6 +80,7 @@ const PackageBookingModal = ({
   const [esewaWebViewLoading, setEsewaWebViewLoading] = useState(false);
   const paymentCallbackHandledRef = useRef(false);
   const [rewardPointsInput, setRewardPointsInput] = useState("");
+  const [agentType, setAgentType] = useState("regular");
 
   useEffect(() => {
     if (!visible) return;
@@ -85,6 +88,7 @@ const PackageBookingModal = ({
     setTravelerCountInput("1");
     setPaymentSession(null);
     setRewardPointsInput("");
+    setAgentType("regular");
     setInitiatingPayment(false);
     setVerifyingPayment(false);
     setEsewaWebViewVisible(false);
@@ -92,10 +96,11 @@ const PackageBookingModal = ({
     paymentCallbackHandledRef.current = false;
   }, [visible, packageId]);
 
-  const unitPrice =
+  const baseUnitPrice =
     packageDetail?.has_active_deal && packageDetail?.deal_price != null
       ? parsePriceValue(packageDetail.deal_price)
       : parsePriceValue(packageDetail?.price_per_person ?? 0);
+  const unitPrice = agentType === "guide" ? baseUnitPrice * GUIDE_PRICE_MULTIPLIER : baseUnitPrice;
   const travelerCount = Math.max(parseInt(travelerCountInput, 10) || 1, 1);
   const computedTotal = unitPrice * travelerCount;
   const availableRewardPoints =
@@ -128,7 +133,8 @@ const PackageBookingModal = ({
         packageId,
         travelerCount,
         session.access,
-        normalizedRewardPointsToUse
+        normalizedRewardPointsToUse,
+        agentType
       );
       if (data?.zero_payment) {
         onBook?.(data || null);
@@ -247,6 +253,30 @@ const PackageBookingModal = ({
             placeholder={t("enterTravelers")}
             placeholderTextColor="#9aa0a6"
           />
+          <Text style={styles.modalLabel}>{t("agentType") || "Agent type"}</Text>
+          <View style={styles.agentTypeRow}>
+            <TouchableOpacity
+              style={[styles.agentTypeBtn, agentType === "regular" && styles.agentTypeBtnActive]}
+              onPress={() => setAgentType("regular")}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.agentTypeBtnText, agentType === "regular" && styles.agentTypeBtnTextActive]}>
+                {t("regularAgent") || "Regular"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.agentTypeBtn, agentType === "guide" && styles.agentTypeBtnActive]}
+              onPress={() => setAgentType("guide")}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.agentTypeBtnText, agentType === "guide" && styles.agentTypeBtnTextActive]}>
+                {t("guideAgent") || "Guide (+20%)"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {agentType === "guide" ? (
+            <Text style={styles.agentTypeHint}>{t("guidePriceNote") || "Guide option adds 20% to per-traveler package price."}</Text>
+          ) : null}
 
           <View style={styles.paymentSummaryCard}>
             <View style={styles.paymentSummaryRow}>
@@ -337,6 +367,9 @@ const PackageBookingModal = ({
           <Text style={styles.esewaMetaText}>
             Travelers: {paymentSession?.traveler_count || travelerCount} | Per person:{" "}
             {formatPrice(paymentSession?.price_per_person || unitPrice)}
+          </Text>
+          <Text style={styles.esewaMetaText}>
+            Agent type: {paymentSession?.agent_type || agentType}
           </Text>
           <Text style={styles.esewaMetaText}>Transaction: {paymentSession?.transaction_uuid || "-"}</Text>
           {paymentSession?.reward_points_used ? (
@@ -517,6 +550,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e1e5ea",
     marginBottom: 14,
+  },
+  agentTypeRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 8,
+  },
+  agentTypeBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  agentTypeBtnActive: {
+    borderColor: "#1f6b2a",
+    backgroundColor: "#ecfdf3",
+  },
+  agentTypeBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  agentTypeBtnTextActive: {
+    color: "#166534",
+  },
+  agentTypeHint: {
+    fontSize: 12,
+    color: "#166534",
+    marginBottom: 12,
   },
   paymentSummaryCard: {
     backgroundColor: "#f8fafc",

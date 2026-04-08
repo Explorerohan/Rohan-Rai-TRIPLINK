@@ -671,6 +671,10 @@
                         <span class="bd-row-value">{{ booking.traveler_count }}</span>
                     </div>
                     <div class="bd-row">
+                        <span class="bd-row-label">Agent type</span>
+                        <span class="bd-row-value">{{ booking.get_agent_type_display }}</span>
+                    </div>
+                    <div class="bd-row">
                         <span class="bd-row-label">Price / person</span>
                         <span class="bd-row-value">Rs. {{ booking.price_per_person_snapshot|floatformat:0 }}</span>
                     </div>

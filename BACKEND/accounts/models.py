@@ -434,6 +434,11 @@ class PaymentMethod(models.TextChoices):
     DIRECT = "direct", "Direct"
 
 
+class BookingAgentType(models.TextChoices):
+    REGULAR = "regular", "Regular"
+    GUIDE = "guide", "Guide"
+
+
 class PaymentStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     PAID = "paid", "Paid"
@@ -462,6 +467,11 @@ class Booking(models.Model):
         default=BookingStatus.CONFIRMED,
     )
     traveler_count = models.PositiveIntegerField(default=1)
+    agent_type = models.CharField(
+        max_length=20,
+        choices=BookingAgentType.choices,
+        default=BookingAgentType.REGULAR,
+    )
     price_per_person_snapshot = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payment_method = models.CharField(
@@ -615,6 +625,11 @@ class EsewaPaymentSession(models.Model):
     )
     transaction_uuid = models.CharField(max_length=120, unique=True)
     traveler_count = models.PositiveIntegerField(default=1)
+    agent_type = models.CharField(
+        max_length=20,
+        choices=BookingAgentType.choices,
+        default=BookingAgentType.REGULAR,
+    )
     price_per_person_snapshot = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payable_amount = models.DecimalField(
