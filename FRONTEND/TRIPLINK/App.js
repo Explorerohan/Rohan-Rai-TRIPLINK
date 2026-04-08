@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { SafeAreaView, ActivityIndicator, View, StyleSheet } from "react-native";
+import { SafeAreaView, ActivityIndicator, View, StyleSheet, BackHandler, Platform } from "react-native";
 import { AppAlertProvider, showAppAlert, showAppOptions } from "./src/components/AppAlertProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./src/screens/onboarding/OnboardingScreen";
@@ -88,6 +88,44 @@ export default function App() {
       return prev.slice(0, -1);
     });
   }, [goToRootScreen]);
+
+  // Android hardware back: prefer in-app navigation over exiting to Expo/app.
+  useEffect(() => {
+    if (Platform.OS !== "android") return undefined;
+
+    const onHardwareBackPress = () => {
+      // If there's history, go to previous in-app screen.
+      if (screenHistory.length > 0) {
+        goBack();
+        return true;
+      }
+
+      // No history: keep user inside app by moving to home first.
+      if (screen !== "home") {
+        setScreen("home");
+        setScreenHistory([]);
+        return true;
+      }
+
+      // Already at home root: prevent accidental exit to Expo/app.
+      showAppOptions({
+        title: "Exit app?",
+        message: "Do you want to close TRIPLINK?",
+        options: [
+          { label: "Cancel", variant: "cancel" },
+          {
+            label: "Exit",
+            variant: "destructive",
+            onPress: () => BackHandler.exitApp(),
+          },
+        ],
+      });
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onHardwareBackPress);
+    return () => subscription.remove();
+  }, [screen, screenHistory.length, goBack]);
 
   const preloadUserData = useCallback(async (accessToken) => {
     if (!accessToken) return;
