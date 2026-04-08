@@ -85,7 +85,7 @@
     .form-section-title .icon {
         width: 36px;
         height: 36px;
-        border-radius: 10px;
+        border-radius: 0 0 10px 10px;
         background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
         color: #1f6b2a;
         display: flex;
@@ -330,6 +330,220 @@
         background: #f0fdf4;
     }
 
+    .map-picker-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #f8fafc;
+        padding: 14px;
+    }
+
+    .map-picker-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .map-picker-summary-label {
+        display: block;
+        font-size: 11px;
+        color: #64748b;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .map-picker-summary-value {
+        font-size: 14px;
+        color: #1e293b;
+        font-weight: 600;
+    }
+
+    .map-picker-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .map-picker-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 20px;
+    }
+
+    .map-picker-modal.open {
+        display: flex;
+    }
+
+    .map-picker-dialog {
+        width: min(920px, 100%);
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .map-picker-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .map-picker-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .map-picker-close {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #334155;
+        border-radius: 8px;
+        width: 34px;
+        height: 34px;
+        cursor: pointer;
+    }
+
+    .map-picker-body {
+        padding: 14px 16px;
+    }
+
+    .map-search-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 12px;
+        align-items: stretch;
+    }
+
+    .map-search-wrap {
+        position: relative;
+        flex: 1 1 auto;
+        min-width: 0;
+        z-index: 2000;
+    }
+
+    .map-search-wrap .form-control {
+        width: 100%;
+    }
+
+    .map-search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 2100;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.10);
+        border-top: none;
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .map-search-suggestion {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: #fff;
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+        font-size: 13px;
+        line-height: 1.35;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .map-search-suggestion:last-child {
+        border-bottom: none;
+    }
+
+    .map-search-suggestion:hover {
+        background: #f8fafc;
+    }
+
+    .map-search-suggestion-icon {
+        color: #64748b;
+        font-size: 15px;
+        line-height: 1.4;
+        margin-top: 1px;
+        flex: 0 0 16px;
+        text-align: center;
+    }
+
+    .map-search-suggestion-main {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .map-search-suggestion-title {
+        display: block;
+        font-size: 15px;
+        font-weight: 700;
+        color: #1f2937;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .map-search-suggestion-subtitle {
+        display: block;
+        font-size: 13px;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 1px;
+    }
+
+    .map-search-status {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 10px;
+    }
+
+    #package-map-picker {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 420px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .map-picker-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 16px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    #map-search-btn {
+        flex: 0 0 140px;
+        min-height: 44px;
+        height: 44px;
+        padding: 0 14px;
+    }
+
+    .map-picker-foot .btn {
+        min-height: 42px;
+        height: 42px;
+        padding: 0 16px;
+    }
+
     /* Status pills */
     .status-pills {
         display: flex;
@@ -536,12 +750,25 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Latitude</label>
-                            <input type="number" name="latitude" class="form-control" placeholder="e.g. 48.856613" step="0.000001" min="-90" max="90">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Longitude</label>
-                            <input type="number" name="longitude" class="form-control" placeholder="e.g. 2.352222" step="0.000001" min="-180" max="180">
+                            <label class="form-label">Location on map</label>
+                            <div class="map-picker-card">
+                                <div class="map-picker-summary">
+                                    <div>
+                                        <span class="map-picker-summary-label">Latitude</span>
+                                        <span class="map-picker-summary-value" id="lat-display">Not selected</span>
+                                    </div>
+                                    <div>
+                                        <span class="map-picker-summary-label">Longitude</span>
+                                        <span class="map-picker-summary-value" id="lng-display">Not selected</span>
+                                    </div>
+                                </div>
+                                <div class="map-picker-actions">
+                                    <button type="button" class="btn btn-secondary" id="open-map-picker-btn">Choose from map</button>
+                                    <button type="button" class="btn btn-secondary" id="clear-map-picker-btn">Clear</button>
+                                </div>
+                                <input type="hidden" name="latitude" id="latitude-input" value="">
+                                <input type="hidden" name="longitude" id="longitude-input" value="">
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -670,10 +897,44 @@
         </div>
     </form>
 </div>
+<div class="map-picker-modal" id="map-picker-modal" aria-hidden="true">
+    <div class="map-picker-dialog">
+        <div class="map-picker-head">
+            <h3 class="map-picker-title">Choose place on map</h3>
+            <button type="button" class="map-picker-close" id="map-picker-close-btn">×</button>
+        </div>
+        <div class="map-picker-body">
+            <div class="map-search-row">
+                <div class="map-search-wrap">
+                    <input type="text" class="form-control" id="map-search-input" placeholder="Search place (e.g. Gangtok, Tsomgo Lake)" autocomplete="off">
+                    <div class="map-search-suggestions" id="map-search-suggestions" style="display:none"></div>
+                </div>
+                <button type="button" class="btn btn-primary" id="map-search-btn">Search</button>
+            </div>
+            <div class="map-search-status" id="map-search-status">Tip: Search a place or click directly on map.</div>
+            <div id="package-map-picker"></div>
+        </div>
+        <div class="map-picker-foot">
+            <button type="button" class="btn btn-secondary" id="map-picker-cancel-btn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="map-picker-apply-btn">Use this location</button>
+        </div>
+    </div>
+</div>
 {% if created_package %}
 {% include 'includes/agent_package_success_modal.html' with success_package=created_package success_heading="Package created" success_detail="has been added to your packages." %}
 {% endif %}
 
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
 <script>
 (function() {
     // Status pills
@@ -766,6 +1027,220 @@
     document.querySelectorAll('.feature-quick-btn').forEach(function(btn) {
         btn.addEventListener('click', function() { addFeature(this.getAttribute('data-feature')); });
     });
+
+    // Map picker
+    var modal = document.getElementById('map-picker-modal');
+    var openMapBtn = document.getElementById('open-map-picker-btn');
+    var clearMapBtn = document.getElementById('clear-map-picker-btn');
+    var closeMapBtn = document.getElementById('map-picker-close-btn');
+    var cancelMapBtn = document.getElementById('map-picker-cancel-btn');
+    var applyMapBtn = document.getElementById('map-picker-apply-btn');
+    var mapSearchInput = document.getElementById('map-search-input');
+    var mapSearchSuggestions = document.getElementById('map-search-suggestions');
+    var mapSearchBtn = document.getElementById('map-search-btn');
+    var mapSearchStatus = document.getElementById('map-search-status');
+    var latInput = document.getElementById('latitude-input');
+    var lngInput = document.getElementById('longitude-input');
+    var latDisplay = document.getElementById('lat-display');
+    var lngDisplay = document.getElementById('lng-display');
+
+    var pickerMap = null;
+    var pickerMarker = null;
+    var selectedLat = null;
+    var selectedLng = null;
+    var suggestionTimer = null;
+    var lastSuggestions = [];
+
+    function updateCoordinateUI() {
+        if (selectedLat == null || selectedLng == null) {
+            latDisplay.textContent = 'Not selected';
+            lngDisplay.textContent = 'Not selected';
+            latInput.value = '';
+            lngInput.value = '';
+            return;
+        }
+        latDisplay.textContent = Number(selectedLat).toFixed(6);
+        lngDisplay.textContent = Number(selectedLng).toFixed(6);
+        latInput.value = Number(selectedLat).toFixed(6);
+        lngInput.value = Number(selectedLng).toFixed(6);
+    }
+
+    function setSelectedCoordinates(lat, lng, moveMap) {
+        selectedLat = lat;
+        selectedLng = lng;
+        if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+        pickerMarker = L.marker([lat, lng]).addTo(pickerMap);
+        if (moveMap) pickerMap.setView([lat, lng], Math.max(pickerMap.getZoom(), 14));
+    }
+
+    function ensureMap() {
+        if (pickerMap || typeof L === 'undefined') return;
+        pickerMap = L.map('package-map-picker', { zoomControl: true }).setView([27.7172, 85.3240], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+        }).addTo(pickerMap);
+
+        pickerMap.on('click', function(e) {
+            setSelectedCoordinates(e.latlng.lat, e.latlng.lng, false);
+            mapSearchStatus.textContent = 'Selected from map. Click "Use this location" to apply.';
+        });
+    }
+
+    function openMapPicker() {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        ensureMap();
+        setTimeout(function() {
+            if (!pickerMap) return;
+            pickerMap.invalidateSize();
+            if (selectedLat != null && selectedLng != null) {
+                setSelectedCoordinates(selectedLat, selectedLng, true);
+            }
+        }, 10);
+    }
+
+    function closeMapPicker() {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    async function searchPlace() {
+        var query = (mapSearchInput.value || '').trim();
+        if (!query) {
+            mapSearchStatus.textContent = 'Enter a place name to search.';
+            return;
+        }
+        ensureMap();
+        hideSuggestions();
+        mapSearchStatus.textContent = 'Searching...';
+        try {
+            var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&q=' + encodeURIComponent(query), {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error('Search failed');
+            var data = await response.json();
+            if (!Array.isArray(data) || !data.length) {
+                mapSearchStatus.textContent = 'No result found. Try another place.';
+                return;
+            }
+            var first = data[0];
+            var lat = parseFloat(first.lat);
+            var lng = parseFloat(first.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                mapSearchStatus.textContent = 'Result has invalid coordinates.';
+                return;
+            }
+            setSelectedCoordinates(lat, lng, true);
+            mapSearchStatus.textContent = 'Found: ' + (first.display_name || query);
+        } catch (err) {
+            mapSearchStatus.textContent = 'Could not search place right now.';
+        }
+    }
+
+    function hideSuggestions() {
+        mapSearchSuggestions.innerHTML = '';
+        mapSearchSuggestions.style.display = 'none';
+        lastSuggestions = [];
+    }
+
+    function chooseSuggestion(item) {
+        var lat = parseFloat(item.lat);
+        var lng = parseFloat(item.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        mapSearchInput.value = item.display_name || '';
+        setSelectedCoordinates(lat, lng, true);
+        mapSearchStatus.textContent = 'Selected: ' + (item.display_name || '');
+        hideSuggestions();
+    }
+
+    function renderSuggestions(items) {
+        if (!items || !items.length) {
+            hideSuggestions();
+            return;
+        }
+        lastSuggestions = items;
+        mapSearchSuggestions.innerHTML = '';
+        items.forEach(function(item, idx) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'map-search-suggestion';
+            var display = (item.display_name || '').trim();
+            var parts = display ? display.split(',') : [];
+            var title = (parts.shift() || ('Result ' + (idx + 1))).trim();
+            var subtitle = parts.join(',').trim();
+            btn.innerHTML =
+                '<span class="map-search-suggestion-icon">📍</span>' +
+                '<span class="map-search-suggestion-main">' +
+                    '<span class="map-search-suggestion-title">' + title.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' +
+                    (subtitle ? '<span class="map-search-suggestion-subtitle">' + subtitle.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>' : '') +
+                '</span>';
+            btn.addEventListener('click', function() {
+                chooseSuggestion(item);
+            });
+            mapSearchSuggestions.appendChild(btn);
+        });
+        mapSearchSuggestions.style.display = 'block';
+    }
+
+    async function fetchSuggestions() {
+        var query = (mapSearchInput.value || '').trim();
+        if (query.length < 2) {
+            hideSuggestions();
+            return;
+        }
+        try {
+            var response = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + encodeURIComponent(query), {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error('suggestion failed');
+            var data = await response.json();
+            renderSuggestions(Array.isArray(data) ? data : []);
+        } catch (err) {
+            hideSuggestions();
+        }
+    }
+
+    openMapBtn.addEventListener('click', openMapPicker);
+    clearMapBtn.addEventListener('click', function() {
+        selectedLat = null;
+        selectedLng = null;
+        if (pickerMap && pickerMarker) {
+            pickerMap.removeLayer(pickerMarker);
+            pickerMarker = null;
+        }
+        updateCoordinateUI();
+    });
+    closeMapBtn.addEventListener('click', closeMapPicker);
+    cancelMapBtn.addEventListener('click', closeMapPicker);
+    applyMapBtn.addEventListener('click', function() {
+        updateCoordinateUI();
+        closeMapPicker();
+    });
+    mapSearchBtn.addEventListener('click', function() { searchPlace(); });
+    mapSearchInput.addEventListener('input', function() {
+        clearTimeout(suggestionTimer);
+        suggestionTimer = setTimeout(fetchSuggestions, 220);
+    });
+    mapSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (lastSuggestions.length) {
+                chooseSuggestion(lastSuggestions[0]);
+                return;
+            }
+            searchPlace();
+        }
+    });
+    mapSearchInput.addEventListener('blur', function() {
+        setTimeout(function(){
+            if (!mapSearchSuggestions.matches(':hover')) hideSuggestions();
+        }, 180);
+    });
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeMapPicker();
+    });
+    updateCoordinateUI();
 
     // On submit: add hidden inputs so backend receives feature_names[]
     var form = document.getElementById('add-package-form');

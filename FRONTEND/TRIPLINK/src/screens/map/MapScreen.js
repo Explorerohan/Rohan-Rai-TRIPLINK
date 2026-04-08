@@ -72,14 +72,28 @@ const MapScreen = ({ mapData = null, onBack = () => {} }) => {
       (function () {
         var lat = ${latitude};
         var lng = ${longitude};
-        var map = L.map("map", { zoomControl: true }).setView([lat, lng], 14);
+        var map = L.map("map", { zoomControl: true }).setView([lat, lng], 16);
 
-        L.tileLayer("https://{s}-tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png?key=${key}", {
-          maxZoom: 19,
+        var streets = L.tileLayer("https://{s}-tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png?key=${key}", {
+          maxZoom: 20,
           attribution: '&copy; <a href="https://www.locationiq.com/">LocationIQ</a> | &copy; OpenStreetMap contributors'
-        }).addTo(map);
+        });
 
-        L.marker([lat, lng]).addTo(map).bindPopup("<b>${safeTitle}</b><br/>${safeSubtitle}");
+        var satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          maxZoom: 19,
+          attribution: 'Tiles &copy; Esri'
+        });
+
+        streets.addTo(map);
+        L.control.layers(
+          { "Street": streets, "Satellite": satellite },
+          {},
+          { collapsed: true }
+        ).addTo(map);
+        L.control.scale({ imperial: false }).addTo(map);
+
+        var marker = L.marker([lat, lng]).addTo(map);
+        marker.bindPopup("<b>${safeTitle}</b><br/>${safeSubtitle}").openPopup();
       })();
     </script>
   </body>
