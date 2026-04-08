@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "../../context/LanguageContext";
+import { useAppAlert } from "../../components/AppAlertProvider";
 import {
   ActivityIndicator,
   Image,
@@ -14,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getChatRooms } from "../../utils/api";
+import { clearChatMessages, getChatRooms } from "../../utils/api";
 
 const DEFAULT_AVATAR =
   "https://static.vecteezy.com/system/resources/thumbnails/041/641/685/small/3d-character-people-close-up-portrait-smiling-nice-3d-avartar-or-icon-png.png";
@@ -54,10 +55,12 @@ const MessagesScreen = ({
   onChatPress = () => {},
 }) => {
   const { t } = useLanguage();
+  const { showAlert, showConfirm, showOptions } = useAppAlert();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchRooms = useCallback(async (isRefresh = false) => {
     if (!session?.access) {
@@ -111,6 +114,73 @@ const MessagesScreen = ({
     onChatPress(chatPayload);
   };
 
+  const handleClearAllChats = useCallback(() => {
+    if (!session?.access) return;
+    if (!rooms.length) {
+      showAlert({
+        title: "No chats",
+        message: "There are no conversations to clear.",
+        type: "info",
+      });
+      return;
+    }
+
+    showConfirm({
+      title: "Clear all chat history?",
+      message: "This will permanently remove all messages from every conversation.",
+      confirmText: "Clear all",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          const results = await Promise.allSettled(
+            rooms.map((room) => clearChatMessages(room.id, session.access))
+          );
+          const failed = results.filter((r) => r.status === "rejected").length;
+          await fetchRooms(true);
+          if (failed > 0) {
+            showAlert({
+              title: "Partially cleared",
+              message: `Cleared most chats, but ${failed} conversation(s) could not be cleared.`,
+              type: "warning",
+            });
+            return;
+          }
+          showAlert({
+            title: "Chat history cleared",
+            message: "All conversation messages have been removed.",
+            type: "success",
+          });
+        } catch (err) {
+          showAlert({
+            title: "Couldn't clear chats",
+            message: err?.message || "Please try again.",
+            type: "error",
+          });
+        }
+      },
+    });
+  }, [session?.access, rooms, showAlert, showConfirm, fetchRooms]);
+
+  const openHeaderMenu = useCallback(() => {
+    showOptions({
+      title: "Chat options",
+      options: [
+        { label: "Clear all chat history", variant: "destructive", onPress: handleClearAllChats },
+        { label: t("cancel"), variant: "cancel" },
+      ],
+    });
+  }, [showOptions, handleClearAllChats, t]);
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredRooms = normalizedQuery
+    ? rooms.filter((room) => {
+        const name = String(room?.other_user_name || "").toLowerCase();
+        const lastMessage = String(room?.last_message || "").toLowerCase();
+        return name.includes(normalizedQuery) || lastMessage.includes(normalizedQuery);
+      })
+    : rooms;
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -121,7 +191,7 @@ const MessagesScreen = ({
           <Ionicons name="chevron-back" size={24} color="#1f1f1f" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t("messagesHeader")}</Text>
-        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8} onPress={openHeaderMenu}>
           <Ionicons name="ellipsis-vertical" size={22} color="#1f1f1f" />
         </TouchableOpacity>
       </View>
@@ -129,9 +199,7 @@ const MessagesScreen = ({
       <View style={styles.content}>
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>{t("messagesHeader")}</Text>
-          <TouchableOpacity style={styles.editBtn} activeOpacity={0.8}>
-            <Ionicons name="pencil" size={20} color="#1f1f1f" />
-          </TouchableOpacity>
+          <View style={styles.editBtnSpacer} />
         </View>
 
         <View style={styles.searchBox}>
@@ -140,7 +208,11 @@ const MessagesScreen = ({
             style={styles.searchInput}
             placeholder={t("searchChatsMessages")}
             placeholderTextColor="#9aa0a6"
-            editable={false}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
           />
         </View>
 
@@ -173,8 +245,14 @@ const MessagesScreen = ({
               <Text style={styles.emptyText}>{t("noConversations")}</Text>
               <Text style={styles.emptySubtext}>{t("conversationsHint")}</Text>
             </View>
+          ) : filteredRooms.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <Ionicons name="search-outline" size={48} color="#94a3b8" />
+              <Text style={styles.emptyText}>No matching conversations</Text>
+              <Text style={styles.emptySubtext}>Try a different name or message keyword.</Text>
+            </View>
           ) : (
-            rooms.map((room) => {
+            filteredRooms.map((room) => {
               const unread = room.unread_count || 0;
               const showRowBadge = unread > 0;
               return (
@@ -314,13 +392,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#1f1f1f",
   },
-  editBtn: {
+  editBtnSpacer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f3f5f7",
-    alignItems: "center",
-    justifyContent: "center",
   },
   searchBox: {
     flexDirection: "row",

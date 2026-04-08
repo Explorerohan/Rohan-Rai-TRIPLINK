@@ -633,6 +633,28 @@ export const sendChatMessageMultipart = async (roomId, formData, accessToken) =>
 };
 
 /**
+ * Clear all messages in a chat room (both participants)
+ * @param {number|string} roomId - Room ID
+ * @param {string} accessToken - JWT access token
+ */
+export const clearChatMessages = async (roomId, accessToken) => {
+  const id = typeof roomId === "string" ? roomId : String(roomId);
+  return apiRequest(`/api/auth/chat/rooms/${id}/messages/`, { method: "DELETE" }, accessToken);
+};
+
+/**
+ * Delete a single chat message
+ * @param {number|string} roomId - Room ID
+ * @param {number|string} messageId - Message ID
+ * @param {string} accessToken - JWT access token
+ */
+export const deleteChatMessage = async (roomId, messageId, accessToken) => {
+  const room = typeof roomId === "string" ? roomId : String(roomId);
+  const msg = typeof messageId === "string" ? messageId : String(messageId);
+  return apiRequest(`/api/auth/chat/rooms/${room}/messages/${msg}/`, { method: "DELETE" }, accessToken);
+};
+
+/**
  * Get structured itinerary items for a room
  * @param {number|string} roomId - Room ID
  * @param {string} accessToken - JWT access token

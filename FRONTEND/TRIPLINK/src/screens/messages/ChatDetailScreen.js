@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import {
   ActivityIndicator,
@@ -35,6 +35,8 @@ import {
   createChatItineraryTrip,
   sendChatItineraryTrip,
   getChatItineraryPdfUrl,
+  clearChatMessages,
+  deleteChatMessage,
 } from "../../utils/api";
 import { useAppAlert } from "../../components/AppAlertProvider";
 
@@ -382,7 +384,7 @@ const ChatDetailScreen = ({
   });
   const [editingItineraryId, setEditingItineraryId] = useState(null);
   const [savingItinerary, setSavingItinerary] = useState(false);
-  const [imageLightboxUri, setImageLightboxUri] = useState(null);
+  const [imageLightboxIndex, setImageLightboxIndex] = useState(-1);
   const [itineraryForm, setItineraryForm] = useState({
     time_label: DEFAULT_ITINERARY_TIME_LABEL,
     activity: "",
@@ -622,6 +624,45 @@ const ChatDetailScreen = ({
     });
   }, [sending, roomId, accessToken, t, pickImageFromLibrary, pickFromCamera, pickDocument, showOptions]);
 
+  const handleDeleteCurrentChat = useCallback(() => {
+    if (!roomId || !accessToken) return;
+    showConfirm({
+      title: "Delete this chat?",
+      message: "This will permanently remove all messages in this conversation.",
+      cancelText: "Cancel",
+      confirmText: "Delete",
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await clearChatMessages(roomId, accessToken);
+          setMessages([]);
+          showAlert({
+            title: "Chat deleted",
+            message: "This conversation history has been cleared.",
+            type: "success",
+          });
+          onBack?.();
+        } catch (err) {
+          showAlert({
+            title: "Couldn't delete chat",
+            message: err?.message || "Please try again.",
+            type: "error",
+          });
+        }
+      },
+    });
+  }, [roomId, accessToken, showConfirm, showAlert, onBack]);
+
+  const openHeaderMenu = useCallback(() => {
+    showOptions({
+      title: "Chat options",
+      options: [
+        { label: "Delete this chat", variant: "destructive", onPress: handleDeleteCurrentChat },
+        { label: t("cancel"), variant: "cancel" },
+      ],
+    });
+  }, [showOptions, handleDeleteCurrentChat, t]);
+
   const sendMessage = async (messageOverride = null) => {
     const baseText = messageOverride !== null && messageOverride !== undefined ? messageOverride : inputText;
     const text = (baseText || "").trim();
@@ -681,6 +722,79 @@ const ChatDetailScreen = ({
     }
     return Number(msg.sender_id) !== Number(otherUserId);
   };
+
+  const imageLightboxItems = useMemo(() => {
+    const items = [];
+    const seen = new Set();
+    messages.forEach((m) => {
+      const { attachmentUrl, attachmentName } = getMessageBody(m);
+      if (!attachmentUrl) return;
+      if (attachmentKindFromMeta(attachmentUrl, attachmentName) !== "image") return;
+      const key = `${m.id}-${attachmentUrl}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push({ messageId: m.id, uri: attachmentUrl });
+    });
+    return items;
+  }, [messages]);
+
+  const imageLightboxUri = imageLightboxIndex >= 0 && imageLightboxIndex < imageLightboxItems.length
+      ? imageLightboxItems[imageLightboxIndex]?.uri
+      : null;
+  const imageLightboxMessageId = imageLightboxIndex >= 0 && imageLightboxIndex < imageLightboxItems.length
+      ? imageLightboxItems[imageLightboxIndex]?.messageId
+      : null;
+
+  const openImageLightbox = useCallback(
+    (url) => {
+      if (!url) return;
+      const idx = imageLightboxItems.findIndex((it) => it?.uri === url);
+      setImageLightboxIndex(idx >= 0 ? idx : 0);
+    },
+    [imageLightboxItems]
+  );
+
+  const closeImageLightbox = useCallback(() => {
+    setImageLightboxIndex(-1);
+  }, []);
+
+  const showPrevLightboxImage = useCallback(() => {
+    setImageLightboxIndex((prev) =>
+      prev > 0 ? prev - 1 : imageLightboxItems.length > 0 ? imageLightboxItems.length - 1 : -1
+    );
+  }, [imageLightboxItems.length]);
+
+  const showNextLightboxImage = useCallback(() => {
+    setImageLightboxIndex((prev) =>
+      prev >= 0 && prev < imageLightboxItems.length - 1 ? prev + 1 : imageLightboxItems.length > 0 ? 0 : -1
+    );
+  }, [imageLightboxItems.length]);
+
+  const handleLightboxDownload = useCallback(() => {
+    if (!imageLightboxUri) return;
+    Linking.openURL(imageLightboxUri);
+  }, [imageLightboxUri]);
+
+  const handleLightboxDelete = useCallback(() => {
+    if (!roomId || !accessToken || !imageLightboxMessageId) return;
+    showConfirm({
+      title: "Delete this image?",
+      message: "This image message will be removed from the chat.",
+      cancelText: "Cancel",
+      confirmText: "Delete",
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await deleteChatMessage(roomId, imageLightboxMessageId, accessToken);
+          closeImageLightbox();
+          await loadMessages(false);
+          showAlert({ title: "Deleted", message: "Image removed from chat.", type: "success" });
+        } catch (err) {
+          showAlert({ title: "Couldn't delete", message: err?.message || "Please try again.", type: "error" });
+        }
+      },
+    });
+  }, [roomId, accessToken, imageLightboxMessageId, showConfirm, showAlert, closeImageLightbox, loadMessages]);
 
   const slotLabels = (days, nights) => {
     const labels = [];
@@ -901,8 +1015,8 @@ const ChatDetailScreen = ({
             </Text>
           )}
         </View>
-        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8}>
-          <Ionicons name="call-outline" size={22} color="#1f1f1f" />
+        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.8} onPress={openHeaderMenu}>
+          <Ionicons name="ellipsis-vertical" size={22} color="#1f1f1f" />
         </TouchableOpacity>
       </View>
 
@@ -1004,7 +1118,7 @@ const ChatDetailScreen = ({
                                 <ChatImageThumbGrid
                                   urls={urls}
                                   variant="outgoing"
-                                  onImagePress={setImageLightboxUri}
+                                  onImagePress={openImageLightbox}
                                 />
                               </View>
                               <View style={[styles.msgMetaRight, styles.msgMetaBelowImage, !showText && styles.msgMetaInsetH]}>
@@ -1059,7 +1173,7 @@ const ChatDetailScreen = ({
                               <ChatImageThumbGrid
                                 urls={urls}
                                 variant={variant}
-                                onImagePress={setImageLightboxUri}
+                                onImagePress={openImageLightbox}
                               />
                             </View>
                             <View style={[styles.msgMetaLeft, styles.msgMetaBelowImage, !showText && !hasPkg && styles.msgMetaInsetH]}>
@@ -1092,7 +1206,7 @@ const ChatDetailScreen = ({
                                 t={t}
                                 displayText={bodyText}
                                 hasContentAbove={showText}
-                                onImagePress={setImageLightboxUri}
+                                onImagePress={openImageLightbox}
                               />
                               <View style={[styles.msgMetaRight, styles.msgMetaBelowImage]}>
                                 <Text style={styles.msgTime}>{formatTime(msg.created_at)}</Text>
@@ -1109,7 +1223,7 @@ const ChatDetailScreen = ({
                                   t={t}
                                   displayText={bodyText}
                                   hasContentAbove={showText}
-                                  onImagePress={setImageLightboxUri}
+                                    onImagePress={openImageLightbox}
                                 />
                               ) : null}
                               <View style={styles.msgMetaRight}>
@@ -1164,7 +1278,7 @@ const ChatDetailScreen = ({
                                   t={t}
                                   displayText={text}
                                   hasContentAbove={showText || hasPkg}
-                                  onImagePress={setImageLightboxUri}
+                                  onImagePress={openImageLightbox}
                                 />
                                 <View style={[styles.msgMetaLeft, styles.msgMetaBelowImage]}>
                                   <Text style={[styles.msgTime, hasPkg && styles.msgTimeInPkg]}>{formatTime(msg.created_at)}</Text>
@@ -1181,7 +1295,7 @@ const ChatDetailScreen = ({
                                     t={t}
                                     displayText={text}
                                     hasContentAbove={showText || hasPkg}
-                                    onImagePress={setImageLightboxUri}
+                                    onImagePress={openImageLightbox}
                                   />
                                 ) : null}
                                 <View style={styles.msgMetaLeft}>
@@ -1456,15 +1570,50 @@ const ChatDetailScreen = ({
         animationType="fade"
         presentationStyle="overFullScreen"
         statusBarTranslucent
-        onRequestClose={() => setImageLightboxUri(null)}
+        onRequestClose={closeImageLightbox}
       >
         <View style={styles.imageLightboxRoot}>
           <Pressable
             style={styles.imageLightboxBackdrop}
-            onPress={() => setImageLightboxUri(null)}
+            onPress={closeImageLightbox}
             accessibilityRole="button"
             accessibilityLabel="Close preview"
           />
+          {imageLightboxUri ? (
+            <Image source={{ uri: imageLightboxUri }} style={styles.imageLightboxBackdropImg} blurRadius={20} />
+          ) : null}
+          <View style={styles.imageLightboxDim} />
+          <View style={styles.imageLightboxTopBar}>
+            <Text style={styles.imageLightboxCounter}>
+              {imageLightboxIndex + 1} / {imageLightboxItems.length}
+            </Text>
+            <View style={styles.imageLightboxTopActions}>
+              <Pressable
+                style={styles.imageLightboxTopIconBtn}
+                onPress={handleLightboxDownload}
+                accessibilityRole="button"
+                accessibilityLabel="Download image"
+              >
+                <Ionicons name="download-outline" size={20} color="#0f172a" />
+              </Pressable>
+              <Pressable
+                style={styles.imageLightboxTopIconBtn}
+                onPress={handleLightboxDelete}
+                accessibilityRole="button"
+                accessibilityLabel="Delete image"
+              >
+                <Ionicons name="trash-outline" size={20} color="#b91c1c" />
+              </Pressable>
+              <Pressable
+                style={styles.imageLightboxTopClose}
+                onPress={closeImageLightbox}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
+                <Ionicons name="close" size={22} color="#0f172a" />
+              </Pressable>
+            </View>
+          </View>
           <View style={styles.imageLightboxCenter} pointerEvents="box-none">
             {imageLightboxUri ? (
               <Image
@@ -1478,23 +1627,26 @@ const ChatDetailScreen = ({
               />
             ) : null}
           </View>
-          <Pressable
-            style={[
-              styles.imageLightboxClose,
-              {
-                top:
-                  Platform.OS === "ios"
-                    ? 52
-                    : (StatusBar.currentHeight || 0) + 8,
-              },
-            ]}
-            onPress={() => setImageLightboxUri(null)}
-            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          >
-            <Ionicons name="close-circle" size={40} color="#ffffff" />
-          </Pressable>
+          {imageLightboxItems.length > 1 ? (
+            <>
+              <Pressable
+                style={[styles.imageLightboxNavBtn, styles.imageLightboxNavLeft]}
+                onPress={showPrevLightboxImage}
+                accessibilityRole="button"
+                accessibilityLabel="Previous image"
+              >
+                <Ionicons name="chevron-back" size={26} color="#ffffff" />
+              </Pressable>
+              <Pressable
+                style={[styles.imageLightboxNavBtn, styles.imageLightboxNavRight]}
+                onPress={showNextLightboxImage}
+                accessibilityRole="button"
+                accessibilityLabel="Next image"
+              >
+                <Ionicons name="chevron-forward" size={26} color="#ffffff" />
+              </Pressable>
+            </>
+          ) : null}
         </View>
       </Modal>
     </SafeAreaView>
@@ -1982,10 +2134,52 @@ const styles = StyleSheet.create({
   },
   imageLightboxRoot: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.92)",
   },
   imageLightboxBackdrop: {
     ...StyleSheet.absoluteFillObject,
+  },
+  imageLightboxBackdropImg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  imageLightboxDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.62)",
+  },
+  imageLightboxTopBar: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 52 : (StatusBar.currentHeight || 0) + 14,
+    left: 16,
+    right: 16,
+    zIndex: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  imageLightboxCounter: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  imageLightboxTopActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  imageLightboxTopIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageLightboxTopClose: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   imageLightboxCenter: {
     ...StyleSheet.absoluteFillObject,
@@ -1993,11 +2187,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
   },
-  imageLightboxClose: {
+  imageLightboxNavBtn: {
     position: "absolute",
-    right: 16,
+    top: "50%",
     zIndex: 10,
-    padding: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginTop: -21,
+    backgroundColor: "rgba(15,23,42,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageLightboxNavLeft: {
+    left: 12,
+  },
+  imageLightboxNavRight: {
+    right: 12,
   },
   modalOverlay: {
     flex: 1,

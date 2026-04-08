@@ -4252,6 +4252,20 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
 
         return super().create(request, *args, **kwargs)
 
+    def delete(self, request, *args, **kwargs):
+        """Delete all chat messages in a room for participants (clear history)."""
+        room_id = self.kwargs.get("room_id")
+        try:
+            room = ChatRoom.objects.get(pk=room_id)
+        except ChatRoom.DoesNotExist:
+            return response.Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user not in (room.traveler, room.agent):
+            return response.Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+
+        deleted_count, _ = ChatMessage.objects.filter(room=room).delete()
+        return response.Response({"status": "ok", "deleted": deleted_count}, status=status.HTTP_200_OK)
+
     def get_queryset(self):
         room_id = self.kwargs.get("room_id")
         user = self.request.user
@@ -4323,6 +4337,34 @@ class ChatRoomMarkReadView(generics.GenericAPIView):
             return response.Response({"detail": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
         room.messages.filter(is_read=False).exclude(sender=user).update(is_read=True)
         return response.Response({"status": "ok"})
+
+
+class ChatMessageDeleteView(generics.GenericAPIView):
+    """DELETE: remove one message from a room (sender or participant can delete)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        room_id = kwargs.get("room_id")
+        message_id = kwargs.get("message_id")
+        if not room_id or not message_id:
+            return response.Response({"detail": "Room ID and message ID are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            room = ChatRoom.objects.get(pk=room_id)
+        except ChatRoom.DoesNotExist:
+            return response.Response({"detail": "Room not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        if user not in (room.traveler, room.agent):
+            return response.Response({"detail": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            msg = ChatMessage.objects.get(pk=message_id, room=room)
+        except ChatMessage.DoesNotExist:
+            return response.Response({"detail": "Message not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        msg.delete()
+        return response.Response({"status": "ok"}, status=status.HTTP_200_OK)
 
 
 class ChatItineraryListCreateView(generics.ListCreateAPIView):
