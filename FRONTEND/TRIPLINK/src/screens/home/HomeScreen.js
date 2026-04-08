@@ -336,6 +336,7 @@ const HomeScreen = ({
     const todayKey = toDateOnlyKey(new Date());
     return filteredPopular
       .filter((pkg) => isPackageUpcoming(pkg, todayKey))
+      .filter((pkg) => pkg?.has_active_deal !== true)
       .sort((a, b) => {
         const aStart = normalizeDateKey(a?.trip_start_date);
         const bStart = normalizeDateKey(b?.trip_start_date);

@@ -234,6 +234,7 @@ const TopPicksScreen = ({
     const todayKey = toDateOnlyKey(new Date());
     return packages
       .filter((pkg) => isPackageUpcoming(pkg, todayKey))
+      .filter((pkg) => pkg?.has_active_deal !== true)
       .sort((a, b) => String(normalizeDateKey(a.trip_start_date)).localeCompare(String(normalizeDateKey(b.trip_start_date))));
   }, [packages]);
 
