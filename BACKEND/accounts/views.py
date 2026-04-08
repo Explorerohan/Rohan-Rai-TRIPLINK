@@ -2133,14 +2133,36 @@ def agent_travelers_view(request):
         messages.error(request, 'Access denied. Agent access required.')
         return redirect('login')
 
-    users = User.objects.filter(role=Roles.TRAVELER).order_by('-date_joined')
+    traveler_users = (
+        User.objects.filter(role=Roles.TRAVELER)
+        .select_related("user_profile")
+        .annotate(
+            bookings_count=Count("bookings", distinct=True),
+            custom_packages_count=Count("custom_packages", distinct=True),
+            reviews_written_count=Count("agent_reviews", distinct=True),
+            traveler_chats_count=Count("chat_rooms_as_traveler", distinct=True),
+        )
+        .order_by("-date_joined")
+    )
     travelers = []
-    for user in users:
+    for u in traveler_users:
         try:
-            profile = user.user_profile
+            profile = u.user_profile
         except UserProfile.DoesNotExist:
             profile = None
-        travelers.append({'user': user, 'profile': profile})
+
+        travelers.append(
+            {
+                "user": u,
+                "profile": profile,
+                "stats": {
+                    "bookings_count": getattr(u, "bookings_count", 0) or 0,
+                    "custom_packages_count": getattr(u, "custom_packages_count", 0) or 0,
+                    "reviews_written_count": getattr(u, "reviews_written_count", 0) or 0,
+                    "chats_count": getattr(u, "traveler_chats_count", 0) or 0,
+                },
+            }
+        )
 
     try:
         agent_profile = AgentProfile.objects.get(user=request.user)
