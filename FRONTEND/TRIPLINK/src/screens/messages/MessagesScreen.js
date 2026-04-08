@@ -61,6 +61,7 @@ const MessagesScreen = ({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const fetchRooms = useCallback(async (isRefresh = false) => {
     if (!session?.access) {
@@ -210,6 +211,8 @@ const MessagesScreen = ({
             placeholderTextColor="#9aa0a6"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
             autoCorrect={false}
             autoCapitalize="none"
             clearButtonMode="while-editing"
@@ -300,51 +303,53 @@ const MessagesScreen = ({
         </ScrollView>
       </View>
 
-      <View style={styles.navBar}>
-        <View style={styles.navSide}>
-          {navItems.slice(0, 2).map((item) => {
-            const color = item.active ? "#1f6b2a" : "#7a7f85";
-            return (
-              <TouchableOpacity
-                key={item.key}
-                style={styles.navItem}
-                activeOpacity={0.85}
-                onPress={item.key === "home" ? onHomePress : item.key === "calendar" ? onCalendarPress : undefined}
-              >
-                <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <TouchableOpacity style={styles.fab} activeOpacity={0.9} onPress={onPlusPress}>
-          <Ionicons name="add" size={26} color="#ffffff" />
-        </TouchableOpacity>
-        <View style={styles.navSide}>
-          {navItems.slice(2).map((item) => {
-            const color = item.active ? "#1f6b2a" : "#7a7f85";
-            const showBadge = item.key === "messages" && unreadCount > 0;
-            return (
-              <TouchableOpacity
-                key={item.key}
-                style={styles.navItem}
-                activeOpacity={0.85}
-                onPress={item.key === "profile" ? onProfilePress : undefined}
-              >
-                <View style={styles.navIconWrap}>
+      {!isSearchFocused && (
+        <View style={styles.navBar}>
+          <View style={styles.navSide}>
+            {navItems.slice(0, 2).map((item) => {
+              const color = item.active ? "#1f6b2a" : "#7a7f85";
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.navItem}
+                  activeOpacity={0.85}
+                  onPress={item.key === "home" ? onHomePress : item.key === "calendar" ? onCalendarPress : undefined}
+                >
                   <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
-                  {showBadge && (
-                    <View style={styles.navBadge}>
-                      <Text style={styles.navBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity style={styles.fab} activeOpacity={0.9} onPress={onPlusPress}>
+            <Ionicons name="add" size={26} color="#ffffff" />
+          </TouchableOpacity>
+          <View style={styles.navSide}>
+            {navItems.slice(2).map((item) => {
+              const color = item.active ? "#1f6b2a" : "#7a7f85";
+              const showBadge = item.key === "messages" && unreadCount > 0;
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={styles.navItem}
+                  activeOpacity={0.85}
+                  onPress={item.key === "profile" ? onProfilePress : undefined}
+                >
+                  <View style={styles.navIconWrap}>
+                    <Ionicons name={item.icon} size={NAV_ICON_SIZE} color={color} />
+                    {showBadge && (
+                      <View style={styles.navBadge}>
+                        <Text style={styles.navBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{t(item.key)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 };
