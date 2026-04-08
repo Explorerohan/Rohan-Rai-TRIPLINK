@@ -52,6 +52,8 @@ from .models import (
     EsewaPaymentSession,
     EsewaPaymentSessionStatus,
     AgentReview,
+    AgentReviewAdminActionLog,
+    AgentReviewAdminActionType,
     ChatRoom,
     ChatMessage,
     ItineraryTrip,
@@ -1412,6 +1414,232 @@ def admin_bookings_view(request):
         "active_nav": "bookings",
     }
     return render(request, "admin_bookings.html", context)
+
+
+def admin_reviews_view(request):
+    """Admin reviews page: platform-wide review monitoring with moderation controls."""
+    if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
+        messages.error(request, "Access denied. Admin access required.")
+        return redirect("login")
+
+    if request.method == "POST":
+        action = (request.POST.get("admin_action") or "").strip()
+        review_id_raw = request.POST.get("review_id")
+        try:
+            review_id = int(review_id_raw)
+        except (TypeError, ValueError):
+            messages.error(request, "Invalid review selected.")
+            return redirect("admin_reviews")
+
+        review = AgentReview.objects.select_related("user", "agent").filter(id=review_id).first()
+        if review is None:
+            messages.error(request, "Review not found.")
+            return redirect("admin_reviews")
+
+        if action == "delete_review":
+            reason = (request.POST.get("reason") or "").strip()
+            if not reason:
+                messages.error(request, "Delete reason is required.")
+                return redirect("admin_reviews")
+            AgentReviewAdminActionLog.objects.create(
+                review=review,
+                admin=request.user,
+                action_type=AgentReviewAdminActionType.DELETE_REVIEW,
+                reason=reason,
+                reviewer_email_snapshot=review.user.email,
+                agent_email_snapshot=review.agent.email,
+                rating_snapshot=review.rating,
+                comment_snapshot=review.comment or "",
+            )
+            review.delete()
+            messages.success(request, "Review deleted and action logged.")
+            return redirect("admin_reviews")
+
+        if action == "add_note":
+            note = (request.POST.get("note") or "").strip()
+            if not note:
+                messages.error(request, "Internal note cannot be empty.")
+                return redirect("admin_reviews")
+            AgentReviewAdminActionLog.objects.create(
+                review=review,
+                admin=request.user,
+                action_type=AgentReviewAdminActionType.INTERNAL_NOTE,
+                note=note,
+                reviewer_email_snapshot=review.user.email,
+                agent_email_snapshot=review.agent.email,
+                rating_snapshot=review.rating,
+                comment_snapshot=review.comment or "",
+            )
+            messages.success(request, "Internal note added.")
+            return redirect("admin_reviews")
+
+        messages.error(request, "Unsupported admin action.")
+        return redirect("admin_reviews")
+
+    now = timezone.now()
+    today = timezone.localdate()
+    current_month_start = today.replace(day=1)
+    previous_month_start = _shift_month(current_month_start, -1)
+    next_month_start = _shift_month(current_month_start, 1)
+    month_starts = [_shift_month(current_month_start, offset) for offset in range(-5, 1)]
+    month_labels = [m.strftime("%b") for m in month_starts]
+    month_keys = [m.strftime("%Y-%m") for m in month_starts]
+    start_window = month_starts[0]
+
+    reviews_qs = AgentReview.objects.select_related("user", "agent", "user__user_profile", "agent__agent_profile")
+
+    selected_agent = (request.GET.get("agent") or "").strip()
+    selected_rating = (request.GET.get("rating") or "").strip()
+    search_query = (request.GET.get("q") or "").strip()
+    if selected_agent:
+        try:
+            reviews_qs = reviews_qs.filter(agent_id=int(selected_agent))
+        except ValueError:
+            selected_agent = ""
+    if selected_rating:
+        try:
+            rating_int = int(selected_rating)
+            if 1 <= rating_int <= 5:
+                reviews_qs = reviews_qs.filter(rating=rating_int)
+            else:
+                selected_rating = ""
+        except ValueError:
+            selected_rating = ""
+    if search_query:
+        reviews_qs = reviews_qs.filter(
+            Q(comment__icontains=search_query)
+            | Q(user__email__icontains=search_query)
+            | Q(agent__email__icontains=search_query)
+            | Q(user__user_profile__first_name__icontains=search_query)
+            | Q(user__user_profile__last_name__icontains=search_query)
+            | Q(agent__agent_profile__first_name__icontains=search_query)
+            | Q(agent__agent_profile__last_name__icontains=search_query)
+        )
+
+    total_reviews = reviews_qs.count()
+    avg_rating = float(reviews_qs.aggregate(avg=Avg("rating")).get("avg") or 0)
+    reviews_this_month = reviews_qs.filter(created_at__gte=current_month_start, created_at__lt=next_month_start).count()
+    reviews_last_month = reviews_qs.filter(created_at__gte=previous_month_start, created_at__lt=current_month_start).count()
+    reviews_change_pct = _pct_change(reviews_this_month, reviews_last_month)
+    low_rating_count = reviews_qs.filter(rating__lte=3, created_at__gte=now - timedelta(days=30)).count()
+
+    review_rating_rows = list(reviews_qs.values("rating").annotate(count=Count("id")).order_by("-rating"))
+    review_rating_map = {int(row["rating"]): row["count"] for row in review_rating_rows}
+    review_breakdown = [
+        {
+            "rating": rating,
+            "count": review_rating_map.get(rating, 0),
+            "percent": _safe_pct(review_rating_map.get(rating, 0), total_reviews),
+        }
+        for rating in range(5, 0, -1)
+    ]
+
+    review_trend_qs = (
+        reviews_qs.filter(created_at__date__gte=start_window)
+        .annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"), avg_rating=Avg("rating"))
+        .order_by("month")
+    )
+    review_trend_map = {_month_key(row["month"]): row for row in review_trend_qs}
+    monthly_review_count_values = [int((review_trend_map.get(key) or {}).get("count", 0) or 0) for key in month_keys]
+    monthly_review_avg_values = [float((review_trend_map.get(key) or {}).get("avg_rating", 0) or 0) for key in month_keys]
+    max_review_count_bar = max(monthly_review_count_values, default=0)
+    monthly_review_bars = [
+        {
+            "label": month_labels[i],
+            "value": monthly_review_count_values[i],
+            "avg_rating": round(monthly_review_avg_values[i], 1) if monthly_review_count_values[i] else 0,
+            "count_height_pct": 0 if max_review_count_bar == 0 else (
+                0 if monthly_review_count_values[i] == 0 else max(14, round((monthly_review_count_values[i] / max_review_count_bar) * 100))
+            ),
+        }
+        for i in range(len(month_labels))
+    ]
+
+    recent_reviews_qs = reviews_qs.order_by("-created_at")[:20]
+    review_ids = [r.id for r in recent_reviews_qs]
+    logs_map = {}
+    for log in AgentReviewAdminActionLog.objects.filter(review_id__in=review_ids).select_related("admin").order_by("-created_at"):
+        logs_map.setdefault(log.review_id, []).append(log)
+
+    recent_reviews = []
+    for r in recent_reviews_qs:
+        reviewer_profile_picture_url = None
+        try:
+            reviewer_profile = r.user.user_profile
+            reviewer_name = reviewer_profile.full_name
+            if reviewer_profile.profile_picture:
+                reviewer_profile_picture_url = reviewer_profile.profile_picture.url
+        except UserProfile.DoesNotExist:
+            reviewer_name = r.user.email.split("@")[0]
+        try:
+            agent_name = r.agent.agent_profile.full_name
+        except AgentProfile.DoesNotExist:
+            agent_name = r.agent.email.split("@")[0]
+        recent_reviews.append(
+            {
+                "id": r.id,
+                "reviewer_name": reviewer_name,
+                "reviewer_email": r.user.email,
+                "reviewer_profile_picture_url": reviewer_profile_picture_url,
+                "agent_name": agent_name,
+                "agent_email": r.agent.email,
+                "rating": r.rating,
+                "comment": r.comment,
+                "created_at": r.created_at,
+                "logs": logs_map.get(r.id, [])[:3],
+            }
+        )
+
+    agent_choices = list(
+        User.objects.filter(role=Roles.AGENT)
+        .select_related("agent_profile")
+        .order_by("email")
+    )
+    top_agents_rows = (
+        reviews_qs.values("agent", "agent__email", "agent__agent_profile__first_name", "agent__agent_profile__last_name")
+        .annotate(avg_rating=Avg("rating"), reviews_count=Count("id"))
+        .order_by("-avg_rating", "-reviews_count", "agent__email")[:10]
+    )
+    top_agents = []
+    for row in top_agents_rows:
+        first_name = (row.get("agent__agent_profile__first_name") or "").strip()
+        last_name = (row.get("agent__agent_profile__last_name") or "").strip()
+        full_name = f"{first_name} {last_name}".strip()
+        top_agents.append(
+            {
+                "agent_id": row["agent"],
+                "agent_name": full_name or row.get("agent__email", ""),
+                "agent_email": row.get("agent__email", ""),
+                "avg_rating": float(row.get("avg_rating") or 0),
+                "reviews_count": int(row.get("reviews_count") or 0),
+            }
+        )
+
+    context = {
+        "user": request.user,
+        "active_nav": "reviews",
+        "review_stats": {
+            "avg_rating": avg_rating,
+            "reviews_count": total_reviews,
+            "reviews_this_month": reviews_this_month,
+            "reviews_last_month": reviews_last_month,
+            "reviews_change_pct": reviews_change_pct,
+            "low_rating_reviews_30d_count": low_rating_count,
+            "low_rating_reviews_30d_percent": _safe_pct(low_rating_count, total_reviews),
+        },
+        "review_breakdown": review_breakdown,
+        "monthly_review_bars": monthly_review_bars,
+        "recent_reviews": recent_reviews,
+        "top_agents": top_agents,
+        "agent_choices": agent_choices,
+        "selected_agent": selected_agent,
+        "selected_rating": selected_rating,
+        "search_query": search_query,
+        "star_slots": [1, 2, 3, 4, 5],
+    }
+    return render(request, "admin_reviews.html", context)
 
 
 def agent_notifications_view(request):

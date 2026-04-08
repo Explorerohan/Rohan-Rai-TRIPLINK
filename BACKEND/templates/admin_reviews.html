@@ -1,0 +1,235 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Admin Reviews - TRIPLINK{% endblock %}
+
+{% block admin_extra_css %}
+<style>
+.reviews-page{display:grid;gap:16px}
+.hero{background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.hero h1{font-size:28px;font-weight:800;color:#0f172a;margin:0 0 5px}.hero p{margin:0;color:#64748b;font-size:13px;line-height:1.4}
+.hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.hero-badge{background:#f8fafc;border:1px solid #e2e8f0;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;color:#334155}
+.hero-stat{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:12px 14px;min-width:210px}.hero-stat .label{font-size:11px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.35px}.hero-stat .value{font-size:24px;font-weight:800;color:#1e3a8a;margin-top:6px}.hero-stat .sub{font-size:12px;color:#1d4ed8;margin-top:3px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card,.panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 3px 10px rgba(15,23,42,.03)}.card{padding:13px}.panel{padding:14px}
+.k-label{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px}.k-value{font-size:22px;font-weight:800;color:#0f172a;margin-top:6px}.k-meta{font-size:12px;color:#64748b;line-height:1.35;margin-top:5px}
+.delta{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700}.up{background:#dcfce7;color:#166534}.down{background:#fee2e2;color:#b91c1c}.flat{background:#e2e8f0;color:#334155}
+.p-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px}.p-title{font-size:14px;font-weight:800;color:#0f172a}.p-sub{font-size:12px;color:#64748b}
+.rows{display:grid;gap:10px}.row{display:grid;gap:5px}.rowtop{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:#334155}.track{height:8px;background:#eef2f7;border-radius:999px;overflow:hidden}.fill{height:100%;border-radius:inherit}.f-review{background:#f59e0b}
+.bars{height:210px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end}.bcol{display:grid;grid-template-rows:auto 140px auto;gap:5px;align-items:end}.bval{text-align:center;font-size:10px;color:#475569;font-weight:700;line-height:1.1}
+.bwrap{height:140px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;display:flex;align-items:flex-end;overflow:hidden}.bfill{width:100%;min-height:0}.review-count{background:#f59e0b}.blbl{text-align:center;font-size:11px;color:#64748b;font-weight:700}
+.filters{display:grid;grid-template-columns:1fr 220px 160px auto;gap:10px;align-items:end;margin-bottom:12px}
+.filters .f{display:grid;gap:4px}.filters label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
+.filters input,.filters select{height:36px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;font-size:13px}
+.btn{height:36px;border:1px solid #1f6b2a;background:#1f6b2a;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer}
+.btn:hover{background:#166534;border-color:#166534}
+.review-item{border:1px solid #e2e8f0;border-radius:12px;padding:10px;display:grid;gap:8px}
+.alert-item{border-color:#fecaca;background:#fff1f2}
+.review-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.review-meta{display:flex;gap:10px;align-items:flex-start}
+.avatar{width:40px;height:40px;border-radius:50%;background:#e2e8f0;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.main{min-width:0}.name{font-size:13px;font-weight:800;color:#0f172a}.sub{font-size:11px;color:#64748b}
+.stars{display:flex;align-items:center;gap:2px;color:#f59e0b;font-size:12px}.star.off{color:#cbd5e1}.rating{margin-left:4px;font-weight:700;color:#92400e;font-size:11px}
+.comment{font-size:12px;color:#475569;line-height:1.4}
+.admin-controls{display:grid;grid-template-columns:1fr auto;gap:8px}
+.admin-controls input{height:34px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;font-size:12px}
+.btn-note,.btn-del{height:34px;border-radius:8px;padding:0 10px;font-size:12px;font-weight:700;cursor:pointer}
+.btn-note{border:1px solid #cbd5e1;background:#fff;color:#334155}
+.btn-del{border:1px solid #dc2626;background:#dc2626;color:#fff}
+.log{font-size:11px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:8px;padding:6px 8px;color:#475569}
+.log + .log{margin-top:6px}
+.log-head{font-weight:700;color:#334155}
+.audit-item{border:1px solid #e2e8f0;border-radius:10px;padding:8px;background:#fff}
+.rank-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rank-left{min-width:0}
+.rank-list{counter-reset: top-agents}
+.rank-item{counter-increment: top-agents}
+.rank-pos{
+  display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:999px;
+  background:#eef2ff;color:#3730a3;font-size:11px;font-weight:700;margin-right:8px
+}
+.rank-pos::before{content: counter(top-agents)}
+.rank-score{font-size:16px;font-weight:800;color:#14532d;text-align:right}
+.rank-score-sub{font-size:11px;color:#64748b;text-align:right}
+.empty{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:12px;padding:14px;font-size:13px;color:#64748b}
+@media (max-width:1200px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{flex-direction:column}.hero-stat{min-width:0}.filters{grid-template-columns:1fr 1fr}}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}.filters{grid-template-columns:1fr}.admin-controls{grid-template-columns:1fr}}
+</style>
+{% endblock admin_extra_css %}
+
+{% block main_content %}
+<div class="reviews-page">
+  <section class="hero">
+    <div>
+      <h1>Reviews</h1>
+      <p>Platform-wide traveler feedback for all agents with moderation and audit control.</p>
+      <div class="hero-badges">
+        <span class="hero-badge">{{ review_stats.reviews_count }} total reviews</span>
+        <span class="hero-badge">{{ review_stats.reviews_this_month }} this month</span>
+        <span class="hero-badge">{{ review_stats.low_rating_reviews_30d_count }} low ratings (30d)</span>
+      </div>
+    </div>
+    <div class="hero-stat">
+      <div class="label">Platform Avg Rating</div>
+      <div class="value">{{ review_stats.avg_rating|floatformat:1 }}/5</div>
+      <div class="sub">Across all agents</div>
+    </div>
+  </section>
+
+  <section class="grid4">
+    <div class="card"><div class="k-label">Total Reviews</div><div class="k-value">{{ review_stats.reviews_count }}</div><div class="k-meta">All travelers to all agents</div></div>
+    <div class="card"><div class="k-label">This Month</div><div class="k-value">{{ review_stats.reviews_this_month }}</div><div class="k-meta">{{ review_stats.reviews_last_month }} last month
+      {% if review_stats.reviews_change_pct > 0 %}<span class="delta up">+{{ review_stats.reviews_change_pct|floatformat:1 }}%</span>
+      {% elif review_stats.reviews_change_pct < 0 %}<span class="delta down">{{ review_stats.reviews_change_pct|floatformat:1 }}%</span>
+      {% else %}<span class="delta flat">{{ review_stats.reviews_change_pct|floatformat:1 }}%</span>{% endif %}
+    </div></div>
+    <div class="card"><div class="k-label">Average Rating</div><div class="k-value">{{ review_stats.avg_rating|floatformat:1 }}/5</div><div class="k-meta">Current platform quality</div></div>
+    <div class="card"><div class="k-label">Low Ratings (30d)</div><div class="k-value">{{ review_stats.low_rating_reviews_30d_count }}</div><div class="k-meta">{{ review_stats.low_rating_reviews_30d_percent|floatformat:1 }}% of visible reviews</div></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Rating Breakdown</div><div class="p-sub">Distribution of traveler ratings</div></div></div>
+      <div class="rows">
+        {% for row in review_breakdown %}
+        <div class="row">
+          <div class="rowtop"><span>{{ row.rating }}*</span><span>{{ row.count }} ({{ row.percent|floatformat:1 }}%)</span></div>
+          <div class="track"><div class="fill f-review" style="width: {{ row.percent|floatformat:2 }}%;"></div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Monthly Trend</div><div class="p-sub">Volume + average rating (last 6 months)</div></div></div>
+      <div class="bars">
+        {% for bar in monthly_review_bars %}
+        <div class="bcol">
+          <div class="bval">{{ bar.value }}<br><span style="font-weight:600;color:#64748b;">{{ bar.avg_rating|floatformat:1 }}/5</span></div>
+          <div class="bwrap"><div class="bfill review-count" style="height: {{ bar.count_height_pct }}%;"></div></div>
+          <div class="blbl">{{ bar.label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Review Moderation</div><div class="p-sub">Filter, inspect and take action</div></div></div>
+      <form method="get" action="{% url 'admin_reviews' %}" class="filters">
+        <div class="f">
+          <label for="q">Search</label>
+          <input id="q" name="q" type="text" value="{{ search_query }}" placeholder="comment, traveler, agent email">
+        </div>
+        <div class="f">
+          <label for="agent">Agent</label>
+          <select id="agent" name="agent">
+            <option value="">All agents</option>
+            {% for a in agent_choices %}
+              <option value="{{ a.id }}" {% if selected_agent|stringformat:"s" == a.id|stringformat:"s" %}selected{% endif %}>{{ a.email }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="f">
+          <label for="rating">Rating</label>
+          <select id="rating" name="rating">
+            <option value="">All ratings</option>
+            {% for n in star_slots %}
+            <option value="{{ n }}" {% if selected_rating|stringformat:"s" == n|stringformat:"s" %}selected{% endif %}>{{ n }} star</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn">Apply</button>
+      </form>
+
+      {% if recent_reviews %}
+      <div class="list">
+        {% for review in recent_reviews %}
+        <div class="review-item {% if review.rating <= 3 %}alert-item{% endif %}">
+          <div class="review-top">
+            <div class="review-meta">
+              <div class="avatar">
+                {% if review.reviewer_profile_picture_url %}
+                <img src="{{ review.reviewer_profile_picture_url }}" alt="{{ review.reviewer_name }}">
+                {% else %}
+                <span>&#128100;</span>
+                {% endif %}
+              </div>
+              <div class="main">
+                <div class="name">{{ review.reviewer_name }} <span class="sub">({{ review.reviewer_email }})</span></div>
+                <div class="sub">For {{ review.agent_name }} ({{ review.agent_email }}) • {{ review.created_at|date:"M d, Y" }}</div>
+                <div class="comment">{% if review.comment %}{{ review.comment|truncatechars:220 }}{% else %}<em>No written comment.</em>{% endif %}</div>
+              </div>
+            </div>
+            <div class="stars">
+              {% for n in star_slots %}
+                {% if n <= review.rating %}
+                <span class="star">&#9733;</span>
+                {% else %}
+                <span class="star off">&#9733;</span>
+                {% endif %}
+              {% endfor %}
+              <span class="rating">{{ review.rating }}/5</span>
+            </div>
+          </div>
+
+          <form method="post" action="{% url 'admin_reviews' %}" class="admin-controls">
+            {% csrf_token %}
+            <input type="hidden" name="admin_action" value="add_note">
+            <input type="hidden" name="review_id" value="{{ review.id }}">
+            <input type="text" name="note" placeholder="Internal moderation note" required>
+            <button type="submit" class="btn-note">Add Note</button>
+          </form>
+          <form method="post" action="{% url 'admin_reviews' %}" class="admin-controls">
+            {% csrf_token %}
+            <input type="hidden" name="admin_action" value="delete_review">
+            <input type="hidden" name="review_id" value="{{ review.id }}">
+            <input type="text" name="reason" placeholder="Reason for deletion (required)" required>
+            <button type="submit" class="btn-del">Delete Review</button>
+          </form>
+
+          {% if review.logs %}
+            {% for log in review.logs %}
+              <div class="log">
+                <div class="log-head">{{ log.get_action_type_display }} by {{ log.admin.email|default:"System" }} on {{ log.created_at|date:"M d, Y H:i" }}</div>
+                {% if log.reason %}<div>Reason: {{ log.reason }}</div>{% endif %}
+                {% if log.note %}<div>Note: {{ log.note }}</div>{% endif %}
+              </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">No reviews found for current filters.</div>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="p-head"><div><div class="p-title">Top Agents by Average Rating</div><div class="p-sub">Ranked by highest average traveler rating, then review count</div></div></div>
+      {% if top_agents %}
+      <div class="list rank-list">
+        {% for agent in top_agents %}
+        <div class="audit-item rank-item">
+          <div class="rank-row">
+            <div class="rank-left">
+              <div class="name" style="font-size:12px;"><span class="rank-pos" aria-hidden="true"></span>{{ agent.agent_name }}</div>
+              <div class="sub">{{ agent.agent_email }}</div>
+              <div class="sub">{{ agent.reviews_count }} review{{ agent.reviews_count|pluralize }}</div>
+            </div>
+            <div>
+              <div class="rank-score">{{ agent.avg_rating|floatformat:2 }}/5</div>
+              <div class="rank-score-sub">average rating</div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">No agent review data available for the current filters.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock main_content %}

@@ -20,7 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from accounts.views import (
     login_view, logout_view, admin_dashboard_view, admin_users_view, admin_packages_view, admin_package_detail_view,
-    admin_notifications_view, admin_refunds_view, admin_bookings_view, agent_dashboard_view, agent_notifications_view, agent_refunds_view,
+    admin_notifications_view, admin_refunds_view, admin_bookings_view, admin_reviews_view, agent_dashboard_view, agent_notifications_view, agent_refunds_view,
     admin_forgot_password_view, agent_forgot_password_view,
     admin_verify_otp_view, agent_verify_otp_view,
     admin_reset_password_view, agent_reset_password_view,
@@ -44,6 +44,7 @@ urlpatterns = [
     path('notifications/admin/', admin_notifications_view, name='admin_notifications'),
     path('refunds/admin/', admin_refunds_view, name='admin_refunds'),
     path('bookings/admin/', admin_bookings_view, name='admin_bookings'),
+    path('reviews/admin/', admin_reviews_view, name='admin_reviews'),
     path('dashboard/agent/', agent_dashboard_view, name='agent_dashboard'),
     path('refunds/agent/', agent_refunds_view, name='agent_refunds'),
     path('notifications/agent/', agent_notifications_view, name='agent_notifications'),

@@ -764,6 +764,45 @@ class AgentReview(models.Model):
         agent_profile.save(update_fields=['rating'])
 
 
+class AgentReviewAdminActionType(models.TextChoices):
+    DELETE_REVIEW = "delete_review", "Delete review"
+    INTERNAL_NOTE = "internal_note", "Internal note"
+
+
+class AgentReviewAdminActionLog(models.Model):
+    review = models.ForeignKey(
+        AgentReview,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="admin_action_logs",
+    )
+    admin = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="agent_review_admin_actions",
+        limit_choices_to={"role": Roles.ADMIN},
+    )
+    action_type = models.CharField(max_length=32, choices=AgentReviewAdminActionType.choices)
+    reason = models.TextField(blank=True)
+    note = models.TextField(blank=True)
+    reviewer_email_snapshot = models.EmailField(blank=True)
+    agent_email_snapshot = models.EmailField(blank=True)
+    rating_snapshot = models.PositiveIntegerField(default=0)
+    comment_snapshot = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Agent review admin action log"
+        verbose_name_plural = "Agent review admin action logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Review action {self.action_type} by {self.admin_id or 'system'}"
+
+
 class ChatRoom(models.Model):
     """One-to-one chat room between a traveler and an agent."""
     traveler = models.ForeignKey(
