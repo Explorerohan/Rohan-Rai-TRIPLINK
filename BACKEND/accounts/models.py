@@ -527,6 +527,39 @@ class Booking(models.Model):
         super().save(*args, **kwargs)
 
 
+class BookingAdminActionType(models.TextChoices):
+    FORCE_CANCEL = "force_cancel", "Force cancel"
+    INTERNAL_NOTE = "internal_note", "Internal note"
+
+
+class BookingAdminActionLog(models.Model):
+    booking = models.ForeignKey(
+        Booking,
+        on_delete=models.CASCADE,
+        related_name="admin_action_logs",
+    )
+    admin = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="booking_admin_actions",
+        limit_choices_to={"role": Roles.ADMIN},
+    )
+    action_type = models.CharField(max_length=32, choices=BookingAdminActionType.choices)
+    reason = models.TextField(blank=True)
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Booking admin action log"
+        verbose_name_plural = "Booking admin action logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Booking {self.booking_id} {self.action_type}"
+
+
 class BookingTripReminderKind(models.TextChoices):
     H24 = "h24", "24 hours before trip"
     H1 = "h1", "1 hour before trip"

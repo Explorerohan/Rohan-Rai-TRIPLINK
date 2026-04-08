@@ -45,6 +45,8 @@ from .models import (
     CustomPackage,
     Booking,
     BookingStatus,
+    BookingAdminActionLog,
+    BookingAdminActionType,
     PaymentMethod,
     PaymentStatus,
     EsewaPaymentSession,
@@ -1268,6 +1270,148 @@ def admin_notifications_view(request):
         'active_nav': 'notifications',
     }
     return render(request, 'admin_notifications.html', context)
+
+
+def admin_bookings_view(request):
+    """Admin view to monitor all platform bookings with filters and quick metrics."""
+    if not request.user.is_authenticated or request.user.role != Roles.ADMIN:
+        messages.error(request, "Access denied. Admin access required.")
+        return redirect("login")
+
+    if request.method == "POST":
+        action = (request.POST.get("admin_action") or "").strip()
+        booking_id_raw = request.POST.get("booking_id")
+        try:
+            booking_id = int(booking_id_raw)
+        except (TypeError, ValueError):
+            messages.error(request, "Invalid booking selected.")
+            return redirect("admin_bookings")
+
+        booking = Booking.objects.select_related("user", "package").filter(id=booking_id).first()
+        if booking is None:
+            messages.error(request, "Booking not found.")
+            return redirect("admin_bookings")
+
+        if action == "force_cancel":
+            reason = (request.POST.get("reason") or "").strip()
+            if not reason:
+                messages.error(request, "Cancellation reason is required.")
+                return redirect("admin_bookings")
+            if booking.status == BookingStatus.CANCELLED:
+                messages.info(request, "Booking is already cancelled.")
+                return redirect("admin_bookings")
+            booking.status = BookingStatus.CANCELLED
+            booking.save(update_fields=["status"])
+            BookingAdminActionLog.objects.create(
+                booking=booking,
+                admin=request.user,
+                action_type=BookingAdminActionType.FORCE_CANCEL,
+                reason=reason,
+            )
+            messages.success(request, f"Booking {booking.booking_code} was force-cancelled.")
+            return redirect("admin_bookings")
+
+        if action == "add_note":
+            note = (request.POST.get("note") or "").strip()
+            if not note:
+                messages.error(request, "Internal note cannot be empty.")
+                return redirect("admin_bookings")
+            BookingAdminActionLog.objects.create(
+                booking=booking,
+                admin=request.user,
+                action_type=BookingAdminActionType.INTERNAL_NOTE,
+                note=note,
+            )
+            messages.success(request, f"Internal note added for booking {booking.booking_code}.")
+            return redirect("admin_bookings")
+
+        messages.error(request, "Unsupported admin action.")
+        return redirect("admin_bookings")
+
+    queryset = (
+        Booking.objects.select_related("package", "package__agent", "user")
+        .prefetch_related("admin_action_logs", "admin_action_logs__admin")
+        .order_by("-created_at")
+    )
+
+    status_filter = request.GET.get("status", "").strip()
+    if status_filter and status_filter in dict(BookingStatus.choices):
+        queryset = queryset.filter(status=status_filter)
+
+    payment_status_filter = request.GET.get("payment_status", "").strip()
+    if payment_status_filter and payment_status_filter in dict(PaymentStatus.choices):
+        queryset = queryset.filter(payment_status=payment_status_filter)
+
+    package_id_filter = request.GET.get("package", "").strip()
+    if package_id_filter:
+        try:
+            queryset = queryset.filter(package_id=int(package_id_filter))
+        except ValueError:
+            package_id_filter = ""
+
+    agent_id_filter = request.GET.get("agent", "").strip()
+    if agent_id_filter:
+        try:
+            queryset = queryset.filter(package__agent_id=int(agent_id_filter))
+        except ValueError:
+            agent_id_filter = ""
+
+    booking_code_filter = request.GET.get("booking_code", "").strip()
+    if booking_code_filter:
+        digits_only = "".join(c for c in booking_code_filter if c.isdigit())
+        if len(digits_only) == 5:
+            queryset = queryset.filter(booking_code=digits_only)
+        elif digits_only:
+            queryset = queryset.filter(booking_code__startswith=digits_only)
+
+    bookings_with_profiles = []
+    for booking in queryset:
+        try:
+            profile = booking.user.user_profile
+        except UserProfile.DoesNotExist:
+            profile = None
+        try:
+            agent_profile = booking.package.agent.agent_profile
+            agent_name = agent_profile.full_name
+        except AgentProfile.DoesNotExist:
+            agent_name = booking.package.agent.email.split("@")[0]
+        bookings_with_profiles.append(
+            {
+                "booking": booking,
+                "profile": profile,
+                "agent_name": agent_name,
+                "latest_logs": list(booking.admin_action_logs.all()[:3]),
+            }
+        )
+
+    all_bookings = Booking.objects.all()
+    total_count = all_bookings.count()
+    confirmed_count = all_bookings.filter(status=BookingStatus.CONFIRMED).count()
+    cancelled_count = all_bookings.filter(status=BookingStatus.CANCELLED).count()
+    total_travelers = all_bookings.aggregate(total=Sum("traveler_count")).get("total") or 0
+
+    packages = Package.objects.select_related("agent").order_by("title")
+    agents = User.objects.filter(role=Roles.AGENT).order_by("email")
+
+    context = {
+        "user": request.user,
+        "bookings_with_profiles": bookings_with_profiles,
+        "packages": packages,
+        "agents": agents,
+        "total_count": total_count,
+        "confirmed_count": confirmed_count,
+        "cancelled_count": cancelled_count,
+        "total_travelers": total_travelers,
+        "status_filter": status_filter,
+        "payment_status_filter": payment_status_filter,
+        "package_id_filter": package_id_filter,
+        "agent_id_filter": agent_id_filter,
+        "booking_code_filter": booking_code_filter,
+        "booking_status_choices": BookingStatus.choices,
+        "payment_status_choices": PaymentStatus.choices,
+        "active_nav": "bookings",
+    }
+    return render(request, "admin_bookings.html", context)
 
 
 def agent_notifications_view(request):

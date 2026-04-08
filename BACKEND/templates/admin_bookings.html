@@ -1,0 +1,591 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}Bookings - TRIPLINK Admin{% endblock %}
+
+{% block admin_extra_css %}
+<style>
+    .bookings-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        --bookings-section-gap: 22px;
+        --bookings-toolbar-to-list-gap: 36px;
+    }
+    .page-head {
+        margin-bottom: var(--bookings-section-gap, 22px);
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .page-head h1 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1a1d21;
+        margin-bottom: 4px;
+        letter-spacing: -0.02em;
+    }
+    .page-head p {
+        font-size: 14px;
+        color: #64748b;
+        line-height: 1.45;
+        margin: 0;
+    }
+    .bookings-stats {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: var(--bookings-section-gap, 22px);
+        padding: 8px 0 4px;
+        align-items: flex-start;
+    }
+    .section-label {
+        width: 100%;
+        font-size: 10px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 8px;
+    }
+    .stat-card {
+        position: relative;
+        background: radial-gradient(circle at top left, #eff8f1 0, #ffffff 55%);
+        border-radius: 14px;
+        padding: 14px 16px 12px;
+        border: 1px solid rgba(45, 90, 54, 0.06);
+        min-width: 190px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+        border-color: rgba(45, 90, 54, 0.16);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    .stat-card-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+    }
+    .stat-card-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .stat-card .stat-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #111827;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
+    }
+    .stat-card .stat-label {
+        font-size: 13px;
+        color: #4b5563;
+        font-weight: 600;
+    }
+    .stat-card .stat-sub {
+        font-size: 11px;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+    }
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+        line-height: 1;
+        background: #ecfdf3;
+        color: #166534;
+        flex-shrink: 0;
+    }
+    .stat-icon-char {
+        line-height: 0;
+        display: inline-block;
+        font-size: inherit;
+    }
+    .stat-card.cancelled .stat-icon-char { transform: translate(0.5px, -1px); }
+    .stat-card.confirmed .stat-icon { background: #ecfdf3; color: #166534; }
+    .stat-card.cancelled .stat-icon { background: #fef2f2; color: #b91c1c; }
+    .stat-card.confirmed .stat-value { color: #14532d; }
+    .stat-card.cancelled .stat-value { color: #b91c1c; }
+
+    .bookings-toolbar-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px 20px;
+        width: 100%;
+    }
+    .bookings-toolbar {
+        padding: 12px 20px;
+        background: #f8fafc;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .bookings-toolbar-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 14px 18px;
+        flex: 1;
+        min-width: 0;
+    }
+    .bookings-toolbar .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        flex: 1 1 180px;
+        max-width: 320px;
+    }
+    .bookings-toolbar .filter-package-with-btn {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1 1 260px;
+        max-width: 460px;
+        min-width: 0;
+    }
+    .bookings-toolbar .filter-package-input-row {
+        display: flex;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .bookings-toolbar .filter-select--package { flex: 1; min-width: 0; width: auto; }
+    .bookings-toolbar .btn-filter {
+        flex-shrink: 0;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid #166534;
+        background: #166534;
+        color: #f9fafb;
+        cursor: pointer;
+        transition: background 0.18s ease, border-color 0.18s ease;
+        align-self: stretch;
+        min-height: 36px;
+    }
+    .bookings-toolbar .btn-filter:hover { background: #14532d; border-color: #14532d; }
+    .bookings-toolbar label {
+        font-size: 10px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .bookings-toolbar select,
+    .bookings-toolbar input[type="text"] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        font-size: 13px;
+        background: #fff;
+        color: #1a1d21;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .bookings-toolbar select { cursor: pointer; }
+    .bookings-toolbar select:focus,
+    .bookings-toolbar input[type="text"]:focus {
+        outline: none;
+        border-color: #2d5a36;
+        box-shadow: 0 0 0 3px rgba(45, 90, 54, 0.1);
+    }
+    .bookings-filters-clear {
+        font-size: 13px;
+        font-weight: 500;
+        color: #64748b;
+        text-decoration: none;
+        padding: 8px 0;
+        white-space: nowrap;
+    }
+    .bookings-filters-clear:hover { color: #1e293b; text-decoration: underline; }
+
+    .bookings-card {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+    .bookings-list-region {
+        padding-top: var(--bookings-toolbar-to-list-gap, 36px);
+        padding-bottom: 10px;
+    }
+    .bookings-list-region .section-label {
+        padding: 0 20px 12px;
+        margin-bottom: 0;
+    }
+    .bookings-table-wrap { overflow-x: auto; }
+    .bookings-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    .bookings-table th {
+        text-align: left;
+        padding: 11px 20px;
+        background: #fafafa;
+        color: #6b7280;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .bookings-table td {
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        color: #1a1d21;
+        vertical-align: middle;
+    }
+    .bookings-table tbody tr:hover { background: rgba(0, 0, 0, 0.02); }
+    .bookings-table tbody tr:last-child td { border-bottom: none; }
+    .booking-code-cell {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+        color: #14532d;
+    }
+    .booking-traveler-name,
+    .booking-agent-name {
+        font-weight: 600;
+        color: #1a1d21;
+    }
+    .booking-traveler-email,
+    .booking-agent-email,
+    .booking-package-location {
+        color: #5c6572;
+        font-size: 13px;
+    }
+    .booking-package-link {
+        color: #2d5a36;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .booking-package-link:hover { text-decoration: underline; }
+    .booking-status {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+    .booking-status.confirmed {
+        background: rgba(45, 90, 54, 0.1);
+        color: #2d5a36;
+        border: 1px solid rgba(45, 90, 54, 0.2);
+    }
+    .booking-status.cancelled {
+        background: rgba(158, 45, 45, 0.08);
+        color: #9e2d2d;
+        border: 1px solid rgba(158, 45, 45, 0.2);
+    }
+    .payment-status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .payment-status.paid { background: #dcfce7; color: #166534; }
+    .payment-status.pending { background: #fef9c3; color: #854d0e; }
+    .payment-status.failed { background: #fee2e2; color: #b91c1c; }
+    .payment-status.refund_pending { background: #ffedd5; color: #9a3412; }
+    .payment-status.refunded { background: #e0f2fe; color: #075985; }
+    .payment-status.refund_declined { background: #f1f5f9; color: #475569; }
+    .admin-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 240px;
+    }
+    .admin-actions form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .admin-actions input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        padding: 7px 9px;
+        font-size: 12px;
+    }
+    .btn-note,
+    .btn-cancel {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #334155;
+        border-radius: 7px;
+        padding: 7px 9px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .btn-cancel {
+        border-color: #b91c1c;
+        color: #b91c1c;
+    }
+    .btn-cancel:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+    .audit-log {
+        margin-top: 8px;
+        padding: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 12px;
+    }
+    .audit-item + .audit-item {
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px dashed #dbe3ee;
+    }
+    .audit-meta {
+        color: #334155;
+        font-weight: 600;
+    }
+    .audit-text {
+        color: #64748b;
+        margin-top: 2px;
+        white-space: normal;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px 44px;
+        color: #5c6572;
+    }
+    .empty-state-icon {
+        font-size: 40px;
+        margin-bottom: 16px;
+        opacity: 0.6;
+    }
+    .empty-state-text {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+    @media (max-width: 768px) {
+        .bookings-table th,
+        .bookings-table td {
+            padding: 12px 14px;
+            font-size: 13px;
+        }
+        .bookings-table th:nth-child(4),
+        .bookings-table td:nth-child(4),
+        .bookings-table th:nth-child(5),
+        .bookings-table td:nth-child(5) {
+            display: none;
+        }
+    }
+</style>
+{% endblock admin_extra_css %}
+
+{% block main_content %}
+<div class="bookings-page">
+    <div class="page-head">
+        <h1>Bookings</h1>
+        <p>All bookings on your platform. Filter by status, package, or booking ID.</p>
+    </div>
+
+    <div class="bookings-stats">
+        <span class="section-label">Summary</span>
+        <div class="stat-card">
+            <div class="stat-card-inner">
+                <div class="stat-card-main">
+                    <div class="stat-label">Total bookings</div>
+                    <div class="stat-sub">All time</div>
+                    <div class="stat-value">{{ total_count }}</div>
+                </div>
+                <div class="stat-icon"><span class="stat-icon-char" aria-hidden="true">📦</span></div>
+            </div>
+        </div>
+        <div class="stat-card confirmed">
+            <div class="stat-card-inner">
+                <div class="stat-card-main">
+                    <div class="stat-label">Confirmed</div>
+                    <div class="stat-sub">Trips going ahead</div>
+                    <div class="stat-value">{{ confirmed_count }}</div>
+                </div>
+                <div class="stat-icon"><span class="stat-icon-char" aria-hidden="true">✅</span></div>
+            </div>
+        </div>
+        <div class="stat-card cancelled">
+            <div class="stat-card-inner">
+                <div class="stat-card-main">
+                    <div class="stat-label">Cancelled</div>
+                    <div class="stat-sub">No longer active</div>
+                    <div class="stat-value">{{ cancelled_count }}</div>
+                </div>
+                <div class="stat-icon"><span class="stat-icon-char" aria-hidden="true">⚠️</span></div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-inner">
+                <div class="stat-card-main">
+                    <div class="stat-label">Travelers</div>
+                    <div class="stat-sub">Booked seats</div>
+                    <div class="stat-value">{{ total_travelers }}</div>
+                </div>
+                <div class="stat-icon"><span class="stat-icon-char" aria-hidden="true">🧳</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bookings-card">
+        <div class="bookings-toolbar">
+            <form method="get" action="{% url 'admin_bookings' %}" class="bookings-toolbar-form">
+                <div class="bookings-toolbar-controls">
+                    <div class="filter-group">
+                        <label for="filter-booking-code">Booking ID</label>
+                        <input type="text" name="booking_code" id="filter-booking-code" value="{{ booking_code_filter }}" placeholder="5-digit code" maxlength="12" inputmode="numeric" autocomplete="off" pattern="[0-9]*">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-status">Status</label>
+                        <select name="status" id="filter-status">
+                            <option value="">All</option>
+                            {% for value, label in booking_status_choices %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-payment-status">Payment</label>
+                        <select name="payment_status" id="filter-payment-status">
+                            <option value="">All payment states</option>
+                            {% for value, label in payment_status_choices %}
+                                <option value="{{ value }}" {% if payment_status_filter == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-agent">Agent</label>
+                        <select name="agent" id="filter-agent">
+                            <option value="">All agents</option>
+                            {% for agent in agents %}
+                                <option value="{{ agent.id }}" {% if agent_id_filter|stringformat:"s" == agent.id|stringformat:"s" %}selected{% endif %}>{{ agent.email }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-package-with-btn">
+                        <label for="filter-package">Package</label>
+                        <div class="filter-package-input-row">
+                            <select name="package" id="filter-package" class="filter-select--package">
+                                <option value="">All packages</option>
+                                {% for pkg in packages %}
+                                    <option value="{{ pkg.id }}" {% if package_id_filter|stringformat:"s" == pkg.id|stringformat:"s" %}selected{% endif %}>{{ pkg.title }} ({{ pkg.location }})</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn-filter">Filter</button>
+                        </div>
+                    </div>
+                </div>
+                {% if status_filter or payment_status_filter or package_id_filter or agent_id_filter or booking_code_filter %}
+                    <a href="{% url 'admin_bookings' %}" class="bookings-filters-clear">Clear filters</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="bookings-list-region">
+            <div class="section-label">Bookings list</div>
+            {% if bookings_with_profiles %}
+            <div class="bookings-table-wrap">
+                <table class="bookings-table">
+                    <thead>
+                        <tr>
+                            <th>Booking ID</th>
+                            <th>Traveler</th>
+                            <th>Package</th>
+                            <th>Agent</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Booked</th>
+                            <th>Admin controls</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in bookings_with_profiles %}
+                            <tr>
+                                <td class="booking-code-cell">{{ item.booking.booking_code }}</td>
+                                <td>
+                                    <span class="booking-traveler-name">
+                                        {% if item.profile and item.profile.full_name %}
+                                            {{ item.profile.full_name }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </span>
+                                    <br>
+                                    <span class="booking-traveler-email">{{ item.booking.user.email }}</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'admin_package_detail' item.booking.package.id %}" class="booking-package-link">{{ item.booking.package.title }}</a>
+                                    <br>
+                                    <span class="booking-package-location">{{ item.booking.package.location }}, {{ item.booking.package.country }}</span>
+                                </td>
+                                <td>
+                                    <span class="booking-agent-name">{{ item.agent_name }}</span>
+                                    <br>
+                                    <span class="booking-agent-email">{{ item.booking.package.agent.email }}</span>
+                                </td>
+                                <td><span class="booking-status {{ item.booking.status }}">{{ item.booking.get_status_display }}</span></td>
+                                <td><span class="payment-status {{ item.booking.payment_status }}">{{ item.booking.get_payment_status_display }}</span></td>
+                                <td>{{ item.booking.created_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <div class="admin-actions">
+                                        <form method="post" action="{% url 'admin_bookings' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="admin_action" value="force_cancel">
+                                            <input type="hidden" name="booking_id" value="{{ item.booking.id }}">
+                                            <input type="text" name="reason" placeholder="Cancel reason" required>
+                                            <button type="submit" class="btn-cancel" {% if item.booking.status == 'cancelled' %}disabled{% endif %}>Force cancel</button>
+                                        </form>
+                                        <form method="post" action="{% url 'admin_bookings' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="admin_action" value="add_note">
+                                            <input type="hidden" name="booking_id" value="{{ item.booking.id }}">
+                                            <input type="text" name="note" placeholder="Internal note" required>
+                                            <button type="submit" class="btn-note">Add note</button>
+                                        </form>
+                                        {% if item.latest_logs %}
+                                        <div class="audit-log">
+                                            {% for log in item.latest_logs %}
+                                            <div class="audit-item">
+                                                <div class="audit-meta">{{ log.get_action_type_display }} by {{ log.admin.email|default:"System" }} on {{ log.created_at|date:"M d, Y H:i" }}</div>
+                                                <div class="audit-text">
+                                                    {% if log.reason %}Reason: {{ log.reason }}{% endif %}
+                                                    {% if log.note %}Note: {{ log.note }}{% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-text">
+                    {% if status_filter or payment_status_filter or package_id_filter or agent_id_filter or booking_code_filter %}
+                        No bookings match your filters.
+                    {% else %}
+                        No bookings yet. Bookings will appear here once travelers start booking packages.
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock main_content %}
