@@ -28,12 +28,14 @@ def _send_via_resend(subject, plain, html_body, to_email):
         "text": plain,
     }
     data = json.dumps(payload).encode("utf-8")
+    # Resend rejects requests without User-Agent (403, error code 1010). urllib alone may not satisfy their check.
     req = urllib.request.Request(
         "https://api.resend.com/emails",
         data=data,
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "TRIPLINK/1.0 (Django; transactional email)",
         },
         method="POST",
     )
