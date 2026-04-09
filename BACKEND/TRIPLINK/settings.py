@@ -14,7 +14,6 @@ from datetime import timedelta
 from pathlib import Path
 import os
 from urllib.parse import urlparse
-from django.core.exceptions import ImproperlyConfigured
 
 import dj_database_url
 from decouple import Csv, config
@@ -284,11 +283,6 @@ DEFAULT_FROM_EMAIL = config(
 ).strip()
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
 
-if not DEBUG and 'console' in EMAIL_BACKEND.lower():
-    raise ImproperlyConfigured(
-        "Email is configured to console backend in production. "
-        "Set EMAIL_HOST (or SMTP_HOST), EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, and DEFAULT_FROM_EMAIL."
-    )
 
 # Optional branding / copy for transactional email bodies
 EMAIL_APP_NAME = os.environ.get('EMAIL_APP_NAME', 'TRIPLINK')
