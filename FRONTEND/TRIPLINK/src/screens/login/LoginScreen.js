@@ -17,7 +17,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 const HERO = require("../../Assets/Login.jpg");
-const GOOGLE_ICON = require("../../Assets/google.png");
 const EMAIL_ICON = require("../../Assets/email.png");
 const LOCK_ICON = require("../../Assets/lock.png");
 
@@ -122,13 +121,6 @@ const LoginScreen = ({
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t("login")}</Text>}
         </TouchableOpacity>
 
-        <Text style={styles.or}>{t("or")}</Text>
-
-        <TouchableOpacity style={styles.googleButton} activeOpacity={0.85}>
-          <Image source={GOOGLE_ICON} style={styles.googleIcon} />
-          <Text style={styles.googleText}>{t("continueWithGoogle")}</Text>
-        </TouchableOpacity>
-
         <View style={styles.footerRow}>
           <Text style={styles.footerText}>{t("newOnTripLink")} </Text>
           <TouchableOpacity onPress={onSignupPress}>
@@ -230,32 +222,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 17,
     fontWeight: "700",
-  },
-  or: {
-    marginVertical: 12,
-    color: "#7a7f85",
-    fontSize: 13,
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#d5d9dd",
-    borderRadius: 22,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  googleIcon: {
-    width: 18,
-    height: 18,
-  },
-  googleText: {
-    color: "#1f1f1f",
-    fontSize: 15,
-    fontWeight: "600",
   },
   footerRow: {
     flexDirection: "row",

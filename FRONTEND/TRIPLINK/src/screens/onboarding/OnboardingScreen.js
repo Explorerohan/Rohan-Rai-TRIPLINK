@@ -19,7 +19,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const imageHeight = Math.min(screenHeight * 0.53, 500);
 const STATUS_BAR_HEIGHT = StatusBar.currentHeight || 0;
 const FINAL_HERO = require("../../Assets/Login screen image.png");
-const LOGO = require("../../Assets/Logo.png");
+const LOGO = require("../../../assets/Logo.png");
 
 const slides = [slideOne, slideTwo, slideThree, slideFinal];
 

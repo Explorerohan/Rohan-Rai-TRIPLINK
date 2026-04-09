@@ -6,7 +6,10 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "prebuild:android": "expo prebuild --platform android",
+    "build:apk": "cd android && gradlew.bat assembleRelease",
+    "release:apk": "expo prebuild --platform android && cd android && gradlew.bat assembleRelease"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
@@ -14,13 +17,16 @@
     "@react-native-community/datetimepicker": "8.2.0",
     "expo": "~52.0.49",
     "expo-asset": "~11.0.5",
+    "expo-auth-session": "~6.0.3",
     "expo-constants": "~17.0.8",
+    "expo-crypto": "~14.0.2",
     "expo-device": "~7.0.3",
     "expo-document-picker": "~13.0.2",
     "expo-font": "~13.0.4",
     "expo-image-picker": "~16.0.6",
     "expo-notifications": "^0.29.14",
     "expo-status-bar": "~2.0.0",
+    "expo-web-browser": "~14.0.2",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.9",

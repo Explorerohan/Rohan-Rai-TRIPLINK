@@ -23,5 +23,8 @@ TRIPLINK backend on Render (short checklist)
 Notes
 -----
 - Free web services sleep after idle; first request can be slow.
-- Uploaded media under /media/ lives on ephemeral disk on free tier; use S3 or similar for real production.
+- Uploaded media under /media/ lives on ephemeral disk: each new deploy starts with an empty MEDIA_ROOT,
+  so package photos and profile images 404 until re-uploaded. Fix: Render Persistent Disk mounted at
+  MEDIA_ROOT, or django-storages + S3 (or another object store). The Django urls.py already serves
+  /media/ in production when files exist on disk.
 - WebSockets use in-memory channel layer on one dyno; scale-out would need Redis + channels_redis.

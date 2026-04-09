@@ -1,8 +1,14 @@
+// App + Play metadata. Launcher icons for Android are generated into android/app/src/main/res/
+// when you run `npx expo prebuild --platform android` — `gradlew assembleRelease` alone does not
+// re-copy the icon asset into mipmaps; re-run prebuild after changing assets/Logo.png.
+//
+// Adaptive icons: Android scales the foreground to a 108dp layer, then the launcher mask crops the
+// outer rim. Edge-to-edge logos look "zoomed"; plugins/withAdaptiveIconInset.js adds ~20dp inset.
 module.exports = {
   expo: {
     name: "TRIPLINK",
     slug: "TRIPLINK",
-    version: "1.0.0",
+    version: "1.0.5",
     icon: "./assets/Logo.png",
     sdkVersion: "52.0.0",
     newArchEnabled: false,
@@ -22,6 +28,8 @@ module.exports = {
       },
     },
     android: {
+      package: "com.rohandev.TRIPLINK",
+      versionCode: 6,
       adaptiveIcon: {
         foregroundImage: "./assets/Logo.png",
         backgroundColor: "#ffffff",
@@ -54,6 +62,7 @@ module.exports = {
           defaultChannel: "default",
         },
       ],
+      "./plugins/withAdaptiveIconInset",
     ],
   },
 };
