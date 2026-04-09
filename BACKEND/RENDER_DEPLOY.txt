@@ -23,8 +23,29 @@ TRIPLINK backend on Render (short checklist)
 Notes
 -----
 - Free web services sleep after idle; first request can be slow.
-- Uploaded media under /media/ lives on ephemeral disk: each new deploy starts with an empty MEDIA_ROOT,
-  so package photos and profile images 404 until re-uploaded. Fix: Render Persistent Disk mounted at
-  MEDIA_ROOT, or django-storages + S3 (or another object store). The Django urls.py already serves
-  /media/ in production when files exist on disk.
+
+Persistent uploads (survive redeploy)
+-------------------------------------
+Without extra config, the app stores files on the instance disk (ephemeral on Render). Use one of:
+
+A) S3 or Cloudflare R2 (recommended; works on free tier)
+   In the web service → Environment, set:
+   - AWS_STORAGE_BUCKET_NAME
+   - AWS_ACCESS_KEY_ID
+   - AWS_SECRET_ACCESS_KEY
+   - AWS_S3_REGION_NAME   (e.g. auto for R2, or us-east-1 for AWS)
+   Optional for R2:
+   - AWS_S3_ENDPOINT_URL  (https://<accountid>.r2.cloudflarestorage.com)
+   - AWS_S3_CUSTOM_DOMAIN (your public bucket hostname, e.g. pub-xxx.r2.dev or your domain)
+   Optional prefix inside the bucket:
+   - AWS_S3_LOCATION      (e.g. media)
+   Make the bucket (or prefix) publicly readable for GET so image URLs load in the app; ACLs are not used
+   (AWS_DEFAULT_ACL=None). After enabling, new uploads go to object storage; old rows still point at
+   old /media/ paths until you re-upload or migrate files.
+
+B) Render Persistent Disk (paid web services)
+   Add a disk in the Render dashboard (or blueprint disk: mountPath + sizeGB), mount e.g. at
+   /var/triplink-media, then set environment variable MEDIA_ROOT=/var/triplink-media (no S3 vars).
+   The API will keep serving /media/ from that path across deploys.
+
 - WebSockets use in-memory channel layer on one dyno; scale-out would need Redis + channels_redis.

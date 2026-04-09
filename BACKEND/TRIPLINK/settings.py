@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
     'rest_framework',
     'rest_framework_simplejwt',
     'channels',
@@ -218,18 +219,47 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
+_staticfiles_storage = {
+    'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
 }
 
-# Media files (user uploads)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# User uploads: local disk (default), optional persistent MEDIA_ROOT, or S3/R2 when bucket is set.
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='').strip()
+USE_S3_MEDIA = bool(AWS_STORAGE_BUCKET_NAME)
+
+if USE_S3_MEDIA:
+    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='').strip()
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='').strip()
+    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1').strip()
+    _endpoint = config('AWS_S3_ENDPOINT_URL', default='').strip()
+    AWS_S3_ENDPOINT_URL = _endpoint or None
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_FILE_OVERWRITE = False
+    _s3_location = config('AWS_S3_LOCATION', default='').strip()
+    if _s3_location:
+        AWS_LOCATION = _s3_location
+    _custom_domain = config('AWS_S3_CUSTOM_DOMAIN', default='').strip()
+    if _custom_domain:
+        AWS_S3_CUSTOM_DOMAIN = _custom_domain
+        MEDIA_URL = f'https://{_custom_domain}/'
+    else:
+        MEDIA_URL = (
+            f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/'
+        )
+    STORAGES = {
+        'default': {'BACKEND': 'storages.backends.s3.S3Boto3Storage'},
+        'staticfiles': _staticfiles_storage,
+    }
+    MEDIA_ROOT = BASE_DIR / 'media'  # unused for default file storage; keeps settings introspection happy
+else:
+    MEDIA_ROOT = Path(config('MEDIA_ROOT', default=str(BASE_DIR / 'media')))
+    MEDIA_URL = '/media/'
+    STORAGES = {
+        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+        'staticfiles': _staticfiles_storage,
+    }
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

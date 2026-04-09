@@ -78,17 +78,16 @@ urlpatterns = [
     path('reset-password/agent/', agent_reset_password_view, name='agent_reset_password'),
 ]
 
-# User uploads (profile pictures, package images). static() only adds routes when DEBUG=True,
-# so on Render (DEBUG=False) /media/ was 404 and all image URLs failed. Serve MEDIA_ROOT in production too.
-# For heavy traffic, use django-storages + S3; this is fine for typical FYP / Render free tier.
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-else:
-    media_url = settings.MEDIA_URL.lstrip("/").rstrip("/")
-    urlpatterns += [
-        re_path(
-            rf"^{media_url}/(?P<path>.*)$",
-            serve,
-            {"document_root": settings.MEDIA_ROOT},
-        ),
-    ]
+# User uploads: serve from disk when not using S3 (USE_S3_MEDIA → files are at bucket URLs).
+if not getattr(settings, 'USE_S3_MEDIA', False):
+    if settings.DEBUG:
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    else:
+        media_url = settings.MEDIA_URL.lstrip("/").rstrip("/")
+        urlpatterns += [
+            re_path(
+                rf"^{media_url}/(?P<path>.*)$",
+                serve,
+                {"document_root": settings.MEDIA_ROOT},
+            ),
+        ]

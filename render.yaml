@@ -21,3 +21,5 @@ services:
         value: "true"
       # Free tier blocks SMTP (25/465/587). Add RESEND_API_KEY + RESEND_FROM_EMAIL (verified domain or
       # onboarding@resend.dev for tests) in the dashboard — Resend cannot send as @gmail.com.
+      # Persist uploads across deploys: add AWS_* vars for S3/R2 (see BACKEND/RENDER_DEPLOY.txt), or
+      # on a paid instance attach a disk and set MEDIA_ROOT to the mount path.
