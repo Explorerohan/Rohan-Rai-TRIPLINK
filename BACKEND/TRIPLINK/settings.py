@@ -281,7 +281,8 @@ DEFAULT_FROM_EMAIL = config(
     'DEFAULT_FROM_EMAIL',
     default=(EMAIL_HOST_USER or 'webmaster@localhost'),
 ).strip()
-EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
+# SMTP to Gmail/some ISPs can be slow on first connect; 20s is often too tight and raises "timed out".
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=60, cast=int)
 
 
 # Optional branding / copy for transactional email bodies
