@@ -20,6 +20,11 @@ def send_otp_email(email, otp):
     Raises:
         Exception: If configuration is missing or sending fails.
     """
+    if "console" in str(getattr(settings, "EMAIL_BACKEND", "")).lower():
+        raise ValueError(
+            "Email backend is console-only. Configure SMTP env vars on the server "
+            "(EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD/DEFAULT_FROM_EMAIL)."
+        )
     if not getattr(settings, "DEFAULT_FROM_EMAIL", None):
         raise ValueError("DEFAULT_FROM_EMAIL is not configured.")
 
@@ -79,6 +84,11 @@ def send_agent_credentials_email(email, password, login_url, agent_name=None):
     Raises:
         Exception: If configuration is missing or sending fails.
     """
+    if "console" in str(getattr(settings, "EMAIL_BACKEND", "")).lower():
+        raise ValueError(
+            "Email backend is console-only. Configure SMTP env vars on the server "
+            "(EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD/DEFAULT_FROM_EMAIL)."
+        )
     if not getattr(settings, "DEFAULT_FROM_EMAIL", None):
         raise ValueError("DEFAULT_FROM_EMAIL is not configured.")
 

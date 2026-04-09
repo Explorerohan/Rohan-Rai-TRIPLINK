@@ -14,6 +14,7 @@ from datetime import timedelta
 from pathlib import Path
 import os
 from urllib.parse import urlparse
+from django.core.exceptions import ImproperlyConfigured
 
 import dj_database_url
 from decouple import Csv, config
@@ -255,9 +256,16 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
 
-# Email: if EMAIL_HOST is set, Django sends real mail via SMTP (travelers get OTP in their inbox).
-# If EMAIL_HOST is empty, mail is only printed to the console (dev).
-EMAIL_HOST = config('EMAIL_HOST', default='').strip()
+# Email configuration
+# Supports both EMAIL_* and SMTP_* env names.
+# In production, transactional email must use SMTP (not console backend).
+EMAIL_HOST = config('EMAIL_HOST', default=config('SMTP_HOST', default='')).strip()
+EMAIL_PORT = config('EMAIL_PORT', default=config('SMTP_PORT', default=587), cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=config('SMTP_USE_TLS', default=True), cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=config('SMTP_USE_SSL', default=False), cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default=config('SMTP_USER', default='')).strip()
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default=config('SMTP_PASSWORD', default='')).strip()
+
 if EMAIL_HOST:
     EMAIL_BACKEND = config(
         'EMAIL_BACKEND',
@@ -268,13 +276,19 @@ else:
         'EMAIL_BACKEND',
         default='django.core.mail.backends.console.EmailBackend',
     )
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-# Shown as "From:" — use your real address (e.g. TRIPLINK <you@gmail.com>)
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='webmaster@localhost')
+
+# Shown as "From:" — if not explicitly set, fallback to SMTP username.
+DEFAULT_FROM_EMAIL = config(
+    'DEFAULT_FROM_EMAIL',
+    default=(EMAIL_HOST_USER or 'webmaster@localhost'),
+).strip()
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
+
+if not DEBUG and 'console' in EMAIL_BACKEND.lower():
+    raise ImproperlyConfigured(
+        "Email is configured to console backend in production. "
+        "Set EMAIL_HOST (or SMTP_HOST), EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, and DEFAULT_FROM_EMAIL."
+    )
 
 # Optional branding / copy for transactional email bodies
 EMAIL_APP_NAME = os.environ.get('EMAIL_APP_NAME', 'TRIPLINK')
