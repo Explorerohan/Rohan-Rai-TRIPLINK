@@ -19,3 +19,5 @@ services:
         generateValue: true
       - key: DATABASE_SSL_REQUIRE
         value: "true"
+      # Free tier blocks SMTP (25/465/587). Add RESEND_API_KEY + DEFAULT_FROM_EMAIL in the dashboard
+      # (https://resend.com) so OTP email uses HTTPS instead of Gmail SMTP.

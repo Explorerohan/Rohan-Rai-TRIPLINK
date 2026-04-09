@@ -293,6 +293,10 @@ DEFAULT_FROM_EMAIL = config(
 # SMTP to Gmail/some ISPs can be slow on first connect; 20s is often too tight and raises "timed out".
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=300, cast=int)
 
+# Resend (HTTPS API) — use on hosts that block SMTP (e.g. Render free tier blocks ports 25/465/587).
+# https://resend.com — set RESEND_API_KEY in Render dashboard; verify a domain for production "From".
+RESEND_API_KEY = config('RESEND_API_KEY', default='').strip()
+
 
 # Optional branding / copy for transactional email bodies
 EMAIL_APP_NAME = os.environ.get('EMAIL_APP_NAME', 'TRIPLINK')

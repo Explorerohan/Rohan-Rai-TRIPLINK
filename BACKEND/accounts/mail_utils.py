@@ -1,11 +1,65 @@
 """
-Send transactional email via Django's email API (SMTP or console in development).
+Send transactional email via Django's email API (SMTP or console in development),
+or via Resend HTTPS API when RESEND_API_KEY is set (required on Render free tier — SMTP blocked).
 """
 import html
+import json
 import random
+import urllib.error
+import urllib.request
 
 from django.conf import settings
 from django.core.mail import send_mail
+
+
+def _using_resend():
+    return bool(getattr(settings, "RESEND_API_KEY", "").strip())
+
+
+def _send_via_resend(subject, plain, html_body, to_email):
+    """POST to Resend API (port 443). Raises on failure."""
+    api_key = settings.RESEND_API_KEY
+    from_email = settings.DEFAULT_FROM_EMAIL
+    payload = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_body,
+        "text": plain,
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        try:
+            err = json.loads(body)
+            detail = err.get("message", body)
+        except json.JSONDecodeError:
+            detail = body or str(e)
+        raise ValueError(f"Resend API error: {detail}") from e
+    except urllib.error.URLError as e:
+        raise ValueError(f"Resend request failed: {e.reason}") from e
+    return {"status": "sent"}
+
+
+def _reject_console_only():
+    if "console" in str(getattr(settings, "EMAIL_BACKEND", "")).lower():
+        raise ValueError(
+            "Email backend is console-only. Configure SMTP env vars on the server "
+            "(EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD/DEFAULT_FROM_EMAIL), "
+            "or set RESEND_API_KEY for HTTPS email (e.g. on Render free tier)."
+        )
 
 
 def generate_otp():
@@ -20,13 +74,10 @@ def send_otp_email(email, otp):
     Raises:
         Exception: If configuration is missing or sending fails.
     """
-    if "console" in str(getattr(settings, "EMAIL_BACKEND", "")).lower():
-        raise ValueError(
-            "Email backend is console-only. Configure SMTP env vars on the server "
-            "(EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD/DEFAULT_FROM_EMAIL)."
-        )
     if not getattr(settings, "DEFAULT_FROM_EMAIL", None):
         raise ValueError("DEFAULT_FROM_EMAIL is not configured.")
+    if not _using_resend():
+        _reject_console_only()
 
     app_name = getattr(settings, "EMAIL_APP_NAME", "TRIPLINK")
     subject = f"{app_name} verification code"
@@ -66,6 +117,8 @@ def send_otp_email(email, otp):
         "</div>"
     )
 
+    if _using_resend():
+        return _send_via_resend(subject, plain, html_body, email)
     send_mail(
         subject=subject,
         message=plain,
@@ -84,13 +137,10 @@ def send_agent_credentials_email(email, password, login_url, agent_name=None):
     Raises:
         Exception: If configuration is missing or sending fails.
     """
-    if "console" in str(getattr(settings, "EMAIL_BACKEND", "")).lower():
-        raise ValueError(
-            "Email backend is console-only. Configure SMTP env vars on the server "
-            "(EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD/DEFAULT_FROM_EMAIL)."
-        )
     if not getattr(settings, "DEFAULT_FROM_EMAIL", None):
         raise ValueError("DEFAULT_FROM_EMAIL is not configured.")
+    if not _using_resend():
+        _reject_console_only()
 
     app_name = getattr(settings, "EMAIL_APP_NAME", "TRIPLINK")
     company = getattr(settings, "EMAIL_COMPANY_NAME", app_name)
@@ -161,6 +211,8 @@ def send_agent_credentials_email(email, password, login_url, agent_name=None):
     html_parts.append("</div>")
     html_body = "".join(html_parts)
 
+    if _using_resend():
+        return _send_via_resend(subject, plain, html_body, email)
     send_mail(
         subject=subject,
         message=plain,

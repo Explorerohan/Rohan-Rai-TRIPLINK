@@ -12,6 +12,8 @@ from django.conf import settings
 from django.core.mail import EmailMessage, get_connection
 from django.core.management.base import BaseCommand
 
+from accounts.mail_utils import _send_via_resend
+
 
 def _try_tcp(host, port, timeout, ipv4_only=False):
     """Return (ok: bool, detail: str, elapsed: float)."""
@@ -56,6 +58,34 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        resend_key = getattr(settings, "RESEND_API_KEY", "").strip()
+        to_email = (options.get("to_email") or "").strip()
+
+        if resend_key:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "RESEND_API_KEY is set — OTP emails use Resend (HTTPS port 443), not SMTP."
+                )
+            )
+            self.stdout.write(
+                "Note: Render free tier blocks outbound SMTP (25/465/587); Resend avoids that."
+            )
+            if to_email:
+                self.stdout.write(f"\n--- Resend test email to {to_email} ---")
+                try:
+                    _send_via_resend(
+                        "TRIPLINK Resend test",
+                        "If you receive this, Resend works from this server.",
+                        "<p>If you receive this, <strong>Resend</strong> works from this server.</p>",
+                        to_email,
+                    )
+                    self.stdout.write(self.style.SUCCESS("Resend send completed."))
+                except ValueError as e:
+                    self.stderr.write(self.style.ERROR(str(e)))
+            else:
+                self.stdout.write("Pass --to you@email.com to send a test email via Resend.")
+            return
+
         host = getattr(settings, "EMAIL_HOST", "") or ""
         port = int(getattr(settings, "EMAIL_PORT", 587) or 587)
         timeout = options["timeout"]
@@ -73,7 +103,10 @@ class Command(BaseCommand):
             self.stdout.write(f"EMAIL_USE_IPV4: {ipv4}")
 
         if not host:
-            self.stderr.write("EMAIL_HOST is empty — OTP cannot use SMTP.")
+            self.stderr.write(
+                "EMAIL_HOST is empty and RESEND_API_KEY not set — configure one or the other "
+                "for OTP email."
+            )
             return
 
         self.stdout.write("\n--- Raw TCP probes ---")
@@ -114,7 +147,6 @@ class Command(BaseCommand):
         except OSError as e:
             self.stderr.write(self.style.ERROR(f"FAILED: {e}"))
 
-        to_email = (options.get("to_email") or "").strip()
         if to_email:
             self.stdout.write(f"\n--- Sending test email to {to_email} ---")
             try:
