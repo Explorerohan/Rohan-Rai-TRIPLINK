@@ -265,10 +265,19 @@ EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=config('SMTP_USE_SSL', default=F
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default=config('SMTP_USER', default='')).strip()
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default=config('SMTP_PASSWORD', default='')).strip()
 
+# Prefer IPv4 for SMTP. Many networks/VPS have broken IPv6 to smtp.gmail.com → errno 110 (ETIMEDOUT)
+# even with a large EMAIL_TIMEOUT; raising the timeout does not fix a blackholed route.
+EMAIL_USE_IPV4 = config('EMAIL_USE_IPV4', default=True, cast=bool)
+
 if EMAIL_HOST:
+    _default_smtp_backend = (
+        'accounts.email_backend.IPv4EmailBackend'
+        if EMAIL_USE_IPV4
+        else 'django.core.mail.backends.smtp.EmailBackend'
+    )
     EMAIL_BACKEND = config(
         'EMAIL_BACKEND',
-        default='django.core.mail.backends.smtp.EmailBackend',
+        default=_default_smtp_backend,
     )
 else:
     EMAIL_BACKEND = config(
