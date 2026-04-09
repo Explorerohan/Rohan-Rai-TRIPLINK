@@ -21,7 +21,14 @@ def _send_via_resend(subject, plain, html_body, to_email):
     api_key = settings.RESEND_API_KEY
     # Resend does not allow @gmail.com / unverified domains as "from". Prefer RESEND_FROM_EMAIL when set.
     resend_from = getattr(settings, "RESEND_FROM_EMAIL", "").strip()
-    from_email = resend_from or settings.DEFAULT_FROM_EMAIL
+    from_email = (resend_from or settings.DEFAULT_FROM_EMAIL).strip()
+    # Resend requires email@domain or "Name <email@domain>"; a bare domain (e.g. triplink.com) is invalid.
+    if "@" not in from_email:
+        raise ValueError(
+            "Resend sender must be a full email address. Set RESEND_FROM_EMAIL (or DEFAULT_FROM_EMAIL) "
+            "on the server to something like noreply@yourdomain.com or TRIPLINK <noreply@yourdomain.com> "
+            "(not the domain alone)."
+        )
     payload = {
         "from": from_email,
         "to": [to_email],
