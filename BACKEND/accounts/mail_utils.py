@@ -19,7 +19,9 @@ def _using_resend():
 def _send_via_resend(subject, plain, html_body, to_email):
     """POST to Resend API (port 443). Raises on failure."""
     api_key = settings.RESEND_API_KEY
-    from_email = settings.DEFAULT_FROM_EMAIL
+    # Resend does not allow @gmail.com / unverified domains as "from". Prefer RESEND_FROM_EMAIL when set.
+    resend_from = getattr(settings, "RESEND_FROM_EMAIL", "").strip()
+    from_email = resend_from or settings.DEFAULT_FROM_EMAIL
     payload = {
         "from": from_email,
         "to": [to_email],

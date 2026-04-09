@@ -294,8 +294,11 @@ DEFAULT_FROM_EMAIL = config(
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=300, cast=int)
 
 # Resend (HTTPS API) — use on hosts that block SMTP (e.g. Render free tier blocks ports 25/465/587).
-# https://resend.com — set RESEND_API_KEY in Render dashboard; verify a domain for production "From".
+# https://resend.com — set RESEND_API_KEY in Render dashboard.
+# You cannot send "from" @gmail.com via Resend; verify your own domain at resend.com/domains, then set
+# RESEND_FROM_EMAIL (e.g. TRIPLINK <noreply@yourdomain.com>). For quick tests only: onboarding@resend.dev
 RESEND_API_KEY = config('RESEND_API_KEY', default='').strip()
+RESEND_FROM_EMAIL = config('RESEND_FROM_EMAIL', default='').strip()
 
 
 # Optional branding / copy for transactional email bodies
