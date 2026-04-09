@@ -1,5 +1,26 @@
 import { API_BASE } from "../config";
 
+/**
+ * Read response body as JSON. If the server returns HTML or plain text (502 page, Django error),
+ * avoids "JSON Parse error: Unexpected character" and surfaces a short readable message.
+ * @param {Response} res
+ * @returns {Promise<Record<string, unknown>>}
+ */
+export async function parseJsonResponse(res) {
+  const text = await res.text();
+  const trimmed = (text || "").trim();
+  if (!trimmed) return {};
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const snippet = trimmed.replace(/\s+/g, " ").slice(0, 200);
+    throw new Error(
+      snippet ||
+        `Server returned non-JSON (${res.status}). Check EXPO_PUBLIC_API_BASE and Render logs.`
+    );
+  }
+}
+
 // Token refresh: when we get 401, get new access token and retry (or log out if refresh fails)
 let tokenRefreshHandler = null;
 // Single refresh in flight so concurrent 401s don't trigger multiple refresh calls

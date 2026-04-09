@@ -92,6 +92,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # So request.build_absolute_uri() uses the public host (e.g. *.onrender.com), not internal host
+    USE_X_FORWARDED_HOST = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 

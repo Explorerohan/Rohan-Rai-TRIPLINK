@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import { API_BASE } from "../../config";
+import { parseJsonResponse } from "../../utils/api";
 import {
   ActivityIndicator,
   Image,
@@ -48,7 +49,7 @@ const LoginScreen = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
         throw new Error(data?.detail || data?.message || t("invalidCredentials"));
       }

@@ -15,9 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 from accounts.views import (
     login_view, logout_view, admin_dashboard_view, admin_users_view, admin_packages_view, admin_package_detail_view,
     admin_notifications_view, admin_refunds_view, admin_bookings_view, admin_reviews_view, agent_dashboard_view, agent_notifications_view, agent_refunds_view,
@@ -77,6 +78,17 @@ urlpatterns = [
     path('reset-password/agent/', agent_reset_password_view, name='agent_reset_password'),
 ]
 
-# Serve media files in development
+# User uploads (profile pictures, package images). static() only adds routes when DEBUG=True,
+# so on Render (DEBUG=False) /media/ was 404 and all image URLs failed. Serve MEDIA_ROOT in production too.
+# For heavy traffic, use django-storages + S3; this is fine for typical FYP / Render free tier.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    media_url = settings.MEDIA_URL.lstrip("/").rstrip("/")
+    urlpatterns += [
+        re_path(
+            rf"^{media_url}/(?P<path>.*)$",
+            serve,
+            {"document_root": settings.MEDIA_ROOT},
+        ),
+    ]
