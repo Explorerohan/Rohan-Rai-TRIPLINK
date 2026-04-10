@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import { API_BASE } from "../../config";
-import { parseJsonResponse } from "../../utils/api";
+import { loginTravelerWithGoogle, parseJsonResponse } from "../../utils/api";
 import {
   ActivityIndicator,
   Image,
@@ -15,12 +15,16 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+import Constants from "expo-constants";
 
 const HERO = require("../../Assets/Login.jpg");
 const EMAIL_ICON = require("../../Assets/email.png");
 const LOCK_ICON = require("../../Assets/lock.png");
 
 const LOGIN_ENDPOINT = `${API_BASE}/api/auth/login/`;
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({
   onLoginSuccess = () => {},
@@ -32,7 +36,15 @@ const LoginScreen = ({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [googleRequest, googleResponse, promptGoogleSignIn] = Google.useAuthRequest({
+    expoClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || undefined,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || undefined,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || undefined,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || undefined,
+    scopes: ["openid", "profile", "email"],
+  });
 
   const handleLogin = async () => {
     setError("");
@@ -61,6 +73,48 @@ const LoginScreen = ({
       setError(e.message || t("loginFailed"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    const run = async () => {
+      if (!googleResponse || googleResponse.type !== "success") return;
+      setGoogleLoading(true);
+      setError("");
+      try {
+        const idToken =
+          googleResponse.authentication?.idToken || googleResponse.params?.id_token || "";
+        if (!idToken) throw new Error("Google sign-in did not return an ID token.");
+        const data = await loginTravelerWithGoogle(idToken);
+        const role = data?.user?.role;
+        if (role !== "traveler") {
+          throw new Error(t("onlyTravelerCanLogin"));
+        }
+        onLoginSuccess({ access: data.access, refresh: data.refresh, user: data.user });
+      } catch (e) {
+        setError(e.message || "Google login failed");
+      } finally {
+        setGoogleLoading(false);
+      }
+    };
+    run();
+  }, [googleResponse, onLoginSuccess, t]);
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    if (!googleRequest) {
+      setError("Google sign-in is still loading. Please try again.");
+      return;
+    }
+    if (!process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID && !process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID) {
+      setError("Missing Google OAuth client IDs in .env.");
+      return;
+    }
+    try {
+      const isExpoGo = Constants.appOwnership === "expo";
+      await promptGoogleSignIn(isExpoGo ? { useProxy: true } : undefined);
+    } catch (e) {
+      setError(e?.message || "Google login failed");
     }
   };
 
@@ -119,6 +173,19 @@ const LoginScreen = ({
 
         <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85} onPress={handleLogin} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t("login")}</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.googleButton}
+          activeOpacity={0.85}
+          onPress={handleGoogleLogin}
+          disabled={googleLoading}
+        >
+          {googleLoading ? (
+            <ActivityIndicator color="#1f6b2a" />
+          ) : (
+            <Text style={styles.googleText}>Continue with Google</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footerRow}>
@@ -222,6 +289,21 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 17,
     fontWeight: "700",
+  },
+  googleButton: {
+    marginTop: 12,
+    width: "100%",
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#d5d9dd",
+  },
+  googleText: {
+    color: "#1f1f1f",
+    fontSize: 16,
+    fontWeight: "600",
   },
   footerRow: {
     flexDirection: "row",

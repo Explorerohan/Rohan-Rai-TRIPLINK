@@ -11,6 +11,12 @@ TRIPLINK backend on Render (short checklist)
 4) On the web service → Environment → add:
    DATABASE_URL = <paste from Postgres, usually starts with postgres://>
    (Optional) RENDER_EXTERNAL_URL = https://YOUR-SERVICE.onrender.com  if hosts/CSRF need a hint.
+   (For traveler Google sign-in)
+   GOOGLE_AUTH_CLIENT_IDS = <comma-separated OAuth client IDs from Firebase/Google, include web + android as needed>
+   # Alternative to the comma list:
+   # GOOGLE_WEB_CLIENT_ID=...
+   # GOOGLE_ANDROID_CLIENT_ID=...
+   # GOOGLE_IOS_CLIENT_ID=...
 
 5) Deploy. Logs should show migrate + daphne listening.
 

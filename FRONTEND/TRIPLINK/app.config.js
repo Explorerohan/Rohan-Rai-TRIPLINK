@@ -8,6 +8,7 @@ module.exports = {
   expo: {
     name: "TRIPLINK",
     slug: "TRIPLINK",
+    scheme: "triplink",
     version: "1.0.5",
     icon: "./assets/Logo.png",
     sdkVersion: "52.0.0",

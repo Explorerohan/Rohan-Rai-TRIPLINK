@@ -21,6 +21,7 @@ daphne>=4.0
 Pillow
 django-storages[s3]>=1.14
 boto3>=1.34
+google-auth>=2.35
 
 # PDF generation (itinerary)
 reportlab>=4.0

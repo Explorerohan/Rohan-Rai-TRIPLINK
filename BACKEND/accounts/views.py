@@ -30,6 +30,8 @@ from rest_framework import generics, permissions, response, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 from .mail_utils import generate_otp, send_otp_email, send_agent_credentials_email
 from .models import (
@@ -339,6 +341,129 @@ class TravelerSignupOtpVerifyView(generics.GenericAPIView):
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
+
+
+class TravelerGoogleLoginView(generics.GenericAPIView):
+    """
+    Sign in / sign up traveler using Google ID token.
+    Expects: { id_token: "..." }
+    Returns the same JWT payload shape as password login.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        raw_id_token = (request.data.get("id_token") or "").strip()
+        if not raw_id_token:
+            return response.Response(
+                {"detail": "id_token is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            payload = google_id_token.verify_oauth2_token(
+                raw_id_token,
+                google_requests.Request(),
+                audience=None,
+            )
+        except Exception:
+            return response.Response(
+                {"detail": "Invalid Google token."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        allowed_audiences = set(getattr(settings, "GOOGLE_AUTH_CLIENT_IDS", []) or [])
+        token_audience = str(payload.get("aud") or "").strip()
+        if allowed_audiences and token_audience not in allowed_audiences:
+            return response.Response(
+                {"detail": "Google token audience is not allowed."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if not token_audience:
+            return response.Response(
+                {"detail": "Google token is missing audience."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        email = (payload.get("email") or "").strip().lower()
+        if not email:
+            return response.Response(
+                {"detail": "Google account does not provide an email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if payload.get("email_verified") is not True:
+            return response.Response(
+                {"detail": "Google account email is not verified."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        given_name = (payload.get("given_name") or "").strip()
+        family_name = (payload.get("family_name") or "").strip()
+        full_name = (payload.get("name") or "").strip()
+
+        with transaction.atomic():
+            user = User.objects.filter(email__iexact=email).first()
+            if user is None:
+                user = User.objects.create(
+                    email=email,
+                    role=Roles.TRAVELER,
+                    first_name=given_name or (full_name.split(" ")[0] if full_name else ""),
+                    last_name=family_name,
+                )
+                user.set_unusable_password()
+                user.save()
+            elif user.role != Roles.TRAVELER:
+                return response.Response(
+                    {"detail": "This Google account is already linked to a non-traveler account."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if not user.is_active:
+                return response.Response(
+                    {"detail": "This account is inactive."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            changed_user_fields = []
+            if given_name and not user.first_name:
+                user.first_name = given_name
+                changed_user_fields.append("first_name")
+            if family_name and not user.last_name:
+                user.last_name = family_name
+                changed_user_fields.append("last_name")
+            if changed_user_fields:
+                user.save(update_fields=changed_user_fields)
+
+            profile_defaults = {}
+            try:
+                profile = user.user_profile
+            except UserProfile.DoesNotExist:
+                profile = None
+
+            if given_name and (profile is None or not profile.first_name):
+                profile_defaults["first_name"] = given_name
+            elif full_name and not profile_defaults.get("first_name") and profile is None:
+                profile_defaults["first_name"] = full_name.split(" ")[0]
+            if family_name and (profile is None or not profile.last_name):
+                profile_defaults["last_name"] = family_name
+
+            if profile is None:
+                UserProfile.objects.create(user=user, **profile_defaults)
+            elif profile_defaults:
+                for key, value in profile_defaults.items():
+                    setattr(profile, key, value)
+                profile.save(update_fields=list(profile_defaults.keys()))
+
+        refresh = CustomTokenObtainPairSerializer.get_token(user)
+        access = refresh.access_token
+        return response.Response(
+            {
+                "refresh": str(refresh),
+                "access": str(access),
+                "user": UserSerializer(user).data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class RefreshView(TokenRefreshView):

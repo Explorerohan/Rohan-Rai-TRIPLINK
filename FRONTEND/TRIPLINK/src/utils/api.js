@@ -883,6 +883,25 @@ export const verifyTravelerSignupOtp = async (payload) => {
 };
 
 /**
+ * Sign in traveler with Google ID token.
+ * @param {string} idToken
+ * @returns {Promise<{access:string, refresh:string, user:object}>}
+ */
+export const loginTravelerWithGoogle = async (idToken) => {
+  const url = `${API_BASE}/api/auth/google/login/`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken }),
+  });
+  const data = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(data?.detail || data?.message || `Google login failed (${response.status})`);
+  }
+  return data;
+};
+
+/**
  * Verify password-reset code issued by requestTravelerPasswordReset.
  * @param {string} email
  * @param {string} otp

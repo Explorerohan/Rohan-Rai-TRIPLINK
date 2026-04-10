@@ -268,6 +268,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'accounts.User'
 
+# Google Sign-In audiences accepted by backend token verification.
+# Add one or more OAuth client IDs (comma-separated) from Firebase/Google Cloud.
+GOOGLE_AUTH_CLIENT_IDS = [
+    cid
+    for cid in dict.fromkeys(
+        [
+            *config('GOOGLE_AUTH_CLIENT_IDS', default='', cast=Csv()),
+            config('GOOGLE_WEB_CLIENT_ID', default='').strip(),
+            config('GOOGLE_ANDROID_CLIENT_ID', default='').strip(),
+            config('GOOGLE_IOS_CLIENT_ID', default='').strip(),
+        ]
+    )
+    if cid
+]
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
