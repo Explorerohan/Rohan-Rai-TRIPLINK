@@ -1,7 +1,7 @@
 /**
  * Android adaptive icons scale the foreground to fill a 108dp layer, then the launcher mask
- * crops the outer rim — logos that touch the edges look "zoomed". This adds ~20dp inset
- * (≈18% per side) so the artwork sits in the safe zone. Re-applied on each `expo prebuild`.
+ * crops the outer rim — logos that touch the edges look "zoomed". This adds ~14dp inset
+ * so artwork stays visible without looking too small. Re-applied on each `expo prebuild`.
  */
 const { withDangerousMod } = require("@expo/config-plugins");
 const fs = require("fs");
@@ -10,10 +10,10 @@ const path = require("path");
 const INSET_XML = `<?xml version="1.0" encoding="utf-8"?>
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@mipmap/ic_launcher_foreground"
-    android:insetLeft="20dp"
-    android:insetTop="20dp"
-    android:insetRight="20dp"
-    android:insetBottom="20dp" />
+    android:insetLeft="14dp"
+    android:insetTop="14dp"
+    android:insetRight="14dp"
+    android:insetBottom="14dp" />
 `;
 
 const ADAPTIVE_ICON_XML = `<?xml version="1.0" encoding="utf-8"?>

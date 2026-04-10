@@ -28,11 +28,7 @@ class MainApplication : Application(), ReactApplication {
             return packages
           }
 
-          // Dev: Metro serves the Expo virtual entry. Release: embedded bundle matches index.js / App registry.
-          override fun getJSMainModuleName(): String =
-            if (BuildConfig.DEBUG) ".expo/.virtual-metro-entry" else "index"
-
-          override fun getBundleAssetName(): String = "index.android.bundle"
+          override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
 
           override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
 
